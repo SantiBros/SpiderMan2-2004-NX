@@ -17,6 +17,10 @@
 #include "cpu/x86_ops.h"
 #include "kernel/memory.h"
 
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+extern "C" uintptr_t x86_seg[16];  // cpu/x86_ops.h
+#endif
+
 namespace kernel {
 
 // NTSTATUS values the kernel hands back
@@ -55,29 +59,38 @@ enum : uint32_t {
 
 extern uint8_t* g_base;
 
+// host byte of a guest address: the flat window, or the slice table (cpu/x86_ops.h)
+inline uint8_t* GuestByte(uint32_t va) {
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+    return reinterpret_cast<uint8_t*>(x86_seg[va >> 28] + va);
+#else
+    return g_base + va;
+#endif
+}
+
 template <typename T>
 inline T& G(uint32_t va) {
-    return *reinterpret_cast<T*>(g_base + va);
+    return *reinterpret_cast<T*>(GuestByte(va));
 }
 inline uint32_t R32(uint32_t va) {
     uint32_t v;
-    std::memcpy(&v, g_base + va, 4);
+    std::memcpy(&v, GuestByte(va), 4);
     return v;
 }
-inline void W32(uint32_t va, uint32_t v) { std::memcpy(g_base + va, &v, 4); }
+inline void W32(uint32_t va, uint32_t v) { std::memcpy(GuestByte(va), &v, 4); }
 inline uint16_t R16(uint32_t va) {
     uint16_t v;
-    std::memcpy(&v, g_base + va, 2);
+    std::memcpy(&v, GuestByte(va), 2);
     return v;
 }
-inline void W16(uint32_t va, uint16_t v) { std::memcpy(g_base + va, &v, 2); }
+inline void W16(uint32_t va, uint16_t v) { std::memcpy(GuestByte(va), &v, 2); }
 inline uint64_t R64(uint32_t va) {
     uint64_t v;
-    std::memcpy(&v, g_base + va, 8);
+    std::memcpy(&v, GuestByte(va), 8);
     return v;
 }
-inline void W64(uint32_t va, uint64_t v) { std::memcpy(g_base + va, &v, 8); }
-inline void* HostPtr(uint32_t va) { return g_base + va; }
+inline void W64(uint32_t va, uint64_t v) { std::memcpy(GuestByte(va), &v, 8); }
+inline void* HostPtr(uint32_t va) { return GuestByte(va); }
 
 // ANSI_STRING / OBJECT_STRING: USHORT Length, USHORT MaximumLength, PCHAR Buffer
 std::string ReadAnsiString(uint32_t str);

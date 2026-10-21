@@ -8,12 +8,17 @@
 
 #include "core/log.h"
 
-#ifdef _WIN32
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+#include <cstdlib>
+#elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #else
 #include <sys/mman.h>
 #endif
+
+// the slice table of the segmented layout (cpu/x86_ops.h); unused in the flat one
+extern "C" uintptr_t x86_seg[16] = {};
 
 namespace mem {
 
@@ -22,6 +27,15 @@ static std::recursive_mutex g_lock;
 
 uint8_t* Base() { return g_base; }
 
+// host byte of a guest address in either layout
+static uint8_t* Host(uint32_t va) {
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+    return reinterpret_cast<uint8_t*>(x86_seg[va >> 28] + va);
+#else
+    return g_base + va;
+#endif
+}
+
 // physical memory shows at 0x80000000 and again at 0xF0000000 (write combined view)
 static bool InPhysical(uint32_t va) {
     return (va >= kContiguousBase && va < kContiguousBase + kPhysicalSize) ||
@@ -29,8 +43,34 @@ static bool InPhysical(uint32_t va) {
 }
 
 bool Init() {
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+    // One host block, sliced: guest 0x00000000-0x1FFFFFFF (the image and user memory, kUserHigh), physical memory
+    // at 0x80000000 and its write combined view at 0xF0000000 (the same bytes, 256 MB so stray register reads stay
+    // inside), the system pool at kSystemBase and the stacks at kStackBase. Any other slice points at the bottom
+    // of the host address space, where nothing is mapped, so a stray access faults.
+    constexpr size_t kLow = 0x20000000, kPhys = 0x10000000;
+    const size_t total = kLow + kPhys + kSystemSize + kStackSize;
+    uint8_t* b = static_cast<uint8_t*>(std::calloc(1, total));
+    if (b) {
+        for (uint32_t i = 0; i < 16; i++) x86_seg[i] = uintptr_t(0) - (uintptr_t(i) << 28);
+        x86_seg[0] = x86_seg[1] = uintptr_t(b);
+        x86_seg[kContiguousBase >> 28] = uintptr_t(b + kLow) - kContiguousBase;
+        x86_seg[kWriteCombineBase >> 28] = uintptr_t(b + kLow) - kWriteCombineBase;
+        x86_seg[kSystemBase >> 28] = uintptr_t(b + kLow + kPhys) - kSystemBase;
+        x86_seg[kStackBase >> 28] = uintptr_t(b + kLow + kPhys + kSystemSize) - kStackBase;
+        g_base = b;  // not a flat window: guest bytes go through x86_seg
+    }
+    if (!g_base) {
+        LOGE("memory: could not allocate %zu MB for the guest", total >> 20);
+        return false;
+    }
+    LOGI("memory: segmented guest space, %zu MB at %p", total >> 20, static_cast<void*>(g_base));
+    return true;
+#else
     const uint64_t size = 1ull << 32;
-#ifdef _WIN32
+#endif
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+#elif defined(_WIN32)
     HANDLE ram = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, kPhysicalSize, nullptr);
     // a fixed base keeps crash dumps comparable between runs
     for (uint64_t hint : {0x100000000ull, 0x200000000ull, 0x300000000ull, 0ull}) {
@@ -79,7 +119,11 @@ bool Commit(uint32_t va, uint32_t size) {
     uint32_t first = va & ~(kPage - 1);
     uint64_t end = (uint64_t(va) + size + kPage - 1) & ~uint64_t(kPage - 1);
     std::lock_guard<std::recursive_mutex> lock(g_lock);
-#ifdef _WIN32
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+    // the block is always there; pages committed afresh read as zero, as the kernel gives them
+    for (uint64_t p = first; p < end; p += kPage)
+        if (!g_committed[size_t(p >> 12)]) std::memset(Host(uint32_t(p)), 0, kPage);
+#elif defined(_WIN32)
     if (!VirtualAlloc(g_base + first, size_t(end - first), MEM_COMMIT, PAGE_READWRITE)) {
         LOGE("memory: commit %08X+%X failed", first, uint32_t(end - first));
         return false;
@@ -99,7 +143,9 @@ void Decommit(uint32_t va, uint32_t size) {
     uint32_t first = va & ~(kPage - 1);
     uint64_t end = (uint64_t(va) + size + kPage - 1) & ~uint64_t(kPage - 1);
     std::lock_guard<std::recursive_mutex> lock(g_lock);
-#ifdef _WIN32
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+    // nothing to give back: the next commit zeroes the pages
+#elif defined(_WIN32)
     VirtualFree(g_base + first, size_t(end - first), MEM_DECOMMIT);
 #else
     madvise(g_base + first, size_t(end - first), MADV_DONTNEED);
@@ -356,7 +402,7 @@ uint32_t AllocContiguous(uint32_t size, uint32_t lowest, uint32_t highest, uint3
         return 0;
     }
     Commit(a, size);
-    std::memset(g_base + a, 0, size);
+    std::memset(Host(a), 0, size);
     return a;
 }
 
@@ -374,7 +420,7 @@ uint32_t AllocSystem(uint32_t size, uint32_t align) {
     uint32_t a = g_system.Alloc(size, std::max<uint32_t>(align, 16), kSystemBase, kSystemBase + kSystemSize - 1, false);
     if (!a) return 0;
     Commit(a, size);
-    std::memset(g_base + a, 0, size);
+    std::memset(Host(a), 0, size);
     return a;
 }
 

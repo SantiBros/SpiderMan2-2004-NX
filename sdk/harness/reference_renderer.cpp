@@ -1312,6 +1312,21 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
     if (zs.ok) Written(zs.data, zs.End());
 }
 
+bool ReadRgba(const Surface& s, std::vector<uint32_t>& out, uint32_t& w, uint32_t& h) {
+    Plane p = OpenPlane(s);
+    if (!p.ok) return false;
+    w = p.w;
+    h = p.h;
+    out.resize(size_t(w) * h);
+    for (uint32_t y = 0; y < h; y++)
+        for (uint32_t x = 0; x < w; x++) {
+            Vec c = p.Load(x, y);
+            out[size_t(y) * w + x] = uint32_t(Sat(c[0]) * 255) | uint32_t(Sat(c[1]) * 255) << 8 |
+                                     uint32_t(Sat(c[2]) * 255) << 16 | 0xFF000000u;
+        }
+    return true;
+}
+
 bool WriteTga(const Surface& s, const char* path) {
     Plane p = OpenPlane(s);
     if (!p.ok) return false;

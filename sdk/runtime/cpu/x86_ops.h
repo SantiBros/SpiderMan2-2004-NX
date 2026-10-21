@@ -13,13 +13,22 @@ typedef uint64_t __attribute__((aligned(1), may_alias)) x86_u64u;
 typedef float __attribute__((aligned(1), may_alias)) x86_f32u;
 typedef double __attribute__((aligned(1), may_alias)) x86_f64u;
 
-#define X86_MEM8(a) (*(uint8_t*)(base + (uint32_t)(a)))
-#define X86_MEM16(a) (*(x86_u16u*)(base + (uint32_t)(a)))
-#define X86_MEM32(a) (*(x86_u32u*)(base + (uint32_t)(a)))
-#define X86_MEM64(a) (*(x86_u64u*)(base + (uint32_t)(a)))
-#define X86_MEMF32(a) (*(x86_f32u*)(base + (uint32_t)(a)))
-#define X86_MEMF64(a) (*(x86_f64u*)(base + (uint32_t)(a)))
-#define X86_PTR(T, a) ((T*)(base + (uint32_t)(a)))
+// Guest address to host. Flat: one 4 GB window at base. Segmented (XBE_SEGMENTED, for hosts that cannot reserve
+// 4 GB of address space with pages committed on demand, the Switch): 16 slices of 256 MB, each placed anywhere in
+// host memory by kernel/memory.cpp, x86_seg[slice] + address being the host byte.
+#if defined(XBE_SEGMENTED) && XBE_SEGMENTED
+extern "C" uintptr_t x86_seg[16];
+#define X86_HOST(a) ((uint8_t*)(x86_seg[(uint32_t)(a) >> 28] + (uint32_t)(a)))
+#else
+#define X86_HOST(a) (base + (uint32_t)(a))
+#endif
+#define X86_MEM8(a) (*(uint8_t*)X86_HOST(a))
+#define X86_MEM16(a) (*(x86_u16u*)X86_HOST(a))
+#define X86_MEM32(a) (*(x86_u32u*)X86_HOST(a))
+#define X86_MEM64(a) (*(x86_u64u*)X86_HOST(a))
+#define X86_MEMF32(a) (*(x86_f32u*)X86_HOST(a))
+#define X86_MEMF64(a) (*(x86_f64u*)X86_HOST(a))
+#define X86_PTR(T, a) ((T*)X86_HOST(a))
 
 #define X86_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* base)
 #define X86_EXTERN_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* base)
@@ -211,7 +220,7 @@ inline void x86_rep_movs(X86Context& ctx, uint8_t* base, uint32_t w) {
     if (!n) return;
     uint32_t bytes = n * w;
     if (!ctx.df && (ctx.edi - ctx.esi >= bytes || ctx.edi <= ctx.esi)) {
-        std::memmove(base + ctx.edi, base + ctx.esi, bytes);
+        std::memmove(X86_HOST(ctx.edi), X86_HOST(ctx.esi), bytes);
         ctx.esi += bytes;
         ctx.edi += bytes;
         ctx.ecx = 0;
@@ -219,7 +228,7 @@ inline void x86_rep_movs(X86Context& ctx, uint8_t* base, uint32_t w) {
     }
     int32_t d = ctx.df ? -int32_t(w) : int32_t(w);
     for (; n; n--) {
-        std::memcpy(base + ctx.edi, base + ctx.esi, w);
+        std::memcpy(X86_HOST(ctx.edi), X86_HOST(ctx.esi), w);
         ctx.esi += d;
         ctx.edi += d;
     }
@@ -230,7 +239,7 @@ inline void x86_rep_stos(X86Context& ctx, uint8_t* base, uint32_t w) {
     uint32_t n = ctx.ecx;
     if (!n) return;
     if (!ctx.df && w == 1) {
-        std::memset(base + ctx.edi, uint8_t(ctx.eax), n);
+        std::memset(X86_HOST(ctx.edi), uint8_t(ctx.eax), n);
         ctx.edi += n;
         ctx.ecx = 0;
         return;
@@ -238,7 +247,7 @@ inline void x86_rep_stos(X86Context& ctx, uint8_t* base, uint32_t w) {
     int32_t d = ctx.df ? -int32_t(w) : int32_t(w);
     uint32_t v = ctx.eax;
     for (; n; n--) {
-        std::memcpy(base + ctx.edi, &v, w);
+        std::memcpy(X86_HOST(ctx.edi), &v, w);
         ctx.edi += d;
     }
     ctx.ecx = 0;

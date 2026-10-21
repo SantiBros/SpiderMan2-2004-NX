@@ -103,13 +103,13 @@ bool Boot(std::vector<uint8_t> xbe, const std::string& xbe_name, const std::stri
     for (auto& l : img.libraries) LOGI("boot: library %-8s %u.%u.%u", l.name.c_str(), l.major, l.minor, l.build);
 
     mem::ReserveImage(img.base, img.image_size);
-    std::memcpy(g_base + img.base, img.file.data(), std::min<size_t>(img.header_size, img.file.size()));
+    std::memcpy(HostPtr(img.base), img.file.data(), std::min<size_t>(img.header_size, img.file.size()));
     // XBE header 0x120 points at the section headers, 56 bytes each, +0x18 is the reference count that marks one loaded
     uint32_t sec_hdr = img.U32(0x120);
     for (size_t i = 0; i < img.sections.size(); i++) {
         auto& s = img.sections[i];
         if (!(s.flags & xbe::kPreload)) continue;
-        std::memcpy(g_base + s.va, img.file.data() + s.raw, std::min(s.rsize, s.vsize));
+        std::memcpy(HostPtr(s.va), img.file.data() + s.raw, std::min(s.rsize, s.vsize));
         W32(sec_hdr + uint32_t(i) * 56 + 0x18, 1);
     }
     if (app::kGame.loaded) app::kGame.loaded();

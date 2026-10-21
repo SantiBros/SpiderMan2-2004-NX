@@ -90,6 +90,8 @@ void NameHostThread(const char* name) {
     using Fn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
     static Fn set = reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription")));
     if (set) set(GetCurrentThread(), w);
+#elif defined(__SWITCH__)
+    (void)name;  // libnx threads are not named through pthreads
 #else
     pthread_setname_np(pthread_self(), name);
 #endif
@@ -109,7 +111,11 @@ void Spawn(std::function<void()> fn) {
 #else
     pthread_attr_t attr;
     pthread_attr_init(&attr);
+#ifdef __SWITCH__
+    pthread_attr_setstacksize(&attr, 16u << 20);  // the stacks come out of the application's memory
+#else
     pthread_attr_setstacksize(&attr, 64u << 20);
+#endif
     pthread_t th;
     pthread_create(&th, &attr, [](void* p) -> void* {
         std::unique_ptr<std::function<void()>> g(static_cast<std::function<void()>*>(p));
