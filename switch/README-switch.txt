@@ -16,23 +16,39 @@ What it tests: that the game runs on the Switch's processor and memory, reads
 its files from the SD card, and reacts to your controls.
 
 
-1. Put the files on the SD card
--------------------------------
+1. Put your copy of the game on the SD card
+-------------------------------------------
 
-  sdmc:/switch/SpiderMan2Xbox/SpiderMan2Xbox.nro
-  sdmc:/switch/SpiderMan2Xbox/game/default.xbe      <- from your disc
-  sdmc:/switch/SpiderMan2Xbox/game/data/...         <- the whole data folder
-                                                       from your disc
+Into sdmc:/switch/SpiderMan2Xbox/game/ put ONE of these:
 
-The game folder must look like this:
+  a) A disc image of your game, any of:
+       .iso / .xiso   an XISO (game partition only) or a full disc dump
+       .cci           compressed, as Repackinator makes for Cerbios
+       .cso           compressed, as Repackinator or ciso make (version 2)
+     Split images work too: name.1.iso, name.2.iso, ... (or .1.cci, .1.cso):
+     put ALL the parts in the folder. Split images are what a FAT32 card
+     needs, as it cannot hold a file over 4 GB.
 
-  game/
-    default.xbe
-    data/
-      game.ini
-      movies/
-      packs/
-      sound/
+       game/
+         Spider-Man 2.iso                 (any name)
+
+  b) The files from your disc:
+
+       game/
+         default.xbe
+         data/
+           game.ini
+           movies/
+           packs/
+           sound/
+
+Not read: .zip, .7z or .rar archives (extract the image or the folder from
+them first), Xbox 360 images, and the old zlib CSO (version 1) made for the
+PSP.
+
+It must be the same release of the game this build was made from (its
+default.xbe SHA-1 is in the log). With another release the screen says so and
+asks before starting, as it would most likely crash.
 
 
 2. Start it with full memory

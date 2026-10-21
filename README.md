@@ -42,7 +42,10 @@ Built on [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp) by TGP482 (
 - [ ] Frame pacing in the headless harness (it presents thousands of frames a second; keep `REF` off or large)
 - [x] Switch platform layer (libnx), first pass: segmented guest memory, threads, files on the SD card, controls,
       a CPU test renderer to the screen; no audio yet
-- [ ] First run on a Switch
+- [x] The game from a disc image as well as from its files: XISO or full disc dump (`.iso`, `.xiso`), CCI and CSO
+      version 2 (LZ4, as Repackinator, Cerbios, StellarOS and ciso use), each whole or split into parts for FAT32
+      (`name.1.iso`, `name.2.iso`, ...); checked byte for byte against the extracted files, on x86 and ARM
+- [ ] First run on a Switch (it boots, then froze in 0.0.3; 0.0.4 and later carry the diagnostics and fixes)
 - [ ] Switch GPU backend (OpenGL/EGL or deko3d) + GLSL output from the shader translator
 - [ ] PC-side builder that turns the user's `default.xbe` into the `.nro`
 
@@ -90,6 +93,15 @@ of address space with pages committed on demand.
 
 ## Changes to the SDK
 
+- `runtime/kernel/image.{h,cpp}` (new): the containers of a disc image (plain, split, CCI, CSO v2) with an LZ4 block
+  decoder; `kernel/disc.cpp` reads through it and names Xbox 360 images.
+- `runtime/kernel/game_source.{h,cpp}` (new): the player's copy found in folders, the disc's files before images,
+  matched by the xbe's SHA-1 and entry point; the Switch build and the harness use it (Windows keeps
+  `app/game_files.cpp`, which now gets the new containers through `Disc` for `.iso` files).
+- `runtime/kernel/files.cpp`: existing files open read only unless written (never on the disc's folder), renames
+  close the file around them, resizes go through the open file: the Switch's file system refuses a second open of a
+  file open for writing.
+- `harness/reference_renderer.cpp`: triangles clipped at the near plane, float to int as x86 converts.
 - `runtime/kernel/xboxkrnl.cpp`: `MmQueryAddressProtect` answers from the committed pages instead of always
   `PAGE_READWRITE` (the game walks up its stack in 64 KB steps while pages are read/write).
 - `runtime/kernel/xboxkrnl.cpp`: `NtUserIoApcDispatcher` (ReadFileEx/WriteFileEx completions), with

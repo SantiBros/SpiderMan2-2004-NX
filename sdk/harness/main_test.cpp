@@ -1,6 +1,7 @@
-// headless host: <exe> <game folder> [--instance N], run from the folder that gets logs, hdd and cap
-// the game folder may come from GAME_DIR instead
+// headless host: <exe> <game folder or disc image> [--instance N], run from the folder that gets logs, hdd and cap
+// the game folder may come from GAME_DIR instead; a folder is searched as the Switch build does (kernel/game_source)
 // PULSE=1: every 2 s a line naming the kernel or library function each guest thread is in, as the Switch build logs
+#include <algorithm>
 #include <chrono>
 #include <map>
 #include <cstdio>
@@ -14,6 +15,7 @@
 #include "app/app.h"
 #include "core/log.h"
 #include "image_symbols.h"
+#include "kernel/game_source.h"
 #include "kernel/kernel.h"
 
 int main(int argc, char** argv) {
@@ -34,8 +36,30 @@ int main(int argc, char** argv) {
     if (app::kGame.init) app::kGame.init();
     if (app::kGame.window) app::kGame.window(nullptr);
     std::string hdd = app::Instance() > 1 ? "hdd" + std::to_string(app::Instance()) : "hdd";
-    std::ifstream f(game + "/" + IMAGE_XBE, std::ios::binary);
-    std::vector<uint8_t> xbe((std::istreambuf_iterator<char>(f)), {});
+    std::vector<uint8_t> xbe;
+    std::error_code ec;
+    if (std::filesystem::is_regular_file(game, ec)) {
+        // one disc image, as given
+        auto disc = std::make_unique<kernel::Disc>();
+        std::string error;
+        if (!disc->Open(game, error) || !disc->Load(IMAGE_XBE, xbe)) {
+            LOGE("harness: %s: %s", game.c_str(), error.empty() ? "no " IMAGE_XBE : error.c_str());
+            return 1;
+        }
+        LOGI("harness: D: is the disc image %s (%s)", game.c_str(), disc->Kind().c_str());
+        kernel::MountDisc(std::move(disc));
+        game = std::filesystem::path(game).parent_path().string();
+    } else {
+        auto search = kernel::FindGameCopies({game}, IMAGE_XBE, "");
+        auto it = std::find_if(search.copies.begin(), search.copies.end(), [](const kernel::GameCopy& c) { return c.same_entry; });
+        if (it == search.copies.end()) {
+            LOGE("harness: no copy of the game in %s", game.c_str());
+            return 1;
+        }
+        LOGI("harness: the game from %s (%s)", it->name.c_str(), it->kind.c_str());
+        xbe = std::move(it->xbe);
+        if (it->disc) kernel::MountDisc(std::move(it->disc));
+    }
     if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / hdd).string())) return 1;
     const bool pulse = std::getenv("PULSE") != nullptr;
     struct Seen {

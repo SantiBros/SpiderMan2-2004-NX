@@ -3,20 +3,6 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
-#include <mutex>
-
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 
 namespace kernel {
 
@@ -25,6 +11,7 @@ namespace {
 constexpr uint32_t kSector = 2048;
 // the game partition: at the start of an xiso, past the video partition of a whole original Xbox disc dump
 constexpr uint64_t kPartitions[] = {0, 0x18300000};
+constexpr uint64_t kXbox360Partitions[] = {0xFD90000, 0x2080000};
 // volume descriptor, sector 32 of the partition: magic, root table sector and size, FILETIME, magic again at +0x7EC
 constexpr uint32_t kVolume = 32 * kSector;
 constexpr char kMagic[] = "MICROSOFT*XBOX*MEDIA";
@@ -50,51 +37,12 @@ std::string Upper(std::string s) {
 
 }  // namespace
 
-Disc::~Disc() {
-    if (file_ == -1) return;
-#ifdef _WIN32
-    CloseHandle(HANDLE(file_));
-#else
-    close(int(file_));
-#endif
-}
-
-// each read carries its own position, so threads reading at once do not queue on one handle
-uint32_t Disc::ReadAt(uint64_t at, void* out, uint32_t len) const {
-#ifdef _WIN32
-    thread_local HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-    OVERLAPPED o{};
-    o.Offset = DWORD(at);
-    o.OffsetHigh = DWORD(at >> 32);
-    o.hEvent = event;
-    DWORD got = 0;
-    if (!ReadFile(HANDLE(file_), out, len, nullptr, &o) && GetLastError() != ERROR_IO_PENDING) return 0;
-    if (!GetOverlappedResult(HANDLE(file_), &o, &got, TRUE)) return 0;
-    return got;
-#elif defined(__SWITCH__)
-    // newlib has no pread here: seek and read under one lock
-    static std::mutex m;
-    std::lock_guard<std::mutex> lock(m);
-    if (lseek(int(file_), off_t(at), SEEK_SET) < 0) return 0;
-    ssize_t got = read(int(file_), out, len);
-    return got > 0 ? uint32_t(got) : 0;
-#else
-    ssize_t got = pread(int(file_), out, len, off_t(at));
-    return got > 0 ? uint32_t(got) : 0;
-#endif
-}
+uint32_t Disc::ReadAt(uint64_t at, void* out, uint32_t len) const { return image_->Read(at, out, len); }
 
 bool Disc::Open(const std::filesystem::path& path, std::string& error) {
     path_ = path;
-#ifdef _WIN32
-    file_ = intptr_t(CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr));
-#else
-    file_ = open(path.c_str(), O_RDONLY);
-#endif
-    if (file_ == -1) {
-        error = "cannot open the file";
-        return false;
-    }
+    image_ = OpenImage(path, error);
+    if (!image_) return false;
     for (uint64_t base : kPartitions) {
         uint8_t volume[kSector];
         if (ReadAt(base + kVolume, volume, kSector) != kSector || std::memcmp(volume, kMagic, kMagicSize) != 0 ||
@@ -107,12 +55,21 @@ bool Disc::Open(const std::filesystem::path& path, std::string& error) {
         std::memcpy(&time_, volume + 0x1C, 8);
         root_ = {{}, base + uint64_t(sector) * kSector, size, true, {}};
         if (!ReadDir(root_, 0)) {
-            error = "its folders cannot be read";
+            error = "its folders cannot be read (" + image_->Kind() + ")";
             return false;
         }
+        kind_ = image_->Kind() + (base ? ", whole disc" : "");
         return true;
     }
-    error = "no Xbox disc image";
+    // the same file system sits elsewhere on Xbox 360 discs (XGD2 and XGD3)
+    for (uint64_t base : kXbox360Partitions) {
+        uint8_t volume[kSector];
+        if (ReadAt(base + kVolume, volume, kSector) == kSector && std::memcmp(volume, kMagic, kMagicSize) == 0) {
+            error = "it is an Xbox 360 disc image, not an original Xbox one";
+            return false;
+        }
+    }
+    error = "it is no Xbox disc image (" + image_->Kind() + " without the Xbox file system)";
     return false;
 }
 

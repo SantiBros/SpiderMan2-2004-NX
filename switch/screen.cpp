@@ -54,11 +54,19 @@ void DrawText(uint32_t* dst, uint32_t stride, const std::string& title, const st
         size_t end = detail.find('\n', start);
         if (end == std::string::npos) end = detail.size();
         std::string line = detail.substr(start, end - start);
-        // long lines wrap at 76 characters
-        for (size_t p = 0; p < line.size() || p == 0; p += 76) {
-            y = Line(dst, stride, 32, y, line.substr(p, 76), kText);
-            if (line.empty()) break;
-        }
+        // long lines wrap at 76 characters, at a space when there is one, indented as they began
+        size_t indent = std::min<size_t>(line.find_first_not_of(" -"), 8);
+        if (indent == std::string::npos || indent > 8) indent = 0;
+        std::string rest = line;
+        do {
+            size_t cut = rest.size();
+            if (cut > 76) {
+                cut = rest.rfind(' ', 76);
+                if (cut == std::string::npos || cut <= indent) cut = 76;
+            }
+            y = Line(dst, stride, 32, y, rest.substr(0, cut), kText);
+            rest = rest.size() > cut ? std::string(indent, ' ') + rest.substr(rest[cut] == ' ' ? cut + 1 : cut) : "";
+        } while (!rest.empty() && y < int(kHeight) - 90);
         start = end + 1;
     }
     Line(dst, stride, 32, int(kHeight) - 72, footer, kText);

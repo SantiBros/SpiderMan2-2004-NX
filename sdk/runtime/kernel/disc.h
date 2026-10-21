@@ -1,12 +1,14 @@
 #pragma once
-// Xbox DVD file system images (.iso): a whole disc dump, its game partition behind the video one, or the game
-// partition alone (xiso). Read only.
+// Xbox DVD file system images: a whole disc dump, its game partition behind the video one, or the game partition
+// alone (xiso), in any container image.h reads (plain, split, CCI, CSO). Read only.
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "kernel/image.h"
 
 namespace kernel {
 
@@ -22,7 +24,7 @@ public:
     Disc() = default;
     Disc(const Disc&) = delete;
     Disc& operator=(const Disc&) = delete;
-    ~Disc();
+    ~Disc() = default;
     // false with the reason when the file is no Xbox disc image
     bool Open(const std::filesystem::path& path, std::string& error);
     // from the root, any case, ".." steps up; null when missing
@@ -33,13 +35,16 @@ public:
     bool Load(std::string_view path, std::vector<uint8_t>& out) const;
     uint64_t Time() const { return time_; }  // the volume's FILETIME, the only time the disc keeps
     const std::filesystem::path& Path() const { return path_; }
+    // the container and what it holds, "CCI in 2 parts, whole disc", for the log and the screen
+    const std::string& Kind() const { return kind_; }
 
 private:
     uint32_t ReadAt(uint64_t at, void* out, uint32_t len) const;
     bool ReadDir(Entry& dir, int depth);
 
-    intptr_t file_ = -1;  // HANDLE or fd
+    std::unique_ptr<Image> image_;
     std::filesystem::path path_;
+    std::string kind_;
     uint64_t base_ = 0;  // the game partition
     uint64_t time_ = 0;
     Entry root_;
