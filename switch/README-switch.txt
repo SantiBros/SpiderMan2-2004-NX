@@ -56,7 +56,7 @@ asks before starting, as it would most likely crash.
 
 Open the Homebrew Menu by HOLDING R while you start any game (not from the
 Album: the Album gives homebrew too little memory). Then start
-"Spider-Man 2 (Xbox) test".
+"Spider-Man 2 (Xbox)".
 
 Until the game draws its first picture, the screen shows the newest lines of
 the log, so a photo of it tells how far the game got.

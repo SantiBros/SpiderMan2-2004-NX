@@ -30,7 +30,11 @@
 namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
-constexpr const char* kVersion = "0.0.7";
+// from the VERSION file, through switch/build.sh
+#ifndef SM2NX_VERSION
+#define SM2NX_VERSION "dev"
+#endif
+constexpr const char* kVersion = SM2NX_VERSION;
 
 namespace {
 

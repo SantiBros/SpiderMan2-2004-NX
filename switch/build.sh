@@ -10,7 +10,7 @@ export DEVKITPRO=$DKP PATH=$DKP/devkitA64/bin:$DKP/tools/bin:$PATH
 GEN=$R/generated/game
 OUT=${OUT:-$R/build-switch}
 JOBS=${JOBS:-$(nproc)}
-VERSION=${VERSION:-0.0.7}
+VERSION=${VERSION:-$(tr -d ' \r\n' < "$R/VERSION")}
 CXX=aarch64-none-elf-g++
 ARCH="-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE"
 DEFS="-D__SWITCH__ -DXBE_SEGMENTED=1 -DXBE_RAW_VERTICES=0 -DXBE_RENDER_THREAD=0"
@@ -32,13 +32,13 @@ SRC=$(ls "$R"/sdk/runtime/*/*.cpp | grep -Ev "/runtime/app/|/core/input.cpp|/gpu
 SRC="$SRC $(ls "$R"/src/*/*.cpp) $R/sdk/harness/reference_renderer.cpp"
 SRC="$SRC $(ls "$R"/switch/*.cpp) $OUT/xbe_sha1.cpp"
 HOSTINC="$INC -I$R/src -I$R -I$R/sdk/harness -I$R/sdk/harness/compat"
-newest=$(find "$R/sdk/runtime" "$R/src" "$R/switch" "$R/sdk/harness" "$GEN/image_symbols.h" -name '*.h' -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2)
+newest=$( (find "$R/sdk/runtime" "$R/src" "$R/switch" "$R/sdk/harness" "$GEN/image_symbols.h" -name '*.h' -printf '%T@ %p\n'; find "$R/VERSION" -printf '%T@ %p\n') | sort -n | tail -1 | cut -d' ' -f2)
 objs=()
 for f in $SRC; do
     o=$OUT/host/$(echo "${f#$R/}" | tr / _ | sed 's/\.cpp$/.o/'); objs+=("$o")
     [ "$o" -nt "$f" ] && [ "$o" -nt "$newest" ] && continue
     echo "compile ${f#$R/}"
-    $CXX $BASE -O2 -g $HOSTINC -c "$f" -o "$o" &
+    $CXX $BASE -O2 -g $HOSTINC -DSM2NX_VERSION="\"$VERSION\"" -c "$f" -o "$o" &
     [ "$(jobs -r | wc -l)" -ge "$JOBS" ] && wait -n
 done
 wait
@@ -47,6 +47,6 @@ wait
 echo "link"
 $CXX -specs=$DKP/libnx/switch.specs $ARCH -Wl,--gc-sections -Wl,-Map,"$OUT/SpiderMan2Xbox.map" -o "$OUT/SpiderMan2Xbox.elf" \
     "${objs[@]}" "$OUT"/gen/*.o -L$DKP/libnx/lib -lnx
-nacptool --create "Spider-Man 2 (Xbox) test" "SantiBros" "$VERSION" "$OUT/SpiderMan2Xbox.nacp"
+nacptool --create "Spider-Man 2 (Xbox)" "SantiBros" "$VERSION" "$OUT/SpiderMan2Xbox.nacp"
 elf2nro "$OUT/SpiderMan2Xbox.elf" "$OUT/SpiderMan2Xbox.nro" --icon="$R/switch/icon.jpg" --nacp="$OUT/SpiderMan2Xbox.nacp"
 ls -l "$OUT/SpiderMan2Xbox.nro"
