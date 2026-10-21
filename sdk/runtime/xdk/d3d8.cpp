@@ -1275,6 +1275,9 @@ HLE_STDCALL(D3DDevice_BeginPush, 1) {
     return g_push_begin;
 }
 
+// the constant and program load slots raw pushes carry on from, as the hardware's registers do
+static uint32_t g_push_constant = 0, g_push_slot = 0;
+
 HLE_STDCALL(D3DDevice_EndPush, 1) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
     constexpr uint32_t kBeginEnd = 0x17FC, kInlineArray = 0x1818;
@@ -1293,6 +1296,20 @@ HLE_STDCALL(D3DDevice_EndPush, 1) {
             ApplyVisibilityMethod(m, v);
             if (m == kInlineArray) {
                 if (prim) vertices.push_back(v);
+            } else if (m >= 0x0B80 && m < 0x0C00) {  // TRANSFORM_CONSTANT at the constant slot (0x1EA4)
+                uint32_t r = g_push_constant / 4;
+                if (r < 192) std::memcpy(&g_state.vsc[r][g_push_constant % 4], &v, 4);
+                g_push_constant++;
+            } else if (m == 0x1EA4) {
+                g_push_constant = v * 4;
+            } else if (m >= 0x0B00 && m < 0x0B80) {  // TRANSFORM_PROGRAM at the load slot (0x1E9C)
+                if (g_push_slot < kProgramSlots * 4) g_slots[g_push_slot] = v;
+                g_push_slot++;
+            } else if (m == 0x1E9C) {
+                g_push_slot = v * 4;
+            } else if (m == 0x1EA0) {  // TRANSFORM_PROGRAM_START
+                g_slot_start = std::min(v, kProgramSlots - 1);
+                if (g_slot_object || g_input_object) SelectFromSlots();
             } else if (m != kBeginEnd) {
                 if (m >> 2 < g_state.simple.size()) g_state.simple[m >> 2] = v;
             } else if (v) {
