@@ -1,0 +1,69 @@
+// Sound on the Switch through audout: 48 kHz stereo, four 20 ms buffers the SDK's DirectSound mixer fills as each one
+// finishes playing. Without audout the mixer is still pulled every 20 ms, so the game's streams keep moving.
+#include <switch.h>
+
+#include <malloc.h>
+
+#include <algorithm>
+#include <chrono>
+#include <cstring>
+#include <thread>
+#include <vector>
+
+#include "audio/audio.h"
+#include "core/log.h"
+
+namespace audio {
+
+namespace {
+constexpr uint32_t kFrames = kRate / 50;                                  // 20 ms
+constexpr uint32_t kBytes = kFrames * 2 * sizeof(int16_t);                // stereo 16 bit
+constexpr uint32_t kAlloc = (kBytes + 0xFFF) & ~0xFFFu;                   // audout wants 4 KB aligned buffers
+constexpr int kBuffers = 4;
+
+void Fill(const std::function<void(float*, uint32_t)>& render, std::vector<float>& mix, int16_t* out) {
+    render(mix.data(), kFrames);
+    for (uint32_t i = 0; i < kFrames * 2; i++) {
+        float v = std::clamp(mix[i], -1.0f, 1.0f);
+        out[i] = int16_t(v * 32767.0f);
+    }
+}
+}  // namespace
+
+void StartOutput(std::function<void(float*, uint32_t)> render) {
+    std::thread([render] {
+        std::vector<float> mix(kFrames * 2);
+        Result rc = audoutInitialize();
+        if (R_SUCCEEDED(rc)) rc = audoutStartAudioOut();
+        if (R_FAILED(rc)) {
+            LOGE("audio: audout failed (%08X), sound is off", rc);
+            for (;;) {
+                render(mix.data(), kFrames);
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+        }
+        LOGI("audio: audout at %u Hz, %u channels", audoutGetSampleRate(), audoutGetChannelCount());
+        static AudioOutBuffer buffers[kBuffers];
+        for (int i = 0; i < kBuffers; i++) {
+            void* data = memalign(0x1000, kAlloc);
+            std::memset(data, 0, kAlloc);
+            buffers[i] = {};
+            buffers[i].next = nullptr;
+            buffers[i].buffer = data;
+            buffers[i].buffer_size = kAlloc;
+            buffers[i].data_size = kBytes;
+            buffers[i].data_offset = 0;
+            Fill(render, mix, static_cast<int16_t*>(data));
+            audoutAppendAudioOutBuffer(&buffers[i]);
+        }
+        for (;;) {
+            AudioOutBuffer* done = nullptr;
+            u32 count = 0;
+            if (R_FAILED(audoutWaitPlayFinish(&done, &count, UINT64_MAX)) || !done) continue;
+            Fill(render, mix, static_cast<int16_t*>(done->buffer));
+            audoutAppendAudioOutBuffer(done);
+        }
+    }).detach();
+}
+
+}  // namespace audio

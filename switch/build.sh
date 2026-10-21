@@ -29,7 +29,7 @@ ls "$GEN"/x86_recomp.*.cpp "$GEN"/x86_func_mapping.cpp | xargs -P "$JOBS" -I{} s
 SHA=$(sha1sum "$R/assets/default.xbe" 2>/dev/null | cut -c1-40)
 echo "extern const char kImageSha1[] = \"${SHA:-unknown}\";" > "$OUT/xbe_sha1.cpp"
 SRC=$(ls "$R"/sdk/runtime/*/*.cpp | grep -Ev "/runtime/app/|/core/input.cpp|/gpu/d3d12.cpp|/audio/xaudio2.cpp")
-SRC="$SRC $(ls "$R"/src/*/*.cpp) $R/sdk/harness/null_audio.cpp $R/sdk/harness/reference_renderer.cpp"
+SRC="$SRC $(ls "$R"/src/*/*.cpp) $R/sdk/harness/reference_renderer.cpp"
 SRC="$SRC $(ls "$R"/switch/*.cpp) $OUT/xbe_sha1.cpp"
 HOSTINC="$INC -I$R/src -I$R -I$R/sdk/harness -I$R/sdk/harness/compat"
 newest=$(find "$R/sdk/runtime" "$R/src" "$R/switch" "$R/sdk/harness" "$GEN/image_symbols.h" -name '*.h' -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2)

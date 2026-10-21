@@ -7,7 +7,8 @@ playable release yet:
 
   - The picture is drawn by a slow software renderer and updates only every
     second or two. The real Switch graphics come later.
-  - There is no sound yet.
+  - Sound goes through the Switch speaker/headphones, but may stutter while a
+    picture is being drawn.
   - This .nro was built from YOUR copy of the game. It contains code derived
     from the game, so keep it to yourself: do not share it.
 
