@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # build.sh: builds the Switch port from YOUR copy of Spider-Man 2 (Xbox).
 #
-#   ./build.sh <your game>
+#   bash build.sh <your game>
 #
 # <your game> is any of: your disc image (.iso .xiso .cci .cso, whole or the first part of a split one), the
 # folder with the disc's files (default.xbe and data/), or default.xbe itself. Only default.xbe is read: the
@@ -18,7 +18,7 @@ set -euo pipefail
 R=$(cd "$(dirname "$0")" && pwd)
 cd "$R"
 VERSION=$(tr -d ' \r\n' < VERSION)
-SUPPORTED_SHA1=853bcb253c5baea2d7e2d9b59e5888b4c87bb402  # Spider-Man 2, NTSC (USA), title 4156002B
+SUPPORTED_SHA1=853bcb253c5baea2d7e2d9b59e5888b4c87bb402  # Spider-Man 2, title 4156002B, version 4
 export DEVKITPRO=${DEVKITPRO:-/opt/devkitpro}
 JOBS=${JOBS:-$(nproc 2>/dev/null || echo 4)}
 
@@ -52,7 +52,7 @@ src=${1:-}
 if [ -z "$src" ] && [ -f assets/default.xbe ]; then
     src=assets/default.xbe
 fi
-[ -n "$src" ] || fail "say where your game is: ./build.sh <disc image, game folder or default.xbe>"
+[ -n "$src" ] || fail "say where your game is: bash build.sh <disc image, game folder or default.xbe>"
 [ -e "$src" ] || fail "$src does not exist"
 mkdir -p assets
 xbe=$(mktemp)
@@ -77,7 +77,7 @@ fi
 sha=$(sha1sum "$xbe" | cut -c1-40)
 echo "  default.xbe SHA-1 $sha"
 [ "$sha" = "$SUPPORTED_SHA1" ] || fail "this default.xbe is not the release the port supports.
-  Supported: Spider-Man 2 for the original Xbox, NTSC (USA), default.xbe SHA-1 $SUPPORTED_SHA1
+  Supported: Spider-Man 2 for the original Xbox, title 4156002B version 4, default.xbe SHA-1 $SUPPORTED_SHA1
   Yours:     $sha
   The recompiled code is made for that one file; other releases need their own config (see docs/TECHNICAL.md)."
 cp "$xbe" assets/default.xbe
@@ -85,10 +85,10 @@ cp "$xbe" assets/default.xbe
 # 3. recompile
 say "[3/5] Recompiling default.xbe to C++ (a few seconds)"
 build-tools/xbe_recomp config/game.toml --xdk sdk/xdk > build-recomp.log 2>&1 || fail "recompiling failed: see build-recomp.log"
-tail -n 3 build-recomp.log | sed 's/^/  /'
+grep -m1 "^total:" build-recomp.log | sed 's/^total: /  /' || true
 
 # 4. the .nro
-say "[4/5] Building SpiderMan2Xbox.nro ($JOBS jobs: about $(( 30 / JOBS + 2 )) minutes on a recent PC)"
+say "[4/5] Building SpiderMan2Xbox.nro ($JOBS jobs: about $(( 20 / JOBS + 2 )) minutes)"
 JOBS=$JOBS VERSION=$VERSION bash switch/build.sh > build-switch.log 2>&1 || fail "the Switch build failed: see build-switch.log"
 [ -f build-switch/SpiderMan2Xbox.nro ] || fail "no .nro was made: see build-switch.log"
 

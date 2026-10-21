@@ -1,0 +1,410 @@
+<div align="center">
+
+[![English](https://img.shields.io/badge/lang-English-1b2a4a?style=for-the-badge)](README.md)
+[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-c8202f?style=for-the-badge)](README.es.md)
+
+<img src="docs/images/banner.jpg" alt="Spider-Man 2 (Xbox original, 2004) para Nintendo Switch, un port homebrew no oficial" width="100%">
+
+# Spider-Man 2 (Xbox) para Nintendo Switch
+
+**Un port homebrew no oficial de la versión de *Spider-Man 2* para la Xbox original (Treyarch, 2004) a Nintendo Switch.**<br>
+El código del propio juego, recompilado de antemano para el procesador de la Switch, con el sistema de la Xbox
+reconstruido a su alrededor. Trae tu propia copia del juego, compila el port a partir de ella una vez y
+balancéate por Nueva York.
+
+[![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=c8202f&logo=github&logoColor=white)](../../releases)
+![Estado: prueba temprana](https://img.shields.io/badge/estado-prueba%20temprana-e0a020?style=for-the-badge)
+![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
+![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1b2a4a?style=for-the-badge)
+![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1b2a4a?style=for-the-badge)](LICENSE)
+
+[Instalar](#cómo-instalar) · [Controles](#controles) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
+
+</div>
+
+> [!IMPORTANT]
+> **No se incluye ningún archivo del juego, ni en este repositorio ni en las versiones publicadas.**
+> Necesitas tu propia copia de *Spider-Man 2* para la **Xbox original**, y compilas el port a partir de
+> ella en tu computador (un solo comando). Por favor, no pidas archivos del juego en los issues y nunca
+> los subas a ningún sitio, ni el `.nro` que compiles: contiene código hecho a partir del juego.
+>
+> Este port es **solo para la versión de la Xbox original (2004)**. Las versiones de PlayStation 2,
+> GameCube, PC, Game Boy Advance, Nintendo DS y PSP son programas distintos y no sirven, y tampoco los
+> juegos de *Spider-Man* más nuevos.
+
+> [!WARNING]
+> **Versión de prueba temprana: todavía no se puede jugar.** En la versión de prueba para PC del port, el
+> juego pasa por sus menús y cinemáticas hasta llegar a la ciudad. En una Switch todavía no ha pasado de su
+> arranque en las pruebas, y la imagen la dibuja un renderizador lento en la CPU: una imagen fija cada pocos
+> segundos. Se buscan [testers](#se-buscan-testers).
+
+> [!TIP]
+> **Novedades de la 0.0.7**
+> - **Tu imagen de disco funciona tal cual**: `.iso` / `.xiso` (o un volcado completo del disco), `.cci` y
+>   `.cso`, también divididas en partes para una tarjeta SD en FAT32. O los archivos del disco, como antes.
+> - **Mensajes claros** cuando algo está mal: un archivo comprimido que hay que extraer, una imagen de Xbox
+>   360, otra edición del juego.
+> - **Se compila con un solo comando** a partir de tu copia: `bash build.sh "Spider-Man 2.iso"`.
+>
+> Todos los detalles, y las correcciones de la 0.0.3 a la 0.0.6, están en la [lista de cambios](CHANGELOG.md)
+> (en inglés).
+
+## Capturas
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
+    <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="El menú del control del balanceo"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>La pantalla de título</sub></td>
+    <td align="center"><sub>Eligiendo el control del balanceo</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/screenshots/city.jpg" alt="En una azotea de la ciudad, con el HUD y la primera pista del tutorial"></td>
+    <td><img src="docs/images/screenshots/demo.jpg" alt="La demo del propio juego en las calles"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>La primera azotea, con el HUD y una pista del tutorial</sub></td>
+    <td align="center"><sub>La demo del juego, en las calles</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/screenshots/status.jpg" alt="La pantalla de arranque del port con las últimas líneas del registro"></td>
+    <td><img src="docs/images/screenshots/not-found.jpg" alt="El port explicando qué poner en la carpeta game"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>La pantalla de arranque del port: qué está haciendo, hasta que el juego dibuja</sub></td>
+    <td align="center"><sub>Si no encuentra una copia que pueda usar, dice qué poner y dónde</sub></td>
+  </tr>
+</table>
+
+<p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo
+código recompilado y el mismo renderizador por CPU que la versión de Switch, con los tiempos y la disposición de
+pantalla de la versión de Switch (la imagen 4:3 del juego en la pantalla de 1280×720 de la Switch). Las dos
+pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
+
+## Características
+
+- **El código real del juego, recompilado, no emulado.** Las 26.876 funciones del código x86 del juego se
+  traducen a C++ de antemano y se compilan para el procesador ARM de la Switch. El kernel de la Xbox,
+  Direct3D 8, DirectSound y los controles se reconstruyen como código nativo de Switch
+  ([cómo funciona](#cómo-funciona)).
+- **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
+  volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
+  Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
+- **Se compila a partir de tu copia con un solo comando.** `build.sh` comprueba que tu copia sea la edición
+  compatible, la recompila y compila el `.nro`, con la carpeta de la tarjeta SD ya armada.
+- **Dice qué está mal.** Falta la carpeta data, hay un archivo comprimido que extraer, una imagen de Xbox
+  360, otra edición del juego: la pantalla lo explica con palabras sencillas.
+- **Pensado para las pruebas.** Hasta que el juego dibuja, la pantalla muestra las últimas líneas del
+  registro. El registro llega a la tarjeta SD varias veces por segundo, así que sobrevive a una consola
+  congelada, y una línea de estado cada 2 segundos dice qué está haciendo cada hilo del juego. Los
+  cierres inesperados dejan un informe.
+- **Controles asignados por posición**, para que los botones que muestra el juego estén donde tus dedos
+  los esperan.
+- **Totalmente sin conexión.** El port no usa la red.
+
+## Qué necesitas
+
+| | Qué |
+|---|---|
+| **Consola** | Una Nintendo Switch, Switch OLED o Switch Lite con [Atmosphère](https://github.com/Atmosphere-NX/Atmosphere) y el Homebrew Menu. Usa emuMMC y guarda una copia de seguridad de tu tarjeta SD. |
+| **Juego** | Tu propio *Spider-Man 2* para la **Xbox original**, la edición cuyo `default.xbe` tiene el SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título `4156002B`, versión 4). Como imagen de disco o como los archivos del disco, unos 1,7 GB. `build.sh` lo comprueba por ti. |
+| **Computador** | Linux, o Windows 10/11 con WSL (el Linux que Windows puede instalar), para compilar el port una vez. Unos 2 GB de espacio y de 10 a 30 minutos. En macOS no está probado. |
+| **Tarjeta SD** | Unos 2 GB libres. FAT32 o exFAT (en FAT32, una imagen de disco de más de 4 GB tiene que ir dividida). |
+
+## Cómo instalar
+
+> [!TIP]
+> **¿Nuevo en el homebrew de Switch?** Primero prepara tu consola con firmware personalizado (Atmosphère)
+> y el Homebrew Menu: la guía de la comunidad [switch.hacks.guide](https://switch.hacks.guide/) lo explica
+> paso a paso (en inglés). ¿No sabes qué significan XBE, XISO, CCI o WSL? Mira el [glosario](docs/INSTALL.es.md#glosario).
+
+1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
+   DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
+2. **Compila el port.** Descarga `SpiderMan2-NX-0.0.7.zip` de la página de [Releases](../../releases) y
+   descomprímelo en tu computador. Luego ejecuta un comando en su carpeta, indicando dónde está tu juego:
+   ```sh
+   bash build.sh "/ruta/a/Spider-Man 2.iso"
+   ```
+   La primera vez, instala las herramientas que necesita (unos 10 minutos, una sola vez): [paso a paso](docs/INSTALL.es.md#compilar-el-port).
+3. **Copia a la tarjeta SD.** Copia la carpeta `out/sd/switch` que se creó a la raíz de tu tarjeta SD.
+   Luego copia tu juego en `switch/SpiderMan2Xbox/game/`: tu imagen de disco (todas sus partes, si está
+   dividida), o `default.xbe` y la carpeta `data`.
+4. **Juega.** Mantén **R** mientras abres cualquier juego para entrar al Homebrew Menu, y elige
+   **Spider-Man 2 (Xbox)**.
+
+> [!WARNING]
+> Abre siempre el Homebrew Menu con **R + un juego** (title takeover). Desde el Álbum, el homebrew solo
+> recibe unos 440 MB de memoria, y el juego necesita unos 1,3 GB.
+
+<details>
+<summary><b>Así queda la carpeta en la tarjeta SD</b></summary>
+
+```
+sd:/switch/SpiderMan2Xbox/
+├── SpiderMan2Xbox.nro    el port que compilaste (nunca lo compartas: contiene código hecho a partir del juego)
+├── README.txt            la guía para jugar (en inglés)
+├── game/                 TU juego, una de estas dos cosas:
+│   ├── Spider-Man 2.iso      una imagen de disco (.iso .xiso .cci .cso), o todas las partes de una dividida
+│   └── default.xbe, data/    o los archivos del disco
+├── hdd/                  el disco duro de la Xbox: tus partidas (se crea la primera vez)
+└── logs/                 sm2_NNN.log y crash.txt: adjúntalos al reportar un error
+```
+
+</details>
+
+La [guía de instalación completa](docs/INSTALL.es.md) explica cómo conseguir tu juego, cómo compilar en Windows
+con WSL, cómo actualizar y la [solución de problemas](docs/INSTALL.es.md#solución-de-problemas).
+
+### Actualizar
+
+Compila la versión nueva igual que la anterior y copia su carpeta `out/sd/switch` encima de la vieja. Tus
+carpetas `game/` y `hdd/` se quedan como están.
+
+## Controles
+
+El juego muestra los botones del control de la Xbox. Están asignados por **posición**, así que el botón que
+pide el juego está donde está en el control de la Xbox:
+
+| Xbox | Switch | | Xbox | Switch |
+|---|---|---|---|---|
+| A (abajo) | **B** | | Gatillo izquierdo / derecho | **ZL** / **ZR** |
+| B (derecha) | **A** | | Botón blanco / negro | **L** / **R** |
+| X (izquierda) | **Y** | | Start / Back | **+** / **−** |
+| Y (arriba) | **X** | | Palancas, cruceta | lo mismo |
+
+Mantén **+ y −** a la vez durante un segundo para salir. Mantén **L** mientras arranca el port para quitar el
+sonido (para probar si un problema viene del sonido).
+
+## Estado
+
+> [!NOTE]
+> **Prueba temprana.** Esta es la primera versión pública. Todavía no se ha jugado en una Switch: haz una
+> copia de seguridad de tu tarjeta SD y usa emuMMC.
+
+| Parte | Estado |
+|---|---|
+| El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; llega a la ciudad en la versión de prueba para ARM |
+| Leer tu copia: imágenes de disco y archivos | ✅ Todos los formatos comprobados byte a byte contra los archivos extraídos, en PC y en ARM |
+| Arrancar en una Switch | 🧪 Encuentra el juego y lo arranca; se congeló justo después en la 0.0.3. De la 0.0.4 a la 0.0.7 se corrigen las causas encontradas y se registra lo necesario para encontrar la siguiente |
+| Imagen | ⚠️ Por ahora un renderizador lento en la CPU: una imagen fija cada pocos segundos. La GPU de la Switch llega más adelante |
+| Menús, cinemáticas, la ciudad | ✅ En la versión de prueba para PC |
+| Sonido | 🧪 Por los altavoces y audífonos de la Switch; sin probar en una consola |
+| Controles | 🧪 Asignados, sin probar en una consola |
+| Partidas | 🧪 En `hdd/` en la tarjeta SD; sin probar en una consola |
+| Idioma | Inglés (los textos en español del juego están en el disco; está prevista una opción de idioma) |
+| En línea | ❌ Nada: el port no usa la red |
+
+**Problemas conocidos**
+- El cuerpo de Spider-Man todavía no se dibuja mientras juegas (su sombra sí), aunque en la demo del propio
+  juego sí aparece. El cielo de la cinemática inicial es ruido gris.
+- Los videos de los logotipos se reproducen, pero no se dibujan.
+- Solo funciona la edición de arriba: otras ediciones necesitan su propia configuración del recompilador.
+
+En la [lista de cambios](CHANGELOG.md) (en inglés) está lo que cambió en cada versión.
+
+## Se buscan testers
+
+El port se prueba en una versión para PC que ejecuta el mismo código recompilado y en la versión para ARM en
+un emulador. Lo que falta son consolas reales. Los reportes en español o en inglés ayudan mucho, con la
+carpeta `logs`:
+
+| Qué | Cómo ayudar |
+|---|---|
+| 🎮 **¿Arranca?** | Compílalo, ábrelo y cuenta qué muestra la pantalla. Una foto de la pantalla de arranque dice hasta dónde llegó. |
+| 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido). |
+| 💿 **El formato de tu imagen** | Si tu `.cci`, `.cso` o imagen dividida no es aceptada, envía el registro: dice por qué. |
+
+Abre un [issue](../../issues/new/choose): el formulario pide todo lo necesario.
+
+## Preguntas frecuentes
+
+<details>
+<summary><b>¿Es un emulador?</b></summary>
+
+**No, al menos no para el código del juego.** Un emulador lee las instrucciones x86 del juego una por una
+mientras se ejecuta (o las traduce sobre la marcha). Este port usa **recompilación estática**: cada función
+del `default.xbe` del juego se traduce a C++ una sola vez, en tu computador, y ese C++ se compila como un
+programa normal de Switch. La Switch ejecuta entonces la lógica del juego como código propio.
+
+Lo que el juego le pide a la Xbox (el kernel, los archivos, los hilos, Direct3D 8, DirectSound, los
+controles) lo responde el propio código del port, escrito para la Switch. La única parte que todavía funciona
+como un emulador es la imagen: por ahora, los comandos de Direct3D del juego los dibuja un renderizador por
+software en la CPU, y por eso va lento. Mira [Cómo funciona](docs/TECHNICAL.md) (en inglés).
+</details>
+
+<details>
+<summary><b>¿Por qué no hay una descarga lista para jugar?</b></summary>
+
+Porque el `.nro` *es* el código del juego, traducido al procesador de la Switch. Compartirlo sería compartir
+el juego. Por eso las versiones publicadas traen el código del port y el compilador, y tú haces el `.nro` a
+partir de tu propia copia en tu computador. Es un solo comando, y primero comprueba tu copia. Guarda para ti
+el `.nro` que hagas.
+</details>
+
+<details>
+<summary><b>¿Funciona con la versión de PlayStation 2, GameCube o PC?</b></summary>
+
+No. Son programas distintos: cada versión de *Spider-Man 2* (2004) se hizo para su propia consola, y la
+versión de PC es directamente otro juego. Este port funciona **solo con la versión de la Xbox original**. Los
+juegos de *Spider-Man* más nuevos (por ejemplo *Marvel's Spider-Man 2*, de 2023) no tienen nada que ver.
+</details>
+
+<details>
+<summary><b>¿Qué edición del juego de Xbox funciona?</b></summary>
+
+La que tiene un `default.xbe` con el SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título
+`4156002B`, versión 4), en inglés. `build.sh` lo comprueba y te avisa si la tuya es distinta. El código
+recompilado corresponde exactamente a ese archivo; otra edición (de otra región, por ejemplo) necesitaría su
+propia configuración del recompilador. Si tienes otra edición, ayuda abrir un issue con su SHA-1 (el
+compilador lo muestra).
+</details>
+
+<details>
+<summary><b>¿De dónde saco los archivos del juego?</b></summary>
+
+De tu propio disco. Este proyecto no puede ayudar con eso, y los issues que pidan archivos del juego se
+cerrarán. [Cómo conseguir tu juego](docs/INSTALL.es.md#cómo-conseguir-tu-juego) explica las formas habituales de
+hacer una copia de tu propio disco.
+</details>
+
+<details>
+<summary><b>¿Qué formatos de imagen de disco funcionan?</b></summary>
+
+- **`.iso` / `.xiso`**: una XISO recortada (la que hace `extract-xiso`) o un volcado completo del disco (con la
+  partición de video al principio, como los de Redump).
+- **`.cci`**: las imágenes comprimidas que hace Repackinator para Cerbios.
+- **`.cso`**: las imágenes comprimidas (versión 2, LZ4) que hacen Repackinator y `ciso` para StellarOS.
+- Cualquiera de ellas **dividida** en partes (`nombre.1.iso`, `nombre.2.iso`, ... o `.1.cci`, `.1.cso`): pon
+  todas las partes en la carpeta.
+- O los **archivos** del disco: `default.xbe` y la carpeta `data`.
+
+No se leen: archivos comprimidos `.zip`, `.7z` o `.rar` (extráelos primero), imágenes de Xbox 360, ni el CSO
+viejo con zlib (versión 1) hecho para la PSP.
+</details>
+
+<details>
+<summary><b>Mi tarjeta SD está en FAT32 y mi imagen pesa más de 4 GB</b></summary>
+
+FAT32 no admite archivos de más de 4 GB. Usa una imagen dividida (Repackinator la divide solo, y el port lee
+las partes como una sola), un `.cci` o `.cso` comprimido (este juego queda en unos 1,5 GB), o los archivos del
+disco. O formatea la tarjeta en exFAT.
+</details>
+
+<details>
+<summary><b>¿Por qué la imagen se actualiza tan lento?</b></summary>
+
+Por ahora, los gráficos del juego los dibuja un renderizador por software en la CPU, una imagen fija cada
+pocos segundos, mientras el juego sigue a su propia velocidad entre una y otra. Era la forma más rápida de ver
+el juego en la pantalla y de probar todo lo demás. Un renderizador en la GPU de la Switch es el siguiente gran
+paso.
+</details>
+
+<details>
+<summary><b>¿Puedo jugar en español?</b></summary>
+
+Todavía no: esta edición arranca en inglés. Los textos en español del juego están en el disco (las voces son
+solo en inglés), y está prevista una opción para el idioma.
+</details>
+
+<details>
+<summary><b>¿El port se conecta a internet? ¿Me pueden banear?</b></summary>
+
+El port nunca se conecta a internet. Usar cualquier homebrew requiere firmware personalizado, lo que va
+contra las condiciones de Nintendo y puede hacer que una consola sea baneada de los servicios en línea de
+Nintendo. Lo habitual es usar el homebrew en un emuMMC y tener una copia de seguridad de tu tarjeta SD.
+</details>
+
+<details>
+<summary><b>¿Dónde está mi partida y cómo la respaldo?</b></summary>
+
+El port tiene un disco duro de Xbox en `switch/SpiderMan2Xbox/hdd/`, y el juego guarda ahí como lo haría en
+la Xbox. Copia esa carpeta a un lugar seguro de vez en cuando.
+</details>
+
+<details>
+<summary><b>¿Puedo compilarlo en Windows sin WSL, o en una Mac?</b></summary>
+
+El compilador es un script de Linux, y WSL es la forma fácil en Windows: [paso a paso](docs/INSTALL.es.md#en-windows-con-wsl).
+devkitPro también funciona en macOS, pero el script no se ha probado ahí.
+</details>
+
+## Cómo funciona
+
+El juego es el programa x86 `default.xbe`, hecho para el Pentium III de la Xbox y su chip gráfico NV2A. El port:
+
+1. **Recompila el código del juego de antemano** con `xbe_recomp`, del SDK
+   [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp): cada función se convierte en C++, que se
+   compila para la CPU ARM de la Switch con devkitA64.
+2. **Reconstruye el sistema de la Xbox a su alrededor**: las 120 funciones del kernel que importa el juego,
+   hilos y temporizadores, archivos (los del disco o los de la imagen de disco), Direct3D 8 con sus push buffers
+   y programas de vértices, DirectSound y los controles, como código nativo.
+3. **Acomoda el espacio de direcciones de 4 GB de la Xbox** en la memoria que puede tener un programa homebrew
+   de Switch, en trozos de 256 MB.
+4. **Dibuja** por ahora los comandos de Direct3D del juego con un renderizador por software, y los muestra en la
+   pantalla de la Switch.
+
+Más en [docs/TECHNICAL.md](docs/TECHNICAL.md) (en inglés): el recompilador, la capa de Switch, los formatos de
+imagen de disco, las versiones de prueba y la organización del código.
+
+## Compilar desde el código fuente
+
+`build.sh` hace todo: compila las herramientas de PC, recompila tu `default.xbe` y compila el `.nro` con las
+herramientas `switch-dev` de [devkitPro](https://devkitpro.org/wiki/Getting_Started):
+
+```sh
+bash build.sh "/ruta/a/tu/Spider-Man 2.iso"     # o la carpeta del juego, o default.xbe
+```
+
+El resultado es `build-switch/SpiderMan2Xbox.nro`, ya armado para la tarjeta SD en `out/sd/`.
+[docs/BUILDING.md](docs/BUILDING.md) (en inglés) tiene los detalles, la versión de prueba para PC que se usa para
+desarrollar, las pruebas y cómo se publica una versión.
+
+## Créditos
+
+Gracias a quienes hicieron esto posible:
+
+- **Treyarch** y **Activision**, que hicieron el juego. Por favor, apoya el original.
+- [**Xbox XBE Recomp**](https://github.com/TGP482/XboxXBE-Recomp) de TGP482: el recompilador y el entorno de la
+  Xbox sobre los que está hecho este port (en `sdk/`, con los cambios que se listan en [docs/TECHNICAL.md](docs/TECHNICAL.md)).
+- [**Zydis**](https://github.com/zyantific/zydis) (decodificación de x86) y [**toml++**](https://github.com/marzer/tomlplusplus),
+  que usa el recompilador.
+- [**XbSymbolDatabase**](https://github.com/Cxbx-Reloaded/XbSymbolDatabase), [**Cxbx-Reloaded**](https://github.com/Cxbx-Reloaded/Cxbx-Reloaded)
+  y [**xemu**](https://github.com/xemu-project/xemu): para encontrar las funciones del XDK, y como referencia de cómo
+  se comportan la Xbox y su GPU.
+- [**libnx**](https://github.com/switchbrew/libnx) y la comunidad de switchbrew, [**devkitPro**](https://devkitpro.org)
+  (devkitA64, switch-tools) y [**Atmosphère**](https://github.com/Atmosphere-NX/Atmosphere).
+- Los formatos de imagen de disco: [**extract-xiso**](https://github.com/XboxDev/extract-xiso),
+  [**Repackinator** y XboxToolkit](https://github.com/Team-Resurgent/Repackinator) de Team Resurgent (CCI), y
+  [**ciso**](https://github.com/antangelo/ciso) de antangelo (CSO), cuyos formatos lee el port; LZ4 de Yann Collet.
+
+Lista completa con licencias: [THIRD_PARTY.md](THIRD_PARTY.md) (en inglés).
+
+## Licencia
+
+El código propio del port (`switch/`, `src/`, `tools/`, `config/`, `build.sh`) está bajo la [licencia MIT](LICENSE).
+El SDK en `sdk/` mantiene su propia licencia MIT ([sdk/LICENSE](sdk/LICENSE)), y el resto del código de terceros,
+la suya ([THIRD_PARTY.md](THIRD_PARTY.md)). El juego no está incluido y estas licencias no lo cubren de ninguna
+forma.
+
+## Aviso legal
+
+Este es un proyecto no oficial hecho por fans. No está afiliado, respaldado ni patrocinado por Activision,
+Treyarch, Marvel, Sony Pictures, Microsoft ni Nintendo. *Spider-Man* es una marca registrada de Marvel; Xbox es
+una marca registrada de Microsoft; Nintendo Switch es una marca registrada de Nintendo. Aquí no se distribuye
+ningún código ni dato del juego: necesitas tu propia copia del juego, y lo que compiles a partir de ella es solo
+para ti.
+
+Usar homebrew requiere firmware personalizado, lo que va contra las condiciones de servicio de Nintendo y puede
+hacer que una consola sea baneada de los servicios en línea; esa decisión es tuya. El software se ofrece tal
+cual, sin garantía (consulta la [LICENCIA](LICENSE)).
+
+---
+
+<div align="center">
+
+Un proyecto de **SantiBros** · Si te gusta, dale una estrella al repositorio ⭐ y compártelo
+
+</div>

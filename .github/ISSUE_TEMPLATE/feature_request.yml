@@ -1,0 +1,11 @@
+name: Idea or request
+description: Something the port could do better
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: For another release of the game, include its default.xbe SHA-1 (build.sh prints it). Never attach the file itself.
+    validations:
+      required: true

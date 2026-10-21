@@ -29,3 +29,7 @@ settings.toml
 
 # Switch build output (holds code derived from the game)
 /build-switch/
+
+# build.sh: the PC tools, its logs
+/build-tools/
+/build-*.log
