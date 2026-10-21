@@ -10,7 +10,7 @@ export DEVKITPRO=$DKP PATH=$DKP/devkitA64/bin:$DKP/tools/bin:$PATH
 GEN=$R/generated/game
 OUT=${OUT:-$R/build-switch}
 JOBS=${JOBS:-$(nproc)}
-VERSION=${VERSION:-0.0.3}
+VERSION=${VERSION:-0.0.4}
 CXX=aarch64-none-elf-g++
 ARCH="-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE"
 DEFS="-D__SWITCH__ -DXBE_SEGMENTED=1 -DXBE_RAW_VERTICES=0 -DXBE_RENDER_THREAD=0"

@@ -13,6 +13,7 @@
 #include <typeinfo>
 
 #include "core/log.h"
+#include "kernel/kernel.h"
 
 extern "C" {
 alignas(16) u8 __nx_exception_stack[0x8000];
@@ -36,11 +37,20 @@ void Put(const char* fmt, ...) {
     if (n > 0) g_len = std::min(sizeof(g_buf) - 1, g_len + size_t(n));
 }
 
+size_t g_logged = 0;  // how much of g_buf is in the run's log already
+
 void Save() {
-    // plain open/write: the crashing thread may hold a stdio lock
+    // the run's log first, by its descriptor: the crashing thread may hold the log's or a stdio lock
+    int log = logx::Descriptor();
+    if (log >= 0 && g_len > g_logged) {
+        write(log, g_buf + g_logged, g_len - g_logged);
+        fsync(log);
+        g_logged = g_len;
+    }
     int fd = open("logs/crash.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd >= 0) {
         write(fd, g_buf, g_len);
+        fsync(fd);
         close(fd);
     }
 }
@@ -59,7 +69,7 @@ const char* Desc(u32 d) {
 }
 
 [[noreturn]] void Terminate() {
-    g_len = 0;
+    g_len = g_logged = 0;
     Put("Spider-Man 2 (Xbox) test: uncaught C++ exception");
     if (std::exception_ptr e = std::current_exception()) {
         try {
@@ -73,7 +83,7 @@ const char* Desc(u32 d) {
     Put("\nlog: %s\n", logx::Path().c_str());
     Save();
     LOGE("terminate: uncaught exception, see logs/crash.txt");
-    logx::Flush();
+    logx::Sync();
     std::abort();
 }
 
@@ -87,7 +97,7 @@ const bool g_installed = [] {
 extern "C" void __libnx_exception_handler(ThreadExceptionDump* ctx) {
     uintptr_t lo = uintptr_t(&_start), hi = uintptr_t(&__end__);
     auto off = [&](uint64_t a) -> long long { return a >= lo && a < hi ? (long long)(a - lo) : -1; };
-    g_len = 0;
+    g_len = g_logged = 0;
     Put("Spider-Man 2 (Xbox) test: crash, %s (desc %X, esr %08X)\n", Desc(ctx->error_desc), ctx->error_desc, ctx->esr);
     Put("module %016lX..%016lX\n", (unsigned long)lo, (unsigned long)hi);
     Put("pc  %016lX  offset %llX\n", (unsigned long)ctx->pc.x, off(ctx->pc.x));
@@ -95,6 +105,11 @@ extern "C" void __libnx_exception_handler(ThreadExceptionDump* ctx) {
     Put("sp  %016lX  far %016lX\n", (unsigned long)ctx->sp.x, (unsigned long)ctx->far.x);
     for (int i = 0; i < 29; i++) Put("x%-2d %016lX%s", i, (unsigned long)ctx->cpu_gprs[i].x, i % 4 == 3 ? "\n" : "  ");
     Put("\nfp  %016lX\n", (unsigned long)ctx->fp.x);
+    if (kernel::Thread* t = kernel::Current()) {
+        const char* call = t->call.load(std::memory_order_relaxed);
+        Put("guest thread %u in %s, icall %08X esp %08X\n", t->id, call ? call : "game code",
+            t->ctx ? t->ctx->last_icall : 0, t->ctx ? t->ctx->esp : 0);
+    }
     Put("log: %s\n", logx::Path().c_str());
     Save();  // before the stack walk, which could fault past the stack's end
     // return addresses into the module among the stack's first 64 KB
@@ -108,6 +123,6 @@ extern "C" void __libnx_exception_handler(ThreadExceptionDump* ctx) {
             found++;
         }
     }
-    Put("\nlog: %s\n", logx::Path().c_str());
+    Put("\n");
     Save();
 }

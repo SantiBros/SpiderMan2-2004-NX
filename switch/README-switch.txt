@@ -42,6 +42,12 @@ Open the Homebrew Menu by HOLDING R while you start any game (not from the
 Album: the Album gives homebrew too little memory). Then start
 "Spider-Man 2 (Xbox) test".
 
+Until the game draws its first picture, the screen shows the newest lines of
+the log, so a photo of it tells how far the game got.
+
+Sound off: hold L while you start it (until the text screen appears). Use it
+to test whether a problem comes from the sound.
+
 
 3. Controls
 -----------
@@ -62,5 +68,8 @@ second, then wait for the screen to change.
 4. What to send back
 --------------------
 
-The newest file in sdmc:/switch/SpiderMan2Xbox/logs/ (sm2_NNN.log), plus a
-photo of the screen if something looks wrong or it stops.
+The whole sdmc:/switch/SpiderMan2Xbox/logs/ folder (the newest sm2_NNN.log
+and crash.txt if there is one), plus a photo of the screen if something looks
+wrong or it stops. If the console had to be restarted, also send the newest
+files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
+if they are from that time.

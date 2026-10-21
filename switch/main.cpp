@@ -22,26 +22,42 @@
 #include "image_symbols.h"
 #include "kernel/kernel.h"
 #include "switch/screen.h"
+#include "switch/state.h"
 
 namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
-constexpr const char* kVersion = "0.0.3";
+constexpr const char* kVersion = "0.0.4";
 
 namespace {
 
-// the console text screen for messages before the game draws, waits for + to quit
+// a message on the screen until + is pressed
 [[noreturn]] void Fail(const char* title, const std::string& detail) {
     sw::Message(title, detail, "Press + to go back to the Homebrew Menu.");
     PadState pad;
     padInitializeDefault(&pad);
     while (appletMainLoop()) {
+        sw::Pump();
         padUpdate(&pad);
         if (padGetButtonsDown(&pad) & HidNpadButton_Plus) break;
         svcSleepThread(16'000'000);
     }
-    sw::CloseText();
+    logx::Sync();
+    sw::Close();
     std::exit(1);
+}
+
+// buttons held as the program starts (the pad needs a few updates to report them)
+uint64_t HeldAtStart() {
+    PadState pad;
+    padInitializeDefault(&pad);
+    uint64_t held = 0;
+    for (int i = 0; i < 6; i++) {
+        padUpdate(&pad);
+        held |= padGetButtons(&pad);
+        svcSleepThread(16'000'000);
+    }
+    return held;
 }
 
 std::string Folder(const char* argv0) {
@@ -57,6 +73,8 @@ int main(int argc, char** argv) {
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     std::string dir = Folder(argc > 0 ? argv[0] : nullptr);
     chdir(dir.c_str());
+    sw::Init();
+    sw::g_no_sound = HeldAtStart() & HidNpadButton_L;
 
     AppletType at = appletGetAppletType();
     if (at != AppletType_Application && at != AppletType_SystemApplication)
@@ -81,10 +99,14 @@ int main(int argc, char** argv) {
                     "game.ini, movies, packs and sound inside)");
     }
 
-    sw::Message("Spider-Man 2 (Xbox) - test build", "Starting...", "Logs are written to " + dir + "/logs");
+    const std::string title = std::string("Spider-Man 2 (Xbox) - test build ") + kVersion;
+    const std::string footer = "Quit: hold + and - together.  Logs: " + dir + "/logs";
+    sw::Message(title, "Starting...", footer);
+    sw::Pump();
 
     setenv("GAME_DIR", game.c_str(), 1);
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
+    sw::StartWatch();
     u64 total = 0, used = 0;
     svcGetInfo(&total, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
     svcGetInfo(&used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
@@ -92,31 +114,43 @@ int main(int argc, char** argv) {
     LOGI("switch: %s, folder %s, applet type %d, firmware %u.%u.%u, memory %llu MB of %llu MB used", kVersion,
          dir.c_str(), int(at), HOSVER_MAJOR(hos), HOSVER_MINOR(hos), HOSVER_MICRO(hos),
          (unsigned long long)(used >> 20), (unsigned long long)(total >> 20));
+    u64 cores = 0;
+    svcGetInfo(&cores, InfoType_CoreMask, CUR_PROCESS_HANDLE, 0);
+    LOGI("switch: core mask %llX, sound %s", (unsigned long long)cores, sw::g_no_sound ? "off (L held)" : "on");
 
     std::ifstream f(game + "/" + IMAGE_XBE, std::ios::binary);
     std::vector<uint8_t> xbe((std::istreambuf_iterator<char>(f)), {});
     LOGI("switch: %s, %zu bytes, built for SHA-1 %s", IMAGE_XBE, xbe.size(), kImageSha1);
     if (app::kGame.init) app::kGame.init();
-    if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / "hdd").string())) {
-        logx::Flush();
+    if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / "hdd").string()))
         Fail("The game did not start", "See the newest file in " + dir + "/logs");
-    }
 
-    // the guest runs on its own threads; this one keeps the applet alive and the log on the card, and until the
-    // game's first picture shows the newest log line, so a photo says how far it got
-    std::string shown;
+    // the guest runs on its own threads. This one keeps the applet alive and puts things on screen: until the game
+    // draws its first picture, the newest log lines, so a photo says how far it got. It takes no lock a game thread
+    // could hold for long, so quitting works even when the game hangs.
+    uint64_t last_text = 0;
     while (appletMainLoop() && !sw::QuitRequested()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        logx::Flush();
-        std::string last = logx::Last();
-        if (last != shown && !sw::ShowingGame()) {
-            sw::Message("Spider-Man 2 (Xbox) - test build", "Starting...\n\n" + last.substr(0, 76),
-                        "Logs are written to " + dir + "/logs");
-            shown = last;
+        svcSleepThread(16'000'000);
+        uint64_t now = armTicksToNs(armGetSystemTick());
+        if (!sw::ShowingGame() && now - last_text > 250'000'000ull) {
+            std::string recent;
+            if (logx::Recent(22, recent)) {
+                std::string cut;  // one screen line each
+                size_t start = 0;
+                while (start < recent.size()) {
+                    size_t end = recent.find('\n', start);
+                    if (end == std::string::npos) end = recent.size();
+                    cut += recent.substr(start, std::min<size_t>(end - start, 76)) + "\n";
+                    start = end + 1;
+                }
+                sw::Message(title, cut, footer);
+                last_text = now;
+            }
         }
+        sw::Pump();
     }
     LOGI("switch: quitting");
-    logx::Flush();
+    if (int fd = logx::Descriptor(); fd >= 0) fsync(fd);  // every line is flushed already, no lock needed
     sw::Close();
     std::_Exit(0);
 }

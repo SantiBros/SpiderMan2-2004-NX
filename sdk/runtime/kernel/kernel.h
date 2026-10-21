@@ -172,11 +172,31 @@ struct Thread : Object {
     std::deque<std::array<uint32_t, 4>> apcs;  // routine, arg1, arg2, arg3
     std::condition_variable resume_cv;
     X86Context* ctx = nullptr;
+    // for a watchdog: the kernel or library function the thread is in (null in game code) and how many it called
+    std::atomic<const char*> call{nullptr};
+    std::atomic<uint32_t> calls{0};
     Thread() : Object(ObjType::Thread) {}
 };
 using ThreadRef = std::shared_ptr<Thread>;
 
 Thread* Current();
+
+// marks the current thread as inside a kernel or library function until the end of the scope
+struct CallMark {
+    Thread* t;
+    const char* prev = nullptr;
+    explicit CallMark(const char* name) : t(Current()) {
+        if (t) {
+            prev = t->call.exchange(name, std::memory_order_relaxed);
+            t->calls.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+    ~CallMark() {
+        if (t) t->call.store(prev, std::memory_order_relaxed);
+    }
+    CallMark(const CallMark&) = delete;
+    CallMark& operator=(const CallMark&) = delete;
+};
 ThreadRef CurrentRef();
 void StartHostThread(const char* name, std::function<void(X86Context&)> fn);
 void RunDpcs(X86Context& ctx);

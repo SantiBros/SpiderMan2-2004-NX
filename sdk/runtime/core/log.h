@@ -14,7 +14,13 @@ void Init(const std::string& dir, const std::string& prefix, bool append = false
 void Write(Level lv, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 // the newest message written
 std::string Last();
+// the newest n lines, oldest first; false without waiting when a writer holds the log
+bool Recent(size_t n, std::string& out);
 void Flush();
+// Flush, then the file's data and size onto the storage itself (a console can lose cached writes when it is reset)
+void Sync();
+// the log's file descriptor, -1 without a file: for a crash handler that must not take the log's lock
+int Descriptor();
 const std::string& Path();
 
 #ifdef NDEBUG

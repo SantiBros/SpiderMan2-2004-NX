@@ -99,6 +99,7 @@ inline uint32_t Call(X86Context& ctx, uint32_t fn, const Map& m, std::initialize
     static uint32_t fn(X86Context& ctx, const A& a);     \
     X86_FUNC(guest) {                                    \
         (void)base;                                      \
+        ::kernel::CallMark mark_(&#fn[4]);               \
         A args{ctx};                                     \
         uint32_t r = fn(ctx, args);                      \
         ::kernel::Return(ctx, r, pops);                  \

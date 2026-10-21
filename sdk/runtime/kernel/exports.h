@@ -5,6 +5,7 @@
 #define KERNEL_EXPORT(ord, name, nargs)                                                                   \
     static uint32_t kimpl_##name(X86Context& ctx, const ::kernel::Args& a);                              \
     static void kentry_##name(X86Context& ctx, uint8_t*) {                                               \
+        ::kernel::CallMark mark_(#name);                                                                 \
         ::kernel::Args args{ctx};                                                                        \
         uint32_t r = kimpl_##name(ctx, args);                                                            \
         ::kernel::Return(ctx, r, nargs);                                                                 \
@@ -16,6 +17,7 @@
 #define KERNEL_FASTCALL(ord, name)                                                                        \
     static uint32_t kimpl_##name(X86Context& ctx);                                                       \
     static void kentry_##name(X86Context& ctx, uint8_t*) {                                               \
+        ::kernel::CallMark mark_(#name);                                                                 \
         uint32_t r = kimpl_##name(ctx);                                                                  \
         ::kernel::Return(ctx, r, 0);                                                                     \
     }                                                                                                    \

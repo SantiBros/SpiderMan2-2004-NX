@@ -13,6 +13,7 @@
 
 #include "audio/audio.h"
 #include "core/log.h"
+#include "switch/state.h"
 
 namespace audio {
 
@@ -35,8 +36,20 @@ void StartOutput(std::function<void(float*, uint32_t)> render) {
     // a pthread with room: std::thread gets 128 KB on the Switch, and the mixer decodes on its stack
     auto* fn = new std::function<void()>([render] {
         std::vector<float> mix(kFrames * 2);
+        if (sw::g_no_sound) {
+            LOGI("audio: sound off (L held at start), the mixer runs without output");
+            for (;;) {
+                render(mix.data(), kFrames);
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+        }
+        LOGI("audio: opening audout");
         Result rc = audoutInitialize();
-        if (R_SUCCEEDED(rc)) rc = audoutStartAudioOut();
+        LOGI("audio: audoutInitialize %08X", rc);
+        if (R_SUCCEEDED(rc)) {
+            rc = audoutStartAudioOut();
+            LOGI("audio: audoutStartAudioOut %08X", rc);
+        }
         if (R_FAILED(rc)) {
             LOGE("audio: audout failed (%08X), sound is off", rc);
             for (;;) {
@@ -56,12 +69,22 @@ void StartOutput(std::function<void(float*, uint32_t)> render) {
             buffers[i].data_size = kBytes;
             buffers[i].data_offset = 0;
             Fill(render, mix, static_cast<int16_t*>(data));
-            audoutAppendAudioOutBuffer(&buffers[i]);
+            rc = audoutAppendAudioOutBuffer(&buffers[i]);
+            if (R_FAILED(rc)) LOGE("audio: buffer %d not queued (%08X)", i, rc);
         }
+        LOGI("audio: %d buffers queued", kBuffers);
+        int failures = 0;
         for (;;) {
             AudioOutBuffer* done = nullptr;
             u32 count = 0;
-            if (R_FAILED(audoutWaitPlayFinish(&done, &count, UINT64_MAX)) || !done) continue;
+            rc = audoutWaitPlayFinish(&done, &count, 1'000'000'000ull);
+            if (R_FAILED(rc) || !done) {
+                // never spin on the service: a timeout or an error waits a buffer's length before the next try
+                if (failures++ < 5) LOGW("audio: no buffer back (%08X, %u)", rc, count);
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                continue;
+            }
+            if (sw::g_stats.sound.fetch_add(1, std::memory_order_relaxed) == 0) LOGI("audio: first buffer played");
             Fill(render, mix, static_cast<int16_t*>(done->buffer));
             audoutAppendAudioOutBuffer(done);
         }

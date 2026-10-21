@@ -7,8 +7,13 @@
 #include <ctime>
 #include <filesystem>
 #include <mutex>
+#include <deque>
 #include <thread>
 #include <vector>
+
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -18,6 +23,8 @@ static std::mutex g_mutex;
 static FILE* g_file = nullptr;
 static std::string g_path;
 static std::string g_last;  // the newest message, for a progress line
+static std::deque<std::string> g_recent;  // the newest lines, for a status screen
+constexpr size_t kRecent = 16;
 static auto g_start = std::chrono::steady_clock::now();
 
 constexpr int kKeep = 30;
@@ -68,6 +75,10 @@ void Write(Level lv, const char* fmt, ...) {
                      : std::snprintf(line, sizeof(line), "[%9.3f] %s%s\n", t, lv == Level::Error ? "error: " : "", msg);
     n = std::min(n, int(sizeof(line)) - 1);
     g_last.assign(msg);
+    char brief[160];
+    std::snprintf(brief, sizeof(brief), "%6.1f %s", t, msg);
+    g_recent.emplace_back(brief);
+    if (g_recent.size() > kRecent) g_recent.pop_front();
     if (g_file) {
         std::fwrite(line, 1, size_t(n), g_file);
 #ifdef __SWITCH__
@@ -86,9 +97,35 @@ std::string Last() {
     return g_last;
 }
 
+bool Recent(size_t n, std::string& out) {
+    std::unique_lock<std::mutex> lock(g_mutex, std::try_to_lock);
+    if (!lock) return false;
+    out.clear();
+    for (size_t i = g_recent.size() > n ? g_recent.size() - n : 0; i < g_recent.size(); i++) {
+        if (!out.empty()) out += '\n';
+        out += g_recent[i];
+    }
+    return true;
+}
+
 void Flush() {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_file) std::fflush(g_file);
 }
+
+void Sync() {
+    int fd = -1;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (!g_file) return;
+        std::fflush(g_file);
+        fd = fileno(g_file);
+    }
+#ifndef _WIN32
+    if (fd >= 0) fsync(fd);  // outside the lock: writers carry on meanwhile
+#endif
+}
+
+int Descriptor() { return g_file ? fileno(g_file) : -1; }
 
 }  // namespace logx
