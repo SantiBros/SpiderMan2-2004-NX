@@ -1351,6 +1351,7 @@ struct PushArrays {
 };
 uint32_t g_pb_vb[16] = {};       // stand in D3DVertexBuffer headers, Data = the array's address
 uint32_t g_pb_tex[4] = {};       // stand in texture headers per stage
+uint32_t g_pb_pal[4] = {};       // stand in palette headers per stage
 std::map<uint32_t, uint32_t> g_pb_methods;  // method -> count, for the log of what is not handled
 
 // the vertex arrays the library programmed for the current layout and streams: per register the element's physical
@@ -1465,6 +1466,7 @@ HLE_STDCALL(D3DDevice_RunPushBuffer, 2) {
     bool tex_dirty[4] = {};
     uint32_t tex_regs[4][8] = {};
     auto saved_textures = g_state.textures;
+    auto saved_palettes = g_state.palettes;
     auto flush_textures = [&] {
         for (int t = 0; t < 4; t++) {
             if (!tex_dirty[t]) continue;
@@ -1542,6 +1544,11 @@ HLE_STDCALL(D3DDevice_RunPushBuffer, 2) {
                 if (r < 8) {
                     tex_regs[t][r] = v;
                     if (r <= 1) tex_dirty[t] = true;
+                } else if (r == 8) {  // PALETTE: context DMA bit 0, length code bits 2 and 3, offset from bit 6
+                    if (!g_pb_pal[t]) g_pb_pal[t] = mem::AllocSystem(16, 16);
+                    W32(g_pb_pal[t], 0x00030001 | (v >> 2 & 3) << 30);  // one reference, D3DCOMMON_TYPE_PALETTE, size code
+                    W32(g_pb_pal[t] + 4, v & 0x0FFFFFC0);               // Data: the colours' physical address
+                    g_state.palettes[t] = g_pb_pal[t];
                 }
                 if (m >> 2 < g_state.simple.size()) g_state.simple[m >> 2] = v;
             } else {
@@ -1551,6 +1558,7 @@ HLE_STDCALL(D3DDevice_RunPushBuffer, 2) {
         }
     }
     g_state.textures = saved_textures;
+    g_state.palettes = saved_palettes;
     static uint32_t runs = 0;
     if (++runs == 200) {
         std::string list;
