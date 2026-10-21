@@ -1,3 +1,4 @@
+#include <atomic>
 // XAPI functions that talk to hardware: controller ports and the hard disk cache partition
 #include <chrono>
 
@@ -68,6 +69,7 @@ HLE_STDCALL(XInitDevices, 2) {
 
 HLE_STDCALL(XInputOpen, 4) {
     uint32_t type = a[0], port = a[1];
+    LOG_FIRST(8, "xapi: XInputOpen type %08X port %u slot %u", type, port, a[2]);
     if (type != kGamepadType || port > 3) return 0;
     uint32_t h = mem::AllocSystem(16);
     std::lock_guard<std::mutex> lock(g_ports_lock);
@@ -91,6 +93,9 @@ HLE_STDCALL(XInputGetState, 2) {
         port = it->second.port;
     }
     input::Pad p = input::Poll(int(port));
+    if (p.buttons || p.analog[0]) LOG_FIRST(4, "xapi: XInputGetState port %u, buttons %X A %u", port, p.buttons, p.analog[0]);
+    static std::atomic<uint32_t> calls{0};
+    if (calls.fetch_add(1) % 5000 == 0) LOGI("xapi: XInputGetState call %u buttons %X", calls.load(), p.buttons);
     if (!p.connected) return 1167;  // ERROR_DEVICE_NOT_CONNECTED
     std::lock_guard<std::mutex> lock(g_ports_lock);
     Handle& h = g_handles[a[0]];
