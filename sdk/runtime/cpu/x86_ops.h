@@ -23,11 +23,26 @@ extern "C" uintptr_t x86_seg[16];
 #define X86_HOST(a) (base + (uint32_t)(a))
 #endif
 #define X86_MEM8(a) (*(uint8_t*)X86_HOST(a))
+#if defined(__GNUC__) && !defined(__clang__)
+// GCC (16, AArch64) fails with an internal error when a byte aligned typedef's value is a call argument; a packed
+// struct's field is the same unaligned load without that
+struct __attribute__((packed, may_alias)) x86_p16 { uint16_t v; };
+struct __attribute__((packed, may_alias)) x86_p32 { uint32_t v; };
+struct __attribute__((packed, may_alias)) x86_p64 { uint64_t v; };
+struct __attribute__((packed, may_alias)) x86_pf32 { float v; };
+struct __attribute__((packed, may_alias)) x86_pf64 { double v; };
+#define X86_MEM16(a) (((x86_p16*)X86_HOST(a))->v)
+#define X86_MEM32(a) (((x86_p32*)X86_HOST(a))->v)
+#define X86_MEM64(a) (((x86_p64*)X86_HOST(a))->v)
+#define X86_MEMF32(a) (((x86_pf32*)X86_HOST(a))->v)
+#define X86_MEMF64(a) (((x86_pf64*)X86_HOST(a))->v)
+#else
 #define X86_MEM16(a) (*(x86_u16u*)X86_HOST(a))
 #define X86_MEM32(a) (*(x86_u32u*)X86_HOST(a))
 #define X86_MEM64(a) (*(x86_u64u*)X86_HOST(a))
 #define X86_MEMF32(a) (*(x86_f32u*)X86_HOST(a))
 #define X86_MEMF64(a) (*(x86_f64u*)X86_HOST(a))
+#endif
 #define X86_PTR(T, a) ((T*)X86_HOST(a))
 
 #define X86_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* base)

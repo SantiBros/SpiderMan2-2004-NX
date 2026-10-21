@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstring>
+#include <mutex>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -70,6 +71,13 @@ uint32_t Disc::ReadAt(uint64_t at, void* out, uint32_t len) const {
     if (!ReadFile(HANDLE(file_), out, len, nullptr, &o) && GetLastError() != ERROR_IO_PENDING) return 0;
     if (!GetOverlappedResult(HANDLE(file_), &o, &got, TRUE)) return 0;
     return got;
+#elif defined(__SWITCH__)
+    // newlib has no pread here: seek and read under one lock
+    static std::mutex m;
+    std::lock_guard<std::mutex> lock(m);
+    if (lseek(int(file_), off_t(at), SEEK_SET) < 0) return 0;
+    ssize_t got = read(int(file_), out, len);
+    return got > 0 ? uint32_t(got) : 0;
 #else
     ssize_t got = pread(int(file_), out, len, off_t(at));
     return got > 0 ? uint32_t(got) : 0;

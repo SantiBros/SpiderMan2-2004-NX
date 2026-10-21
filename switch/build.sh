@@ -21,7 +21,7 @@ mkdir -p "$OUT/gen" "$OUT/host"
 
 # recompiled code: each partition rebuilt when it is newer than its object
 export CXX BASE INC GEN OUT
-ls "$GEN"/x86_recomp.*.cpp "$GEN"/x86_func_mapping.cpp | xargs -P "$JOBS" -I{} sh -c '
+[ -n "$SKIP_GEN" ] || ls "$GEN"/x86_recomp.*.cpp "$GEN"/x86_func_mapping.cpp | xargs -P "$JOBS" -I{} sh -c '
     o="$OUT/gen/$(basename {} .cpp).o"; [ "$o" -nt {} ] && exit 0
     $CXX $BASE -O2 -g0 -w $INC -c {} -o "$o.tmp" && mv "$o.tmp" "$o" || { echo "FAILED {}"; exit 1; }'
 
@@ -43,6 +43,7 @@ for f in $SRC; do
 done
 wait
 
+[ -n "$NO_LINK" ] && exit 0
 echo "link"
 $CXX -specs=$DKP/libnx/switch.specs $ARCH -Wl,--gc-sections -Wl,-Map,"$OUT/SpiderMan2Xbox.map" -o "$OUT/SpiderMan2Xbox.elf" \
     "${objs[@]}" "$OUT"/gen/*.o -L$DKP/libnx/lib -lnx

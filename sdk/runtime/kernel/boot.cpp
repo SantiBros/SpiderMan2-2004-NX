@@ -200,6 +200,11 @@ void Relaunch(const char* exe) {
         LOGE("relaunch: cannot start %s.exe (%lu)", exe, GetLastError());
     }
     std::_Exit(0);
+#elif defined(__SWITCH__)
+    // one image per .nro: a title that loads another xbe ends here
+    LOGE("relaunch: %s is not part of this build", exe);
+    logx::Flush();
+    std::_Exit(0);
 #else
     char self[4096] = {};
     ssize_t n = readlink("/proc/self/exe", self, sizeof(self) - 1);

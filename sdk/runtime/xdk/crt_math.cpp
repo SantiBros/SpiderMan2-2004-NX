@@ -2,6 +2,7 @@
 // does not carry flags across call and ret, so the functions read stale flags and returned NaN at random. Computed on
 // the host instead.
 #include <cmath>
+#include <cstring>
 
 #include "xdk/hle.h"
 
@@ -37,7 +38,11 @@ CRT_MATH(crt_log10, std::log10)
 
 // x and y above the return address, y in st0
 X86_FUNC(GUEST(crt_pow)) {
-    X87_ST(0) = std::pow(double(X86_MEMF64(ctx.esp + 4)), double(X86_MEMF64(ctx.esp + 12)));
+    // copied out first: GCC 16 for AArch64 fails (internal error) passing the byte aligned double type as an argument
+    double x, y;
+    std::memcpy(&x, X86_HOST(ctx.esp + 4), 8);
+    std::memcpy(&y, X86_HOST(ctx.esp + 12), 8);
+    X87_ST(0) = std::pow(x, y);
     ctx.esp += 4;
 }
 
