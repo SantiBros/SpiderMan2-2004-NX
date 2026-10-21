@@ -2,7 +2,12 @@
 // REF=N: every Nth frame drawn on the CPU into guest memory and saved as cap/ref_<frame>.tga
 // CAP=N: every Nth frame's draws listed in cap/draws_<frame>.txt
 // snap in the run folder: the next two frames drawn and saved as snap_1.tga and snap_2.tga, then snap is removed
+// SWITCH=1: the Switch build's pacing (switch/backend.cpp): 60 frames a second, a frame drawn when as much time as the
+//   last drawing took has passed (at least half a second), saved as cap/switch_<frame>.tga from the first one with draws
+#include <algorithm>
+#include <chrono>
 #include <cstdio>
+#include <thread>
 #include <cstring>
 #include <filesystem>
 #include <string>
@@ -40,6 +45,8 @@ public:
         else CopySurfaceMemory(src, dst, n, rects, points);
     }
     void Present(const Surface& front) override {
+        static const bool like_switch = harness::Env("SWITCH") != 0;
+        if (like_switch) return PresentLikeSwitch(front);
         if (list_) {
             std::fclose(list_);
             list_ = nullptr;
@@ -73,6 +80,36 @@ public:
     void SetGamma(const uint8_t*) override {}
 
 private:
+    using Clock = std::chrono::steady_clock;
+    void PresentLikeSwitch(const Surface& front) {
+        auto now = Clock::now();
+        if (drawing_) {
+            if (shown_ || draws_ > draws_at_draw_) {
+                if (!shown_) LOGI("renderer: first picture with %llu draws, the status text goes", draws_ - draws_at_draw_);
+                reference::WriteTga(front, File("cap/switch_%05llu.tga", frames_).c_str());
+                shown_++;
+            }
+            auto took = std::chrono::duration_cast<std::chrono::milliseconds>(now - draw_start_).count();
+            next_draw_ = now + std::chrono::milliseconds(std::max<long long>(500, took));
+            if (drawn_++ < 20 || drawn_ % 50 == 0)
+                LOGI("renderer: frame %llu drawn in %lld ms, %llu draws so far", frames_, (long long)took, draws_);
+        } else {
+            auto due = last_present_ + std::chrono::microseconds(16667);
+            if (now < due) std::this_thread::sleep_until(due);
+        }
+        last_present_ = Clock::now();
+        harness::g_frames = ++frames_;
+        if (frames_ % 600 == 0) LOGI("renderer: frame %llu, %llu draws", frames_, draws_);
+        drawing_ = last_present_ >= next_draw_;
+        if (drawing_) {
+            draw_start_ = last_present_;
+            draws_at_draw_ = draws_;
+            reference::BeginFrame();
+        }
+    }
+    unsigned long long drawn_ = 0, shown_ = 0, draws_at_draw_ = 0;
+    Clock::time_point next_draw_ = Clock::now(), draw_start_, last_present_ = Clock::now();
+
     static std::string File(const char* fmt, unsigned long long n) {
         char name[64];
         std::snprintf(name, sizeof name, fmt, n);

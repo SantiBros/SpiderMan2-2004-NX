@@ -1,6 +1,8 @@
 // headless host: <exe> <game folder> [--instance N], run from the folder that gets logs, hdd and cap
 // the game folder may come from GAME_DIR instead
+// PULSE=1: every 2 s a line naming the kernel or library function each guest thread is in, as the Switch build logs
 #include <chrono>
+#include <map>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -35,8 +37,35 @@ int main(int argc, char** argv) {
     std::ifstream f(game + "/" + IMAGE_XBE, std::ios::binary);
     std::vector<uint8_t> xbe((std::istreambuf_iterator<char>(f)), {});
     if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / hdd).string())) return 1;
-    for (;;) {
+    const bool pulse = std::getenv("PULSE") != nullptr;
+    struct Seen {
+        const char* call = nullptr;
+        uint32_t calls = 0;
+        int still = 0;
+    };
+    std::map<uint32_t, Seen> seen;
+    auto start = std::chrono::steady_clock::now();
+    for (int tick = 1;; tick++) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         logx::Flush();
+        if (!pulse || tick % 2) continue;
+        std::string line;
+        char buf[160];
+        for (auto& t : kernel::Threads()) {
+            X86Context* c = t ? t->ctx : nullptr;
+            if (!c) continue;
+            const char* call = t->call.load(std::memory_order_relaxed);
+            uint32_t calls = t->calls.load(std::memory_order_relaxed);
+            Seen& s = seen[t->id];
+            s.still = call == s.call && calls == s.calls ? s.still + 1 : 0;
+            s.call = call;
+            uint32_t made = calls - s.calls;
+            s.calls = calls;
+            std::snprintf(buf, sizeof(buf), " | %u %s %u calls icall %08X esp %08X%s", t->id, call ? call : "game-code",
+                          made, c->last_icall, c->esp, s.still >= 2 ? " STILL" : "");
+            line += buf;
+        }
+        double up = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        LOGI("pulse: %.0f s%s", up, line.c_str());
     }
 }

@@ -1,10 +1,16 @@
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <map>
+
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #include "kernel/disc.h"
 #include "kernel/kernel.h"
@@ -25,6 +31,47 @@ std::string Upper(std::string s) {
     for (char& c : s) c = char(std::toupper(uint8_t(c)));
     return s;
 }
+
+// Host files open, by path: the Switch's file system refuses to open a file for writing while it is open, and to
+// open it at all while it is open for writing, where Windows and Linux allow both. A conflict is logged once per path.
+std::mutex g_open_lock;
+std::map<std::string, std::pair<int, int>> g_open;  // path -> readers, writers
+
+void NoteOpen(const std::string& path, bool writer) {
+    std::lock_guard<std::mutex> lock(g_open_lock);
+    auto& [readers, writers] = g_open[path];
+    if (writers || (writer && readers)) {
+        static std::map<std::string, bool> told;
+        if (!told[path]) {
+            told[path] = true;
+            LOGW("files: %s opened %s while open %s (%d readers, %d writers): the Switch refuses that", path.c_str(),
+                 writer ? "for writing" : "for reading", writers ? "for writing" : "for reading", readers, writers);
+        }
+    }
+    (writer ? writers : readers)++;
+}
+
+void NoteClose(const std::string& path, bool writer) {
+    std::lock_guard<std::mutex> lock(g_open_lock);
+    auto it = g_open.find(path);
+    if (it == g_open.end()) return;
+    (writer ? it->second.second : it->second.first)--;
+    if (!it->second.first && !it->second.second) g_open.erase(it);
+}
+
+// the disc's folder: read only, as the disc is
+bool OnCdRom(const std::string& host) {
+    std::lock_guard<std::mutex> lock(g_links_lock);
+    auto it = g_devices.find(kCdRom);
+    if (it == g_devices.end()) return false;
+    std::string root = it->second.string();
+    return host.size() > root.size() && host.compare(0, root.size(), root) == 0 &&
+           (host[root.size()] == '/' || host[root.size()] == '\\');
+}
+
+// a desired access that includes writing: FILE_WRITE_DATA, FILE_APPEND_DATA, FILE_WRITE_EA, FILE_WRITE_ATTRIBUTES,
+// DELETE, WRITE_DAC, WRITE_OWNER, MAXIMUM_ALLOWED, GENERIC_ALL, GENERIC_WRITE
+bool WantsWrite(uint32_t access) { return access & 0x520D0116u; }
 
 std::string Normalize(std::string p) {
     std::replace(p.begin(), p.end(), '/', '\\');
@@ -78,10 +125,22 @@ struct File : Object {
     size_t next = 0;
     bool listed = false;
     bool delete_on_close = false;
+    bool writer = false;  // fp was opened for writing
     std::mutex io;  // threads sharing a handle: seek and transfer stay together
     File() : Object(ObjType::File) {}
+    // a host file opened with fopen's mode; noted for the conflicts above
+    bool Open(const std::string& path, const char* mode) {
+        fp = std::fopen(path.c_str(), mode);
+        if (!fp) return false;
+        writer = mode[0] != 'r' || std::strchr(mode, '+');
+        NoteOpen(path, writer);
+        return true;
+    }
     ~File() override {
-        if (fp) std::fclose(fp);
+        if (fp) {
+            std::fclose(fp);
+            NoteClose(host.string(), writer);
+        }
         if (delete_on_close) {
             std::error_code ec;
             fs::remove(host, ec);
@@ -323,7 +382,6 @@ bool ReadGameFile(const std::string& xbox_path, std::vector<uint8_t>& out) {
 
 KERNEL_EXPORT(190, NtCreateFile, 9) {
     uint32_t handle_out = a[0], access = a[1], attrs = a[2], iosb = a[3], disposition = a[7], options = a[8];
-    (void)access;
     uint32_t root;
     std::string name = ObjectName(attrs, &root);
     Target t = Resolve(name, root);
@@ -406,17 +464,17 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
         IoStatus(iosb, kObjectPathNotFound, 0);
         return kObjectPathNotFound;
     }
-    FILE* fp = std::fopen(host.c_str(), mode);
-    if (!fp && std::string(mode) == "r+b") fp = std::fopen(host.c_str(), "rb");  // read only media
-    if (!fp) {
-        LOGW("NtCreateFile: cannot open %s", host.c_str());
+    // an existing file opens for reading unless the title asks to write, and the disc's always: the Switch refuses a
+    // second open of a file open for writing, and the game opens its packs more than once
+    if (exists && !std::strcmp(mode, "r+b") && (!WantsWrite(access) || OnCdRom(host))) mode = "rb";
+    auto f = std::make_shared<File>();
+    f->host = host;
+    if (!f->Open(host, mode) && !(!std::strcmp(mode, "r+b") && f->Open(host, "rb"))) {  // read only media
+        LOGW("NtCreateFile: cannot open %s (%s, errno %d)", host.c_str(), mode, errno);
         IoStatus(iosb, kAccessDenied, 0);
         return kAccessDenied;
     }
-    auto f = std::make_shared<File>();
-    f->host = host;
     f->xbox = Normalize(name);
-    f->fp = fp;
     f->delete_on_close = options & 0x1000;  // FILE_DELETE_ON_CLOSE
     W32(handle_out, NewHandle(f));
     IoStatus(iosb, kSuccess, info);
@@ -426,7 +484,7 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
 
 KERNEL_EXPORT(202, NtOpenFile, 6) {
     // same as create with FILE_OPEN
-    uint32_t handle_out = a[0], attrs = a[2], iosb = a[3], options = a[5];
+    uint32_t handle_out = a[0], access = a[1], attrs = a[2], iosb = a[3], options = a[5];
     uint32_t root;
     std::string name = ObjectName(attrs, &root);
     Target t = Resolve(name, root);
@@ -443,9 +501,11 @@ KERNEL_EXPORT(202, NtOpenFile, 6) {
     f->xbox = Normalize(name);
     f->dir = fs::is_directory(host, ec);
     if (!f->dir) {
-        f->fp = std::fopen(host.c_str(), "r+b");
-        if (!f->fp) f->fp = std::fopen(host.c_str(), "rb");
-        if (!f->fp) return kAccessDenied;
+        bool write = WantsWrite(access) && !OnCdRom(host);
+        if (!(write && f->Open(host, "r+b")) && !f->Open(host, "rb")) {
+            LOGW("NtOpenFile: cannot open %s (errno %d)", host.c_str(), errno);
+            return kAccessDenied;
+        }
     }
     (void)options;
     W32(handle_out, NewHandle(f));
@@ -560,7 +620,15 @@ KERNEL_EXPORT(226, NtSetInformationFile, 5) {
                 std::lock_guard<std::mutex> lock(f->io);
                 std::fflush(f->fp);
                 uint64_t size = fs::file_size(f->host, ec);
-                if (cls == 20 || R64(in) < size) fs::resize_file(f->host, R64(in), ec);
+                if (cls == 20 || R64(in) < size) {
+#ifdef _WIN32
+                    fs::resize_file(f->host, R64(in), ec);
+#else
+                    // through the open file: by path it would open the file a second time, which the Switch refuses
+                    if (ftruncate(fileno(f->fp), off_t(R64(in))) != 0)
+                        LOGW("NtSetInformationFile: %s not resized (errno %d)", f->host.string().c_str(), errno);
+#endif
+                }
             }
             break;
         case 13:  // disposition
@@ -571,10 +639,18 @@ KERNEL_EXPORT(226, NtSetInformationFile, 5) {
             std::string target = ReadAnsiString(in + 8);
             std::string host = ResolvePath(target, root);
             if (host.empty()) return kObjectPathNotFound;
-            if (f->fp) std::fflush(f->fp);
+            // closed around the rename: the Switch's file system does not rename an open file
+            bool was_open = f->fp != nullptr, writer = f->writer;
+            if (was_open) {
+                std::fclose(f->fp);
+                f->fp = nullptr;
+                NoteClose(f->host.string(), writer);
+            }
             fs::rename(f->host, host, ec);
+            if (!ec) f->host = host;
+            if (was_open && !f->Open(f->host.string(), writer ? "r+b" : "rb"))
+                LOGW("NtSetInformationFile: %s did not open again after the rename", f->host.string().c_str());
             if (ec) return kAccessDenied;
-            f->host = host;
             break;
         }
         case 4:  // basic, times and attributes are not kept
