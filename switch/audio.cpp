@@ -3,6 +3,7 @@
 #include <switch.h>
 
 #include <malloc.h>
+#include <pthread.h>
 
 #include <algorithm>
 #include <chrono>
@@ -31,7 +32,8 @@ void Fill(const std::function<void(float*, uint32_t)>& render, std::vector<float
 }  // namespace
 
 void StartOutput(std::function<void(float*, uint32_t)> render) {
-    std::thread([render] {
+    // a pthread with room: std::thread gets 128 KB on the Switch, and the mixer decodes on its stack
+    auto* fn = new std::function<void()>([render] {
         std::vector<float> mix(kFrames * 2);
         Result rc = audoutInitialize();
         if (R_SUCCEEDED(rc)) rc = audoutStartAudioOut();
@@ -63,7 +65,19 @@ void StartOutput(std::function<void(float*, uint32_t)> render) {
             Fill(render, mix, static_cast<int16_t*>(done->buffer));
             audoutAppendAudioOutBuffer(done);
         }
-    }).detach();
+    });
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 1u << 20);
+    pthread_t th;
+    if (pthread_create(&th, &attr, [](void* p) -> void* {
+            (*static_cast<std::function<void()>*>(p))();
+            return nullptr;
+        }, fn) == 0)
+        pthread_detach(th);
+    else
+        LOGE("audio: the sound thread could not start");
+    pthread_attr_destroy(&attr);
 }
 
 }  // namespace audio

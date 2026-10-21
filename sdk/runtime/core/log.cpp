@@ -17,6 +17,7 @@ namespace logx {
 static std::mutex g_mutex;
 static FILE* g_file = nullptr;
 static std::string g_path;
+static std::string g_last;  // the newest message, for a progress line
 static auto g_start = std::chrono::steady_clock::now();
 
 constexpr int kKeep = 30;
@@ -66,11 +67,23 @@ void Write(Level lv, const char* fmt, ...) {
     int n = kVerbose ? std::snprintf(line, sizeof(line), "[%9.3f] [%s] [t%04zx] %s\n", t, names[int(lv)], size_t(tid), msg)
                      : std::snprintf(line, sizeof(line), "[%9.3f] %s%s\n", t, lv == Level::Error ? "error: " : "", msg);
     n = std::min(n, int(sizeof(line)) - 1);
+    g_last.assign(msg);
     if (g_file) {
         std::fwrite(line, 1, size_t(n), g_file);
+#ifdef __SWITCH__
+        std::fflush(g_file);  // a crash leaves every line on the card
+#else
         if (lv >= Level::Warn) std::fflush(g_file);
+#endif
     }
-    std::fwrite(line, 1, size_t(n), stderr);
+#ifndef __SWITCH__
+    std::fwrite(line, 1, size_t(n), stderr);  // on the Switch stderr is the text console, not thread safe
+#endif
+}
+
+std::string Last() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    return g_last;
 }
 
 void Flush() {

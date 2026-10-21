@@ -12,6 +12,8 @@ enum class Level { Debug, Info, Warn, Error, Report };
 // release: dir/prefix.log, carried on when append; debug: dir/prefix_NNN.log per run, newest 30 kept
 void Init(const std::string& dir, const std::string& prefix, bool append = false);
 void Write(Level lv, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+// the newest message written
+std::string Last();
 void Flush();
 const std::string& Path();
 

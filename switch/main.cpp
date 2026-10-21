@@ -26,6 +26,7 @@
 namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
+constexpr const char* kVersion = "0.0.2";
 
 namespace {
 
@@ -74,7 +75,13 @@ int main(int argc, char** argv) {
 
     setenv("GAME_DIR", game.c_str(), 1);
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
-    LOGI("switch: folder %s, applet type %d", dir.c_str(), int(at));
+    u64 total = 0, used = 0;
+    svcGetInfo(&total, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
+    svcGetInfo(&used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
+    u32 hos = hosversionGet();
+    LOGI("switch: %s, folder %s, applet type %d, firmware %u.%u.%u, memory %llu MB of %llu MB used", kVersion,
+         dir.c_str(), int(at), HOSVER_MAJOR(hos), HOSVER_MINOR(hos), HOSVER_MICRO(hos),
+         (unsigned long long)(used >> 20), (unsigned long long)(total >> 20));
 
     std::ifstream f(game + "/" + IMAGE_XBE, std::ios::binary);
     std::vector<uint8_t> xbe((std::istreambuf_iterator<char>(f)), {});
@@ -85,10 +92,18 @@ int main(int argc, char** argv) {
         Fail("The game did not start", "See the newest file in " + dir + "/logs");
     }
 
-    // the guest runs on its own threads; this one keeps the applet alive and the log on the card
+    // the guest runs on its own threads; this one keeps the applet alive and the log on the card, and until the
+    // game's first picture shows the newest log line, so a photo says how far it got
+    std::string shown;
     while (appletMainLoop() && !sw::QuitRequested()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         logx::Flush();
+        std::string last = logx::Last();
+        if (last != shown && !sw::ShowingGame()) {
+            sw::Message("Spider-Man 2 (Xbox) - test build", "Starting...\n\n" + last.substr(0, 76),
+                        "Logs are written to " + dir + "/logs");
+            shown = last;
+        }
     }
     LOGI("switch: quitting");
     logx::Flush();

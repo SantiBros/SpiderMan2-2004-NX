@@ -1241,7 +1241,7 @@ static uint32_t VideoFlags() { return (app::Widescreen() ? 0x00010000 : 0) | 0x0
 
 // XC_LANGUAGE: 1 English, 2 Japanese, 3 German, 4 French, 5 Spanish, 6 Italian, 7 Korean, 8 Chinese, 9 Portuguese.
 // The platform may set it (the Switch's system language); XBE_LANGUAGE overrides it.
-uint32_t kernel::g_language = 1;
+uint32_t g_language = 1;
 static uint32_t Language() {
     if (const char* e = std::getenv("XBE_LANGUAGE")) {
         int v = std::atoi(e);

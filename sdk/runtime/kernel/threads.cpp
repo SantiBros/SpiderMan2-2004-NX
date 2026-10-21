@@ -117,11 +117,17 @@ void Spawn(std::function<void()> fn) {
     pthread_attr_setstacksize(&attr, 64u << 20);
 #endif
     pthread_t th;
-    pthread_create(&th, &attr, [](void* p) -> void* {
+    int rc = pthread_create(&th, &attr, [](void* p) -> void* {
         std::unique_ptr<std::function<void()>> g(static_cast<std::function<void()>*>(p));
         (*g)();
         return nullptr;
     }, f);
+    if (rc) {
+        LOGE("threads: a host thread could not start (%d)", rc);
+        delete f;
+        pthread_attr_destroy(&attr);
+        return;
+    }
     pthread_detach(th);
     pthread_attr_destroy(&attr);
 #endif

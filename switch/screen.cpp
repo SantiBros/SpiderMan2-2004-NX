@@ -76,6 +76,11 @@ void Frame(const uint32_t* rgba, uint32_t w, uint32_t h) {
     framebufferEnd(&g_fb);
 }
 
+bool ShowingGame() {
+    std::lock_guard<std::mutex> lock(g_lock);
+    return g_fb_ready;
+}
+
 void Close() {
     std::lock_guard<std::mutex> lock(g_lock);
     if (g_fb_ready) framebufferClose(&g_fb);
