@@ -27,6 +27,13 @@ using namespace gpu;
 
 namespace {
 
+// float to int as x86's cvttss2si: truncated, and INT_MIN for NaN or out of range, where a plain cast is undefined
+// (ARM saturates): the pictures come out the same on every host
+int ToInt(float v) {
+    if (!(v >= -2147483648.0f && v < 2147483648.0f)) return INT32_MIN;
+    return int(v);
+}
+
 struct Vec {
     float c[4] = {};
     float& operator[](int i) { return c[i]; }
@@ -280,8 +287,8 @@ struct Unit {
     Vec Sample(int face, float u, float v) const {
         if (!img) return V(0, 0, 0, 1);
         float sx = u * img->w - 0.5f, sy = v * img->h - 0.5f;
-        if (mag < 2 && min < 2) return Texel(face, int(std::floor(u * img->w)), int(std::floor(v * img->h)));
-        int x = int(std::floor(sx)), y = int(std::floor(sy));
+        if (mag < 2 && min < 2) return Texel(face, ToInt(std::floor(u * img->w)), ToInt(std::floor(v * img->h)));
+        int x = ToInt(std::floor(sx)), y = ToInt(std::floor(sy));
         float fx = sx - x, fy = sy - y;
         Vec t00 = Texel(face, x, y), t10 = Texel(face, x + 1, y), t01 = Texel(face, x, y + 1), t11 = Texel(face, x + 1, y + 1);
         Vec r;
@@ -448,7 +455,7 @@ struct VertexProgram {
                     if (dst <= 12) Masked(Reg(dst), ir, k.f(3, 16, 4));
                 }
                 if (mac == 13) {
-                    a0 = int(std::floor(mr[0] + 0.001f));
+                    a0 = ToInt(std::floor(mr[0] + 0.001f));
                 } else if (mac) {
                     uint32_t m = ilu && r == 1 ? 0 : k.f(3, 24, 4);
                     if (r <= 12) Masked(Reg(r), mr, m);
@@ -713,7 +720,7 @@ struct Combiners {
         Input(inputs & 0xFF, alpha, D);
         uint32_t fl = output >> 12, map = fl & 0x38;
         float ab_dot = A[0] * B[0] + A[1] * B[1] + A[2] * B[2], cd_dot = C[0] * D[0] + C[1] * D[1] + C[2] * D[2];
-        bool pick_cd = (m.key.count >> 8 & 1) ? r0[3] >= 0.5f : (uint32_t(r0[3] * 255) & 1) == 1;
+        bool pick_cd = (m.key.count >> 8 & 1) ? r0[3] >= 0.5f : (ToInt(r0[3] * 255) & 1) == 1;
         float ab[3], cd[3], ms[3];
         for (int i = 0; i < (alpha ? 1 : 3); i++) {
             float x = (fl & 2) && !alpha ? ab_dot : A[i] * B[i];
@@ -979,6 +986,25 @@ struct Clip {
     Vec attr[kAttrs];
 };
 
+// Sutherland-Hodgman against one plane, d(v) >= 0 kept: n corners in, the result's count back (at most n + 1)
+template <typename D>
+int ClipPlane(const Clip* in, int n, Clip* out, D d) {
+    int m = 0;
+    for (int i = 0; i < n; i++) {
+        const Clip &p = in[i], &q = in[(i + 1) % n];
+        float dp = d(p), dq = d(q);
+        bool p_in = dp >= 0, q_in = dq >= 0;
+        if (p_in) out[m++] = p;
+        if (p_in == q_in) continue;
+        float t = dp / (dp - dq);
+        Clip& c = out[m++];
+        for (int j = 0; j < 4; j++) c.h[j] = p.h[j] + (q.h[j] - p.h[j]) * t;
+        for (int a = 0; a < kAttrs; a++)
+            for (int j = 0; j < 4; j++) c.attr[a][j] = p.attr[a][j] + (q.attr[a][j] - p.attr[a][j]) * t;
+    }
+    return m;
+}
+
 // screen vertex with attributes over w
 struct Screen {
     float x, y, z, iw;
@@ -1186,6 +1212,7 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
     bool watched = probes.Watched(rt);
 
     const float near_w = 1e-6f;
+    static const bool near_clip = !std::getenv("REF_NO_NEAR_CLIP");  // for comparing with the old clipping
     for (size_t ti = 0; ti + 2 < as.indices.size(); ti += 3) {
         Clip tri[3];
         for (int i = 0; i < 3; i++) {
@@ -1197,22 +1224,14 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
         // flat shading takes the first vertex's colours
         const Vec* provoking = tri[0].attr;
         Vec flat_colour[4] = {provoking[kD0], provoking[kD1], provoking[kB0], provoking[kB1]};
-        // clipped against w > near_w: a triangle leaves at most four corners
-        Clip poly[4];
-        int corners = 0;
-        for (int i = 0; i < 3; i++) {
-            const Clip &p = tri[i], &q = tri[(i + 1) % 3];
-            bool p_in = p.h[3] > near_w, q_in = q.h[3] > near_w;
-            if (p_in) poly[corners++] = p;
-            if (p_in == q_in) continue;
-            float t = (near_w - p.h[3]) / (q.h[3] - p.h[3]);
-            Clip& m = poly[corners++];
-            for (int j = 0; j < 4; j++) m.h[j] = p.h[j] + (q.h[j] - p.h[j]) * t;
-            for (int a = 0; a < kAttrs; a++)
-                for (int j = 0; j < 4; j++) m.attr[a][j] = p.attr[a][j] + (q.attr[a][j] - p.attr[a][j]) * t;
-        }
+        // clipped against w > near_w, then the near plane (z >= 0, as the GPU clips): only w kept corners close to
+        // the eye with screen positions in the billions, whose triangles the float maths could not draw
+        Clip mid[4], poly[5];
+        int corners = ClipPlane(tri, 3, mid, [&](const Clip& c) { return c.h[3] - near_w; });
+        if (corners >= 3 && near_clip) corners = ClipPlane(mid, corners, poly, [](const Clip& c) { return c.h[2]; });
+        else std::copy(mid, mid + corners, poly);
         if (corners < 3) continue;
-        Screen sv[4];
+        Screen sv[5];
         for (int i = 0; i < corners; i++) {
             float iw = 1 / poly[i].h[3];
             sv[i].x = poly[i].h[0] * iw;
@@ -1230,8 +1249,13 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
             // GL_CW 0x900, GL_CCW 0x901
             if ((cull == 0x900 && clockwise) || (cull == 0x901 && !clockwise)) continue;
             bool front = s.rs[kRsFrontFace] == 0x901 ? !clockwise : clockwise;
-            int x0 = std::max(left, int(std::floor(std::min({p0.x, p1.x, p2.x})))), x1 = std::min(right - 1, int(std::ceil(std::max({p0.x, p1.x, p2.x}))));
-            int y0 = std::max(top, int(std::floor(std::min({p0.y, p1.y, p2.y})))), y1 = std::min(bottom - 1, int(std::ceil(std::max({p0.y, p1.y, p2.y}))));
+            // the box clamped as floats: an int cast of a coordinate out of range is undefined (x86 gives INT_MIN and
+            // skipped such triangles, ARM saturates and drew them)
+            float fx0 = std::floor(std::min({p0.x, p1.x, p2.x})), fx1 = std::ceil(std::max({p0.x, p1.x, p2.x}));
+            float fy0 = std::floor(std::min({p0.y, p1.y, p2.y})), fy1 = std::ceil(std::max({p0.y, p1.y, p2.y}));
+            if (!(fx1 >= float(left) && fx0 <= float(right - 1) && fy1 >= float(top) && fy0 <= float(bottom - 1))) continue;
+            int x0 = int(std::max(fx0, float(left))), x1 = int(std::min(fx1, float(right - 1)));
+            int y0 = int(std::max(fy0, float(top))), y1 = int(std::min(fy1, float(bottom - 1)));
             if (x0 > x1 || y0 > y1) continue;
             float inv_area = 1 / area;
             for (int y = y0; y <= y1; y++)

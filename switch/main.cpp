@@ -27,7 +27,7 @@
 namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
-constexpr const char* kVersion = "0.0.5";
+constexpr const char* kVersion = "0.0.6";
 
 namespace {
 

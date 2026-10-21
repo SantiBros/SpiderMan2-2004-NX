@@ -83,6 +83,10 @@ private:
     using Clock = std::chrono::steady_clock;
     void PresentLikeSwitch(const Surface& front) {
         auto now = Clock::now();
+        if (list_) {
+            std::fclose(list_);
+            list_ = nullptr;
+        }
         if (drawing_) {
             if (shown_ || draws_ > draws_at_draw_) {
                 if (!shown_) LOGI("renderer: first picture with %llu draws, the status text goes", draws_ - draws_at_draw_);
@@ -92,7 +96,8 @@ private:
             auto took = std::chrono::duration_cast<std::chrono::milliseconds>(now - draw_start_).count();
             next_draw_ = now + std::chrono::milliseconds(std::max<long long>(500, took));
             if (drawn_++ < 20 || drawn_ % 50 == 0)
-                LOGI("renderer: frame %llu drawn in %lld ms, %llu draws so far", frames_, (long long)took, draws_);
+                LOGI("renderer: frame %llu drawn in %lld ms, %llu draws in it, %llu so far", frames_, (long long)took,
+                     draws_ - draws_at_draw_, draws_);
         } else {
             auto due = last_present_ + std::chrono::microseconds(16667);
             if (now < due) std::this_thread::sleep_until(due);
@@ -105,6 +110,9 @@ private:
             draw_start_ = last_present_;
             draws_at_draw_ = draws_;
             reference::BeginFrame();
+            // CAP=1: every drawn frame's draws listed
+            static const long cap = harness::Env("CAP");
+            if (cap) list_ = std::fopen(File("cap/draws_%05llu.txt", frames_).c_str(), "w");
         }
     }
     unsigned long long drawn_ = 0, shown_ = 0, draws_at_draw_ = 0;
