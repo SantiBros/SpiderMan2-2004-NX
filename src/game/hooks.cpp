@@ -15,3 +15,8 @@ HLE_STDCALL(D3DDevice_Reset, 1) {
              R32(pp + 4), R32(pp + 8), R32(pp + 12), R32(pp + 0x28), R32(pp + 0x30));
     return 0;  // D3D_OK
 }
+
+// XGetFilePhysicalSortKey(HANDLE) -> ULONG. The XAPI body asks the kernel for the volume's file system
+// (IoQueryVolumeInformation) and reads the starting sector or cluster out of the file object, which the host
+// does not model. The key only orders reads by position on the disc, so every file gets the same one.
+HLE_STDCALL(XGetFilePhysicalSortKey, 1) { return a[0] && a[0] != 0xFFFFFFFF ? 0 : 0xFFFFFFFF; }

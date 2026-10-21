@@ -25,8 +25,13 @@ Built on [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp) by TGP482 (
 - [x] Generated code compiles for ARM64 (GCC 13 `-mcpu=cortex-a57`, all 129 files, 28 MB of objects)
 - [x] Boots headless on Linux (x86-64): kernel + XAPI init, title/save images, Direct3D device, DirectSound with its
       effects image, first push-buffer draws, then file loading from `D:\data\...`
-- [ ] Run with the disc's data files (next step)
-- [ ] Renderer gaps seen so far: `SelectVertexShader` by program address, `EndPush` primitives with no vertex format
+- [x] Runs with the disc's data files (headless, 4 minutes, no crash): loads `game.ini`, `AMALGA_XB.PAK` and every
+      sound bank, plays the Activision and Treyarch logo movies, sits on the title screen, then loops the attract
+      movies as the console does when Start is not pressed
+- [ ] **Next: vertex programs by address.** The game loads raw vertex programs into the GPU's program memory
+      (`D3DDevice_LoadVertexShaderProgram`) and picks them with `D3DDevice_SelectVertexShader`; the SDK only does
+      `CreateVertexShader` + `SetVertexShader`, so every draw is dropped (0 draws per frame so far)
+- [ ] Frame pacing in the headless harness (it presents thousands of frames a second; keep `REF` off or large)
 - [ ] Switch platform layer (libnx): guest memory window, threads, files, timers, audio, HID
 - [ ] Switch GPU backend (OpenGL/EGL or deko3d) + GLSL output from the shader translator
 - [ ] PC-side builder that turns the user's `default.xbe` into the `.nro`
@@ -60,6 +65,8 @@ out/harness/sm2 /path/to/game/folder                      # folder with default.
 
 - `runtime/kernel/xboxkrnl.cpp`: `MmQueryAddressProtect` answers from the committed pages instead of always
   `PAGE_READWRITE` (the game walks up its stack in 64 KB steps while pages are read/write).
+- `runtime/kernel/xboxkrnl.cpp`: `NtUserIoApcDispatcher` (ReadFileEx/WriteFileEx completions), with
+  `RtlNtStatusToDosError`'s table shared as `StatusToDosError`.
 - `runtime/xdk/dsound.cpp`: host `IDirectSoundBuffer_SetMode`, `IDirectSoundBuffer_Pause`,
   `CDirectSoundStream_SetMode`, `CDirectSoundStream_SetAllParameters`, `CDirectSoundStream_SetRolloffCurve`
   (guarded, so configs without them still build).
@@ -67,8 +74,8 @@ out/harness/sm2 /path/to/game/folder                      # folder with default.
 ## Config additions by hand
 
 `D3D_Streams`, `D3DDevice_BeginPush`, `D3DDevice_EndPush`, `D3DDevice_SetPalette`, `D3DDevice_Reset` and the
-DirectSound methods above, located with [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase) and by
-reading the XDK code that uses them. `D3DDevice_Reset` is replaced in `src/game/hooks.cpp`.
+DirectSound methods above and `XGetFilePhysicalSortKey`, located with [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase) and by
+reading the XDK code that uses them. `D3DDevice_Reset` and `XGetFilePhysicalSortKey` are replaced in `src/game/hooks.cpp`.
 
 ## Credits
 

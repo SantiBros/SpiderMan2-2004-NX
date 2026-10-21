@@ -105,6 +105,7 @@ IDirectSoundBuffer_Pause                             = 0x438833  # XbSymbolDatab
 CDirectSoundStream_SetMode                           = 0x439146  # XbSymbolDatabase
 CDirectSoundStream_SetAllParameters                  = 0x4390F0  # XbSymbolDatabase
 CDirectSoundStream_SetRolloffCurve                   = 0x43919C  # XbSymbolDatabase
+XGetFilePhysicalSortKey                              = 0x390046  # XAPI, found by reading its code (ObReferenceObjectByHandle + IoQueryVolumeInformation)
 D3DDevice_SetPixelShader                             = 0x3C2EA0
 D3DDevice_SetPixelShaderConstant                     = 0x3C30A0
 D3DDevice_SetRenderState_BackFillMode                = 0x3BF570
