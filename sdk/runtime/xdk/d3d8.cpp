@@ -1218,6 +1218,18 @@ void Walk(uint32_t end) {
             bool last = true;  // the slot's last component
             std::memcpy(&f, &v, 4);
             ApplyVisibilityMethod(m, v);
+#ifdef XBE_WALK_STATS
+            {  // the methods titles push themselves, logged now and then
+                static std::map<uint32_t, uint64_t> seen;
+                static uint64_t total = 0;
+                seen[m]++;
+                if (++total % 20000 == 0 || total == 2000) {
+                    std::string list;
+                    for (auto& [k, c] : seen) list += " " + std::to_string(k) + "x" + std::to_string(c);
+                    LOGI("d3d: walked methods (decimal method x count):%s", list.c_str());
+                }
+            }
+#endif
             if (m == 0x17FC) {  // begin/end, 0 ends
                 if (v) {
                     g_im_prim = v;
@@ -1341,6 +1353,29 @@ uint32_t g_pb_vb[16] = {};       // stand in D3DVertexBuffer headers, Data = the
 uint32_t g_pb_tex[4] = {};       // stand in texture headers per stage
 std::map<uint32_t, uint32_t> g_pb_methods;  // method -> count, for the log of what is not handled
 
+// the vertex arrays the library programmed for the current layout and streams: per register the element's physical
+// address and its format (D3DVSDT type in the low byte, the stride from bit 8), as VERTEX_DATA_ARRAY sets them
+PushArrays CurrentArrays() {
+    PushArrays arr;
+    gpu::VertexShader fvf;
+    const gpu::VertexShader* layout = g_state.vs.get();
+    if (!(g_state.vs_handle & 1)) {
+        gpu::FvfInputs(g_state.vs_handle, fvf);
+        layout = &fvf;
+    }
+    if (!layout) return arr;
+    for (uint32_t r = 0; r < 16; r++) {
+        const auto& in = layout->inputs[r];
+        if (in.stream < 0 || in.stream >= 16 || !(in.type & 0xF0)) continue;
+        const auto& st = g_state.streams[size_t(in.stream)];
+        if (!st.vb) continue;
+        uint32_t stride = st.stride ? st.stride : layout->stream_stride[size_t(in.stream)];
+        arr.offset[r] = (R32(st.vb + 4) & 0x7FFFFFFF) + in.offset;
+        arr.format[r] = (in.type & 0xFF) | stride << 8;
+    }
+    return arr;
+}
+
 void PushDraw(uint32_t prim, const PushArrays& arr, bool program, const std::vector<uint32_t>& idx,
               const std::vector<uint32_t>& inl) {
     if (!g_backend || !prim) return;
@@ -1422,7 +1457,9 @@ HLE_STDCALL(D3DDevice_RunPushBuffer, 2) {
             p += 8 + n;
         }
     }
-    PushArrays arr;
+    // the arrays start as the hardware has them: a push buffer may only draw, over the layout and buffers the
+    // title set through the library before running it
+    PushArrays arr = CurrentArrays();
     std::vector<uint32_t> idx, inl;
     uint32_t prim = 0, program_mode = g_state.vs && !g_state.vs->program.empty() ? 2 : 0, slot = 0, constant = 0;
     bool tex_dirty[4] = {};
