@@ -28,9 +28,11 @@ Built on [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp) by TGP482 (
 - [x] Runs with the disc's data files (headless, 4 minutes, no crash): loads `game.ini`, `AMALGA_XB.PAK` and every
       sound bank, plays the Activision and Treyarch logo movies, sits on the title screen, then loops the attract
       movies as the console does when Start is not pressed
-- [ ] **Next: vertex programs by address.** The game loads raw vertex programs into the GPU's program memory
-      (`D3DDevice_LoadVertexShaderProgram`) and picks them with `D3DDevice_SelectVertexShader`; the SDK only does
-      `CreateVertexShader` + `SetVertexShader`, so every draw is dropped (0 draws per frame so far)
+- [x] Vertex programs by address: `LoadVertexShaderProgram`, `LoadVertexShader`, `SelectVertexShader` and
+      `SetVertexShaderInput` on the host (the SDK only had `CreateVertexShader` + `SetVertexShader`)
+- [x] **The legal screen and the title screen ("PRESS START TO BEGIN") draw correctly** in the reference renderer
+- [ ] Logo movies (XMV) are opened and played but nothing of them is drawn yet
+- [ ] Press Start: menus, loading the city, gameplay
 - [ ] Frame pacing in the headless harness (it presents thousands of frames a second; keep `REF` off or large)
 - [ ] Switch platform layer (libnx): guest memory window, threads, files, timers, audio, HID
 - [ ] Switch GPU backend (OpenGL/EGL or deko3d) + GLSL output from the shader translator
@@ -67,6 +69,9 @@ out/harness/sm2 /path/to/game/folder                      # folder with default.
   `PAGE_READWRITE` (the game walks up its stack in 64 KB steps while pages are read/write).
 - `runtime/kernel/xboxkrnl.cpp`: `NtUserIoApcDispatcher` (ReadFileEx/WriteFileEx completions), with
   `RtlNtStatusToDosError`'s table shared as `StatusToDosError`.
+- `runtime/xdk/d3d8.cpp`: vertex programs by address (program slots, `LoadVertexShaderProgram`, `LoadVertexShader`,
+  `SelectVertexShader`, `SetVertexShaderInput`); `xdk/5849/layout.toml` gains `CDevice_VertexShaderHandle` and
+  `CDevice_VertexShaderStart`.
 - `runtime/xdk/dsound.cpp`: host `IDirectSoundBuffer_SetMode`, `IDirectSoundBuffer_Pause`,
   `CDirectSoundStream_SetMode`, `CDirectSoundStream_SetAllParameters`, `CDirectSoundStream_SetRolloffCurve`
   (guarded, so configs without them still build).

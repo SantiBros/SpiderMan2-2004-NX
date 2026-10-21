@@ -11,6 +11,7 @@
 #include "app/app.h"
 #include "core/diag.h"
 #include "gpu/backend.h"
+#include "gpu/shaders.h"
 #include "gpu/texture.h"
 #include "gpu/vertex.h"
 #include "xdk/d3d8.h"
@@ -38,6 +39,14 @@ using namespace kernel;
 #ifndef SYM_D3DDevice_GetVertexShaderFunction
 #define SYM_D3DDevice_GetVertexShaderFunction FFFFFE03
 #define HAS_D3DDevice_GetVertexShaderFunction 0
+#endif
+#ifndef SYM_D3DDevice_LoadVertexShaderProgram
+#define SYM_D3DDevice_LoadVertexShaderProgram FFFFFE04
+#define HAS_D3DDevice_LoadVertexShaderProgram 0
+#endif
+#ifndef SYM_D3DDevice_SetVertexShaderInput
+#define SYM_D3DDevice_SetVertexShaderInput FFFFFE05
+#define HAS_D3DDevice_SetVertexShaderInput 0
 #endif
 
 namespace d3d {
@@ -842,12 +851,153 @@ HLE_FASTCALL(D3DDevice_SetVertexShaderConstantNotInlineFast, 1) {
     return 0;
 }
 
-HLE_STDCALL(D3DDevice_LoadVertexShader, 2) {
-    LOG_FIRST(4, "d3d: LoadVertexShader %08X at %u is not supported", a[0], a[1]);
+// Vertex programs by address. A title may load microcode into the GPU's 136 program slots itself
+// (LoadVertexShaderProgram, LoadVertexShader) and pick where a draw's program starts (SelectVertexShader); the
+// attribute layout then comes from a guest shader object, or from SetVertexShaderInput's override with its own
+// vertex buffers. The host keeps the slots and builds a VertexShader from them for the draws.
+namespace {
+constexpr uint32_t kProgramSlots = 136;
+// guest vertex shader object (XDK 5849): flags +4, program dwords +0xC, VERTEXATTRIBUTEFORMAT +0x14
+// (16 slots of stream, offset, D3DVSDT format, tessellation), its program as push buffer commands +0x114
+constexpr uint32_t kVsoFlags = 0x4, kVsoProgramDwords = 0xC, kVsoAttributes = 0x14, kVsoProgram = 0x114;
+std::array<uint32_t, kProgramSlots * 4> g_slots{};
+uint32_t g_slot_start = 0;
+uint32_t g_slot_object = 0;  // SelectVertexShader's object, 0 none
+uint32_t g_input_object = 0;  // SetVertexShaderInput's override object, 0 none
+struct StreamInput {
+    uint32_t vb = 0, stride = 0, offset = 0;
+};
+std::array<StreamInput, 16> g_stream_inputs{};
+uint32_t g_stream_input_count = 0;
+std::unordered_map<uint64_t, std::shared_ptr<gpu::VertexShader>> g_slot_vs;
+
+// push buffer commands of a program and its constants: 0x0B00 instructions at the load slot (set by 0x1E9C),
+// 0x0B80 constants at the constant slot (set by 0x1EA4)
+void RunProgramCommands(uint32_t p, uint32_t end, uint32_t slot) {
+    uint32_t constant = 0;
+    while (p + 4 <= end) {
+        uint32_t head = R32(p), method = head & 0x1FFC, n = (head >> 18) & 0x7FF;
+        p += 4;
+        if ((head & 0xA0030003) || n * 4 > end - p) {
+            LOG_FIRST(8, "d3d: vertex program commands stop at %08X", head);
+            return;
+        }
+        for (uint32_t i = 0; i < n; i++, p += 4) {
+            uint32_t m = head & 0x40000000 ? method : method + i * 4, v = R32(p);
+            if (m >= 0x0B00 && m < 0x0B80) {
+                if (slot < kProgramSlots * 4) g_slots[slot] = v;
+                slot++;
+            } else if (m == 0x1E9C) {
+                slot = v * 4;
+            } else if (m >= 0x0B80 && m < 0x0C00) {
+                uint32_t r = constant / 4;
+                if (r < 192) std::memcpy(&g_state.vsc[r][constant % 4], &v, 4);
+                constant++;
+            } else if (m == 0x1EA4) {
+                constant = v * 4;  // hardware register, D3D register + 96
+            }
+        }
+    }
+}
+
+// the VertexShader the next draws use: the slots from the start to the instruction with the final bit, the
+// override's layout or the selected object's
+void SelectFromSlots() {
+    uint32_t object = g_input_object ? g_input_object : g_slot_object;
+    if (!object) return;
+    auto vs = std::make_shared<gpu::VertexShader>();
+    vs->program_type = 0x2078;
+    for (uint32_t i = g_slot_start; i < kProgramSlots; i++) {
+        vs->program.insert(vs->program.end(), &g_slots[i * 4], &g_slots[i * 4] + 4);
+        if (g_slots[i * 4 + 3] & 1) break;  // FINAL
+    }
+    uint32_t vaf = object + kVsoAttributes;
+    for (uint32_t r = 0; r < 16; r++) {
+        uint32_t stream = R32(vaf + r * 16), offset = R32(vaf + r * 16 + 4), format = R32(vaf + r * 16 + 8);
+        if ((format & 0xF0) == 0 || stream >= 16) continue;  // D3DVSDT_NONE: no element
+        if (g_input_object && stream < g_stream_input_count) offset += g_stream_inputs[stream].offset;
+        vs->inputs[r] = {int(stream), offset, format & 0xFF};
+    }
+    // bytes per vertex: the override's strides, else the end of each stream's last element (inline vertices)
+    for (uint32_t r = 0; r < 16; r++) {
+        const auto& in = vs->inputs[r];
+        if (in.stream < 0) continue;
+        uint32_t t = in.type, n = (t >> 4) & 15, bytes;
+        switch (t == 0x72 ? 7 : t & 15) {  // D3DVSDT kind; 0x72 FLOAT2H is three floats
+            case 7: bytes = 12; break;
+            case 0: case 6: bytes = 4; break;  // D3DCOLOR, NORMPACKED3
+            case 1: case 5: bytes = 2 * n; break;  // NORMSHORT, SHORT
+            case 4: bytes = n; break;  // PBYTE
+            default: bytes = 4 * n; break;  // FLOAT
+        }
+        auto& st = vs->stream_stride[size_t(in.stream)];
+        st = std::max(st, in.offset + bytes);
+    }
+    for (uint32_t i = 0; g_input_object && i < g_stream_input_count; i++) vs->stream_stride[i] = g_stream_inputs[i].stride;
+    uint64_t h = gpu::Hash(vs->program.data(), vs->program.size() * 4);
+    h = gpu::Hash(vs->inputs.data(), sizeof(vs->inputs), h);
+    h = gpu::Hash(vs->stream_stride.data(), sizeof(vs->stream_stride), h);
+    auto& cached = g_slot_vs[h];
+    if (!cached) {
+        vs->hash = h;
+        vs->handle = object | 1;
+        cached = vs;
+        LOG_FIRST(32, "d3d: vertex program at slot %u, %zu instructions, object %08X%s", g_slot_start,
+                  vs->program.size() / 4, object, g_input_object ? " (input override)" : "");
+    }
+    g_state.vs = cached;
+    g_state.vs_handle = object | 1;
+}
+}  // namespace
+
+// (function, slot): the header's high word counts the instructions that follow it
+HLE_STDCALL(D3DDevice_LoadVertexShaderProgram, 2) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    uint32_t func = a[0], slot = a[1], n = R32(func) >> 16;
+    for (uint32_t i = 0; i < n * 4 && slot * 4 + i < kProgramSlots * 4; i++) g_slots[slot * 4 + i] = R32(func + 4 + i * 4);
+    if (g_slot_object || g_input_object) SelectFromSlots();
     return 0;
 }
+
+// (handle, slot): the object's program, as the push buffer commands it keeps
+HLE_STDCALL(D3DDevice_LoadVertexShader, 2) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    uint32_t object = a[0] & ~1u, p = object + kVsoProgram;
+    if (!object) return 0;
+    RunProgramCommands(p, p + R32(object + kVsoProgramDwords) * 4, a[1] * 4);
+    if (g_slot_object || g_input_object) SelectFromSlots();
+    return 0;
+}
+
+// (handle, slot): 0 keeps the layout and moves the start
 HLE_STDCALL(D3DDevice_SelectVertexShader, 2) {
-    LOG_FIRST(4, "d3d: SelectVertexShader %08X at %u is not supported", a[0], a[1]);
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    uint32_t h = a[0];
+    if (h) {
+        g_slot_object = h & ~1u;
+        if (XDK_CDevice_VertexShader != xdk::kUnknown) SetDev(XDK_CDevice_VertexShader, g_slot_object);
+        if (XDK_CDevice_VertexShaderHandle != xdk::kUnknown) SetDev(XDK_CDevice_VertexShaderHandle, h);
+    }
+    g_slot_start = std::min(a[1], kProgramSlots - 1);
+    if (XDK_CDevice_VertexShaderStart != xdk::kUnknown) SetDev(XDK_CDevice_VertexShaderStart, a[1]);
+    SelectFromSlots();
+    return 0;
+}
+
+// (handle, count, STREAM_INPUT[count] of vertex buffer, stride, offset): the handle's layout over these buffers
+// until a call with handle 0. The buffers are held while bound, as the library does.
+HLE_STDCALL(D3DDevice_SetVertexShaderInput, 3) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    uint32_t h = a[0], n = std::min<uint32_t>(a[1], 16), in = a[2];
+    std::array<StreamInput, 16> next{};
+    for (uint32_t i = 0; h && in && i < n; i++) next[i] = {R32(in + i * 12), R32(in + i * 12 + 4), R32(in + i * 12 + 8)};
+    for (uint32_t i = 0; h && i < n; i++) AddRef(ctx, next[i].vb);
+    for (uint32_t i = 0; i < g_stream_input_count; i++) Release(ctx, g_stream_inputs[i].vb);
+    g_stream_inputs = next;
+    g_stream_input_count = h ? n : 0;
+    g_input_object = h & ~1u;
+    for (uint32_t i = 0; i < g_stream_input_count; i++) g_state.streams[i] = {g_stream_inputs[i].vb, g_stream_inputs[i].stride};
+    if (g_input_object || g_slot_object) SelectFromSlots();
     return 0;
 }
 HLE_STDCALL(D3DDevice_SetShaderConstantMode, 1) {
