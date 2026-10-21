@@ -108,6 +108,7 @@ CDirectSoundStream_SetRolloffCurve                   = 0x43919C  # XbSymbolDatab
 XGetFilePhysicalSortKey                              = 0x390046  # XAPI, found by reading its code (ObReferenceObjectByHandle + IoQueryVolumeInformation)
 D3DDevice_LoadVertexShaderProgram                    = 0x3C23F0  # XbSymbolDatabase
 D3DDevice_SetVertexShaderInput                       = 0x3C28C0  # XbSymbolDatabase
+D3DDevice_RunPushBuffer                              = 0x3C4C20  # XbSymbolDatabase
 D3DDevice_SetPixelShader                             = 0x3C2EA0
 D3DDevice_SetPixelShaderConstant                     = 0x3C30A0
 D3DDevice_SetRenderState_BackFillMode                = 0x3BF570

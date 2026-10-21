@@ -48,6 +48,10 @@ using namespace kernel;
 #define SYM_D3DDevice_SetVertexShaderInput FFFFFE05
 #define HAS_D3DDevice_SetVertexShaderInput 0
 #endif
+#ifndef SYM_D3DDevice_RunPushBuffer
+#define SYM_D3DDevice_RunPushBuffer FFFFFE06
+#define HAS_D3DDevice_RunPushBuffer 0
+#endif
 
 namespace d3d {
 
@@ -1305,6 +1309,201 @@ HLE_STDCALL(D3DDevice_EndPush, 1) {
     g_push_begin = 0;
     ScratchPush();
     return a[0];
+}
+
+// RunPushBuffer(push buffer, fixup): a recorded command stream, its fixups patched into a copy first. The arrays
+// it sets (VERTEX_DATA_ARRAY offset and format per register, the format's low byte is the D3DVSDT type) are drawn
+// through stand in vertex buffers, by index (ARRAY_ELEMENT16/32) or range (DRAW_ARRAYS); program loads, program
+// start and transform constants go to the slots; texture offset and format to a header per stage; the rest as simple
+// states. The title's own layout, streams and textures come back afterwards, as the library marks them dirty.
+namespace {
+struct PushArrays {
+    uint32_t offset[16] = {}, format[16] = {};
+};
+uint32_t g_pb_vb[16] = {};       // stand in D3DVertexBuffer headers, Data = the array's address
+uint32_t g_pb_tex[4] = {};       // stand in texture headers per stage
+std::map<uint32_t, uint32_t> g_pb_methods;  // method -> count, for the log of what is not handled
+
+void PushDraw(uint32_t prim, const PushArrays& arr, bool program, const std::vector<uint32_t>& idx,
+              const std::vector<uint32_t>& inl) {
+    if (!g_backend || !prim) return;
+    auto vs = std::make_shared<gpu::VertexShader>();
+    if (program && g_state.vs) vs->program = g_state.vs->program;
+    vs->program_type = 0x2078;
+    uint32_t inline_stride = 0;
+    for (uint32_t r = 0; r < 16; r++) {
+        uint32_t f = arr.format[r], size = (f >> 4) & 15, stride = f >> 8;
+        if (!size) continue;
+        vs->inputs[r] = {int(r), 0, f & 0xFF};
+        vs->stream_stride[r] = stride;
+        inline_stride += (f & 15) == 0 || (f & 15) == 6 ? 4 : (f & 15) == 1 || (f & 15) == 5 ? 2 * size
+                       : (f & 15) == 4 ? size : 4 * size;
+    }
+    vs->hash = gpu::Hash(vs->program.data(), vs->program.size() * 4, gpu::Hash(vs->inputs.data(), sizeof(vs->inputs)));
+    auto saved_vs = g_state.vs;
+    uint32_t saved_handle = g_state.vs_handle;
+    auto saved_streams = g_state.streams;
+    g_state.vs = vs;
+    g_state.vs_handle = 1;
+    if (!inl.empty()) {  // INLINE_ARRAY: attributes packed in register order
+        if (inline_stride && inl.size() * 4 % inline_stride == 0) {
+            uint32_t off = 0;
+            for (uint32_t r = 0; r < 16; r++) {
+                if (vs->inputs[r].stream < 0) continue;
+                vs->inputs[r] = {0, off, vs->inputs[r].type};
+                uint32_t t = vs->inputs[r].type & 15, n = (vs->inputs[r].type >> 4) & 15;
+                off += t == 0 || t == 6 ? 4 : t == 1 || t == 5 ? 2 * n : t == 4 ? n : 4 * n;
+            }
+            vs->stream_stride.fill(0);
+            vs->stream_stride[0] = inline_stride;
+            DrawUp(prim, uint32_t(inl.size() * 4 / inline_stride), inl.data(), inline_stride);
+        } else {
+            LOG_FIRST(8, "d3d: push buffer inline vertices dropped, %zu bytes of vertices of %u", inl.size() * 4, inline_stride);
+        }
+    } else if (!idx.empty()) {
+        for (uint32_t r = 0; r < 16; r++) {
+            if (vs->inputs[r].stream < 0) continue;
+            if (!g_pb_vb[r]) g_pb_vb[r] = mem::AllocSystem(32, 16);
+            W32(g_pb_vb[r], 0x00000001);  // one reference, D3DCOMMON_TYPE_VERTEXBUFFER (0)
+            W32(g_pb_vb[r] + 4, arr.offset[r] & 0x7FFFFFFF);  // context DMA bit off: a physical address
+            g_state.streams[r] = {g_pb_vb[r], vs->stream_stride[r]};
+        }
+        uint32_t top = *std::max_element(idx.begin(), idx.end());
+        if (top < 0x10000) {
+            static std::vector<uint16_t> i16;
+            i16.assign(idx.begin(), idx.end());
+            g_backend->Draw(g_state, prim, 0, uint32_t(i16.size()), reinterpret_cast<const uint8_t*>(i16.data()));
+        } else {
+            LOG_FIRST(8, "d3d: push buffer draw with index %u over 16 bits dropped", top);
+        }
+    }
+    g_state.vs = saved_vs;
+    g_state.vs_handle = saved_handle;
+    g_state.streams = saved_streams;
+}
+}  // namespace
+
+HLE_STDCALL(D3DDevice_RunPushBuffer, 2) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    Walk(Dev(kDevPush));
+    SyncDeferred();
+    uint32_t pb = a[0], fx = a[1];
+    uint32_t data = mem::VirtualFromPhysical(R32(pb + 4) & 0x0FFFFFFF), size = R32(pb + 0xC);
+    static std::vector<uint32_t> buf;
+    buf.assign(size / 4, 0);
+    if (size) std::memcpy(buf.data(), HostPtr(data), buf.size() * 4);
+    if (fx) {  // {bytes, offset, data[bytes]} ... 0xFFFFFFFF from the fixup's Data + Run
+        uint32_t p = mem::VirtualFromPhysical(R32(fx + 4) & 0x0FFFFFFF) + R32(fx + 0xC);
+        for (int guard = 0; guard < 65536; guard++) {
+            uint32_t n = R32(p), off = R32(p + 4);
+            if (n == 0xFFFFFFFF) break;
+            if (n > size || off > size - n || (n | off) & 3) {
+                LOG_FIRST(8, "d3d: push buffer fixup %u bytes at %u does not fit %u", n, off, size);
+                break;
+            }
+            std::memcpy(reinterpret_cast<uint8_t*>(buf.data()) + off, HostPtr(p + 8), n);
+            p += 8 + n;
+        }
+    }
+    PushArrays arr;
+    std::vector<uint32_t> idx, inl;
+    uint32_t prim = 0, program_mode = g_state.vs && !g_state.vs->program.empty() ? 2 : 0, slot = 0, constant = 0;
+    bool tex_dirty[4] = {};
+    uint32_t tex_regs[4][8] = {};
+    auto saved_textures = g_state.textures;
+    auto flush_textures = [&] {
+        for (int t = 0; t < 4; t++) {
+            if (!tex_dirty[t]) continue;
+            if (!g_pb_tex[t]) g_pb_tex[t] = mem::AllocSystem(32, 16);
+            uint32_t h = g_pb_tex[t], cur = g_state.textures[t];
+            if (cur && cur != h) std::memcpy(HostPtr(h), HostPtr(cur), 20);
+            else if (!cur) W32(h, 0x00040001);  // one reference, D3DCOMMON_TYPE_TEXTURE
+            W32(h + 4, tex_regs[t][0]);   // offset
+            W32(h + 12, tex_regs[t][1]);  // format
+            uint32_t rect = tex_regs[t][7], pitch = tex_regs[t][4] >> 16;
+            if (!(tex_regs[t][1] & 0xFFF00000) && rect)  // linear: D3D size from the image rect and pitch
+                W32(h + 16, ((rect >> 16) - 1) | ((rect & 0xFFFF) - 1) << 12 | (std::max(pitch, 64u) / 64 - 1) << 24);
+            g_state.textures[t] = h;
+            tex_dirty[t] = false;
+        }
+    };
+    size_t n = buf.size();
+    for (size_t p = 0; p < n;) {
+        uint32_t head = buf[p++];
+        if (!head) continue;  // NOP
+        if ((head & 0xE0000003) == 0x20000000 || (head & 3) == 1 || (head & 3) == 2 || head == 0x00020000) {
+            LOG_FIRST(8, "d3d: push buffer %08X: jump, call or return %08X at dword %zu of %zu, stopped", pb, head, p - 1, n);
+            break;
+        }
+        uint32_t method = head & 0x1FFC, count = (head >> 18) & 0x7FF;
+        if ((head & 0xA0030003) || count > n - p) {
+            LOG_FIRST(8, "d3d: push buffer %08X stops at command %08X", pb, head);
+            break;
+        }
+        for (uint32_t i = 0; i < count; i++) {
+            uint32_t m = head & 0x40000000 ? method : method + i * 4, v = buf[p++];
+            ApplyVisibilityMethod(m, v);
+            if (m >= 0x1720 && m < 0x1760) {
+                arr.offset[(m - 0x1720) / 4] = v;
+            } else if (m >= 0x1760 && m < 0x17A0) {
+                arr.format[(m - 0x1760) / 4] = v;
+            } else if (m == 0x17FC) {  // BEGIN_END
+                if (v) {
+                    prim = v;
+                    idx.clear();
+                    inl.clear();
+                } else {
+                    flush_textures();
+                    PushDraw(prim, arr, program_mode == 2, idx, inl);
+                    prim = 0;
+                }
+            } else if (m == 0x1800) {  // ARRAY_ELEMENT16, two per dword
+                idx.push_back(v & 0xFFFF);
+                idx.push_back(v >> 16);
+            } else if (m == 0x1808) {  // ARRAY_ELEMENT32
+                idx.push_back(v);
+            } else if (m == 0x1810) {  // DRAW_ARRAYS: start, count - 1 in the top byte
+                for (uint32_t k = 0, s0 = v & 0xFFFFFF; k <= v >> 24; k++) idx.push_back(s0 + k);
+            } else if (m == 0x1818) {  // INLINE_ARRAY
+                inl.push_back(v);
+            } else if (m >= 0x0B00 && m < 0x0B80) {  // TRANSFORM_PROGRAM
+                if (slot < kProgramSlots * 4) g_slots[slot] = v;
+                slot++;
+            } else if (m == 0x1E9C) {
+                slot = v * 4;
+            } else if (m == 0x1EA0) {  // TRANSFORM_PROGRAM_START
+                g_slot_start = std::min(v, kProgramSlots - 1);
+                if (g_slot_object || g_input_object) SelectFromSlots();
+            } else if (m >= 0x0B80 && m < 0x0C00) {  // TRANSFORM_CONSTANT
+                uint32_t r = constant / 4;
+                if (r < 192) std::memcpy(&g_state.vsc[r][constant % 4], &v, 4);
+                constant++;
+            } else if (m == 0x1EA4) {
+                constant = v * 4;
+            } else if (m == 0x1E94) {  // TRANSFORM_EXECUTION_MODE: 0 fixed function, 2 program
+                program_mode = v & 3;
+                if (m >> 2 < g_state.simple.size()) g_state.simple[m >> 2] = v;
+            } else if (m >= 0x1B00 && m < 0x1C00) {  // texture stage registers, 0x40 apart
+                uint32_t t = (m - 0x1B00) >> 6, r = ((m - 0x1B00) & 0x3F) >> 2;
+                if (r < 8) {
+                    tex_regs[t][r] = v;
+                    if (r <= 1) tex_dirty[t] = true;
+                }
+                if (m >> 2 < g_state.simple.size()) g_state.simple[m >> 2] = v;
+            } else {
+                if (m >> 2 < g_state.simple.size()) g_state.simple[m >> 2] = v;
+                g_pb_methods[m]++;
+            }
+        }
+    }
+    g_state.textures = saved_textures;
+    static uint32_t runs = 0;
+    if (++runs == 200) {
+        std::string list;
+        for (auto& [m, c] : g_pb_methods) list += " " + std::to_string(m) + "x" + std::to_string(c);
+        LOGI("d3d: push buffers, other methods (decimal method x count):%s", list.c_str());
+    }
+    return 0;
 }
 
 // frame buffer compression tiles are the console's memory controller's business

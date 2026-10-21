@@ -31,8 +31,14 @@ Built on [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp) by TGP482 (
 - [x] Vertex programs by address: `LoadVertexShaderProgram`, `LoadVertexShader`, `SelectVertexShader` and
       `SetVertexShaderInput` on the host (the SDK only had `CreateVertexShader` + `SetVertexShader`)
 - [x] **The legal screen and the title screen ("PRESS START TO BEGIN") draw correctly** in the reference renderer
+- [x] Menus with scripted presses: name entry, swing control choice
+- [x] `RunPushBuffer` on the host (recorded command streams with fixups: vertex arrays, indexed and ranged draws,
+      inline vertices, program loads and constants, texture registers)
+- [x] **In game**: the opening in-engine cinematic, "Chapter 1: What Might Have Been", then the city with the HUD
+      and the first tutorial hint, about 300 draws a frame, 7 minutes headless without a crash
+- [ ] Rendering bugs: Spider-Man's body is missing (only the mask draws, likely the skinned mesh path), the sky
+      is grey noise, stray purple quads in the cinematic
 - [ ] Logo movies (XMV) are opened and played but nothing of them is drawn yet
-- [ ] Press Start: menus, loading the city, gameplay
 - [ ] Frame pacing in the headless harness (it presents thousands of frames a second; keep `REF` off or large)
 - [ ] Switch platform layer (libnx): guest memory window, threads, files, timers, audio, HID
 - [ ] Switch GPU backend (OpenGL/EGL or deko3d) + GLSL output from the shader translator
@@ -69,6 +75,7 @@ out/harness/sm2 /path/to/game/folder                      # folder with default.
   `PAGE_READWRITE` (the game walks up its stack in 64 KB steps while pages are read/write).
 - `runtime/kernel/xboxkrnl.cpp`: `NtUserIoApcDispatcher` (ReadFileEx/WriteFileEx completions), with
   `RtlNtStatusToDosError`'s table shared as `StatusToDosError`.
+- `runtime/xdk/d3d8.cpp`: `RunPushBuffer` interpreter.
 - `runtime/xdk/d3d8.cpp`: vertex programs by address (program slots, `LoadVertexShaderProgram`, `LoadVertexShader`,
   `SelectVertexShader`, `SetVertexShaderInput`); `xdk/5849/layout.toml` gains `CDevice_VertexShaderHandle` and
   `CDevice_VertexShaderStart`.
