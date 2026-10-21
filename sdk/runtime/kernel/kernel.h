@@ -23,6 +23,9 @@ extern "C" uintptr_t x86_seg[16];  // cpu/x86_ops.h
 
 namespace kernel {
 
+// the console language the title reads (XC_LANGUAGE, 1 English ... 5 Spanish), set by the platform before boot
+extern uint32_t g_language;
+
 // NTSTATUS values the kernel hands back
 enum : uint32_t {
     kSuccess = 0x00000000,
