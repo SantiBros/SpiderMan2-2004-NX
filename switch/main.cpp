@@ -26,7 +26,7 @@
 namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
-constexpr const char* kVersion = "0.0.2";
+constexpr const char* kVersion = "0.0.3";
 
 namespace {
 
@@ -70,6 +70,16 @@ int main(int argc, char** argv) {
         Fail("Game files not found",
              "Copy your own copy of the game here:\n\n  " + game + "/default.xbe\n  " + game +
                  "/data/...\n\n(the default.xbe and the data folder from your disc)");
+    if (!fs::is_directory(game + "/data")) {
+        bool flat = fs::exists(game + "/game.ini") || fs::is_directory(game + "/packs") || fs::is_directory(game + "/PACKS");
+        Fail("The data folder is missing",
+             flat ? "The contents of the data folder are directly in\n\n  " + game +
+                        "\n\nMake a folder named data there and move game.ini, movies, packs\nand sound into it, so you "
+                        "have:\n\n  " + game + "/default.xbe\n  " + game + "/data/game.ini\n  " + game +
+                        "/data/packs/...\n  " + game + "/data/sound/..."
+                  : "Copy the data folder from your disc here:\n\n  " + game + "/data\n\n(next to default.xbe, with "
+                    "game.ini, movies, packs and sound inside)");
+    }
 
     sw::Message("Spider-Man 2 (Xbox) - test build", "Starting...", "Logs are written to " + dir + "/logs");
 
