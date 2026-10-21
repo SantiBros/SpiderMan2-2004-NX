@@ -40,7 +40,9 @@ Built on [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp) by TGP482 (
       is grey noise, stray purple quads in the cinematic
 - [ ] Logo movies (XMV) are opened and played but nothing of them is drawn yet
 - [ ] Frame pacing in the headless harness (it presents thousands of frames a second; keep `REF` off or large)
-- [ ] Switch platform layer (libnx): guest memory window, threads, files, timers, audio, HID
+- [x] Switch platform layer (libnx), first pass: segmented guest memory, threads, files on the SD card, controls,
+      a CPU test renderer to the screen; no audio yet
+- [ ] First run on a Switch
 - [ ] Switch GPU backend (OpenGL/EGL or deko3d) + GLSL output from the shader translator
 - [ ] PC-side builder that turns the user's `default.xbe` into the `.nro`
 
@@ -68,6 +70,23 @@ out/harness/sm2 /path/to/game/folder                      # folder with default.
 ```
 
 `REF=N` draws every Nth frame with the CPU reference renderer into `cap/` (see `sdk/harness/README.md`).
+
+## Building the Switch test .nro
+
+Needs devkitA64, libnx and switch-tools (`elf2nro`, `nacptool`) under `$DEVKITPRO`. With `generated/game` made
+from your own `default.xbe` (see above):
+
+```
+switch/build.sh          # writes build-switch/SpiderMan2Xbox.nro
+```
+
+The `.nro` contains code derived from the game: it is for the owner of that copy only, never to be shared or
+uploaded. `switch/README-switch.txt` says where the files go on the SD card. This test build draws with the CPU
+reference renderer (a picture every second or two) and has no sound.
+
+The Switch build uses the segmented guest memory layout (`XBE_SEGMENTED`): the Xbox's 4 GB address space is cut
+into 16 slices of 256 MB, each placed in one 1 GB host block through a table, since homebrew cannot reserve 4 GB
+of address space with pages committed on demand.
 
 ## Changes to the SDK
 
