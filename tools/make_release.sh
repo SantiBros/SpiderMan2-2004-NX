@@ -11,11 +11,14 @@ mkdir -p out
 Z="out/SpiderMan2-NX-$V.zip"
 rm -f "$Z"
 git archive --format=zip --prefix="SpiderMan2-NX-$V/" -o "$Z" HEAD
-if unzip -l "$Z" | grep -qiE '\.(xbe|nro|elf|iso|xiso|cci|cso|pak|wbk|xmv)$|/generated/|/assets/|/build-switch/'; then
+# The listing goes into a variable first: with pipefail, "unzip | grep -q" fails when grep stops reading early.
+LIST=$(unzip -Z1 "$Z")
+if grep -qiE '\.(xbe|nro|elf|iso|xiso|cci|cso|pak|wbk|xmv)$|^[^/]*/(generated|assets|build-switch)/' <<< "$LIST"; then
     echo "$Z holds a game file or a build of one: not releasing it"
+    grep -iE '\.(xbe|nro|elf|iso|xiso|cci|cso|pak|wbk|xmv)$|^[^/]*/(generated|assets|build-switch)/' <<< "$LIST" | head
     rm -f "$Z"
     exit 1
 fi
-unzip -Z1 "$Z" | grep -qx "SpiderMan2-NX-$V/build.sh" || { echo "build.sh is missing from $Z"; exit 1; }
-echo "$Z: $(unzip -Z1 "$Z" | grep -vc '/$') files, $(du -h "$Z" | cut -f1)"
+grep -qx "SpiderMan2-NX-$V/build.sh" <<< "$LIST" || { echo "build.sh is missing from $Z"; rm -f "$Z"; exit 1; }
+echo "$Z: $(grep -vc '/$' <<< "$LIST") files, $(du -h "$Z" | cut -f1)"
 sha256sum "$Z"
