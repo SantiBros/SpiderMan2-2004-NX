@@ -26,6 +26,14 @@ namespace kernel {
 // the console language the title reads (XC_LANGUAGE, 1 English ... 5 Spanish), set by the platform before boot
 extern uint32_t g_language;
 
+// A disc file the title layer rewrites, by its device path in upper case ("\\DEVICE\\CDROM0\\DATA\\GAME.INI", what
+// the title's D: resolves to): the function gets the file's bytes and returns true when it changed them. The result
+// is kept beside the hard disk folders and opened in the disc file's place. Set before boot.
+void RewriteDiscFile(const std::string& device_path, std::function<bool(std::vector<uint8_t>& bytes)> rewrite);
+// A disc file the title asks for that isn't there: another device path (upper case) to open in its place, or empty
+// for none. Set before boot.
+extern std::function<std::string(const std::string& device_path)> g_missing_disc_file;
+
 // NTSTATUS values the kernel hands back
 enum : uint32_t {
     kSuccess = 0x00000000,

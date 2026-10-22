@@ -26,6 +26,7 @@ std::mutex g_links_lock;
 std::map<std::string, std::string> g_links;    // upper case "\??\D:" -> "\Device\CdRom0"
 std::map<std::string, fs::path> g_devices;     // upper case device -> host directory
 constexpr char kCdRom[] = "\\DEVICE\\CDROM0";
+fs::path g_data_dir;                           // the port's data folder (MountDefaults)
 
 std::string Upper(std::string s) {
     for (char& c : s) c = char(std::toupper(uint8_t(c)));
@@ -252,6 +253,7 @@ std::string ReadCString(uint32_t va, size_t max) {
 void MountDefaults(const std::string& game_dir, const std::string& data_dir) {
     std::lock_guard<std::mutex> lock(g_links_lock);
     fs::path d = data_dir;
+    g_data_dir = d;
     g_devices[kCdRom] = game_dir;
     g_devices["\\DEVICE\\HARDDISK0\\PARTITION1"] = d / "E";
     g_devices["\\DEVICE\\HARDDISK0\\PARTITION2"] = d / "C";
@@ -293,7 +295,61 @@ struct Target {
     const Disc::Entry* entry = nullptr;  // there: the file or folder, null when missing
 };
 
+struct Rewrite {
+    std::function<bool(std::vector<uint8_t>&)> fn;
+    bool done = false;
+    std::string host;  // the rewritten copy, empty while unchanged
+};
+std::map<std::string, Rewrite> g_rewrites;  // upper case device path -> its rewrite, set before boot
+std::mutex g_rewrites_lock;
+
+// missing: set to the device path of a disc file that isn't there; device: to the device path of any disc file
+Target ResolveOnce(const std::string& xbox_path, uint32_t root_handle, std::string* missing, std::string* device = nullptr);
+
+bool ReadTarget(const Target& t, std::vector<uint8_t>& out);
+
+// a disc file the title layer rewrites: the rewritten copy, made at the first open
+Target Rewritten(const Target& t, const std::string& device_path) {
+    std::lock_guard<std::mutex> lock(g_rewrites_lock);
+    auto it = g_rewrites.find(device_path);
+    if (it == g_rewrites.end()) return t;
+    Rewrite& r = it->second;
+    if (!r.done) {
+        r.done = true;
+        std::vector<uint8_t> bytes;
+        if (ReadTarget(t, bytes) && r.fn(bytes)) {
+            fs::path dir = g_data_dir / "disc";
+            std::error_code ec;
+            fs::create_directories(dir, ec);
+            std::string name = device_path.substr(device_path.find_last_of('\\') + 1);
+            fs::path host = dir / name;
+            if (FILE* f = std::fopen(host.string().c_str(), "wb")) {
+                bool ok = std::fwrite(bytes.data(), 1, bytes.size(), f) == bytes.size();
+                ok = std::fclose(f) == 0 && ok;
+                if (ok) r.host = host.string();
+            }
+            LOGI("files: %s rewritten%s", device_path.c_str(), r.host.empty() ? ", but the copy could not be written" : "");
+        }
+    }
+    return r.host.empty() ? t : Target{r.host};
+}
+
+// a disc file that isn't there may be served from another the title layer names (g_missing_disc_file)
 Target Resolve(const std::string& xbox_path, uint32_t root_handle) {
+    std::string missing, device;
+    Target t = ResolveOnce(xbox_path, root_handle, &missing, &device);
+    if (!device.empty() && !g_rewrites.empty()) t = Rewritten(t, device);
+    if (missing.empty() || !g_missing_disc_file) return t;
+    std::string alt = g_missing_disc_file(missing);
+    if (alt.empty()) return t;
+    std::string again;
+    Target a = ResolveOnce(alt, 0, &again, nullptr);
+    if (!again.empty()) return t;
+    LOG_FIRST(32, "files: %s is not on the disc, %s in its place", missing.c_str(), alt.c_str());
+    return a;
+}
+
+Target ResolveOnce(const std::string& xbox_path, uint32_t root_handle, std::string* missing, std::string* device) {
     std::string p = Normalize(xbox_path);
     if (root_handle) {
         if (auto f = FileFromHandle(root_handle)) p = Normalize(f->xbox + "\\" + p);
@@ -330,8 +386,15 @@ Target Resolve(const std::string& xbox_path, uint32_t root_handle) {
     // no Xbox name holds ':', and fs::path would take "D:" as a host drive
     for (auto& part : parts)
         if (part.find(':') != std::string::npos) return {};
-    if (best->first == kCdRom)
-        if (const Disc* disc = MountedDisc()) return {{}, true, disc->Find(parts)};
+    if (best->first == kCdRom) {
+        Target t;
+        if (const Disc* disc = MountedDisc()) t = {{}, true, disc->Find(parts)};
+        else t = {MatchCase(best->second, parts).string()};
+        std::error_code ec;
+        if (missing && (t.disc ? !t.entry : !fs::exists(t.host, ec))) *missing = up;
+        if (device) *device = up;
+        return t;
+    }
     return {MatchCase(best->second, parts).string()};
 }
 
@@ -363,10 +426,15 @@ uint32_t OpenOnDisc(const Disc::Entry* e, const std::string& name, uint32_t hand
 
 }  // namespace
 
-std::string ResolvePath(const std::string& xbox_path, uint32_t root_handle) { return Resolve(xbox_path, root_handle).host; }
+std::function<std::string(const std::string&)> g_missing_disc_file;
 
-bool ReadGameFile(const std::string& xbox_path, std::vector<uint8_t>& out) {
-    Target t = Resolve(xbox_path, 0);
+void RewriteDiscFile(const std::string& device_path, std::function<bool(std::vector<uint8_t>& bytes)> rewrite) {
+    std::lock_guard<std::mutex> lock(g_rewrites_lock);
+    g_rewrites[Upper(device_path)] = {std::move(rewrite)};
+}
+
+namespace {
+bool ReadTarget(const Target& t, std::vector<uint8_t>& out) {
     if (t.disc) {
         if (!t.entry || t.entry->dir) return false;
         out.resize(t.entry->size);
@@ -377,6 +445,11 @@ bool ReadGameFile(const std::string& xbox_path, std::vector<uint8_t>& out) {
     out.assign(std::istreambuf_iterator<char>(f), {});
     return true;
 }
+}  // namespace
+
+std::string ResolvePath(const std::string& xbox_path, uint32_t root_handle) { return Resolve(xbox_path, root_handle).host; }
+
+bool ReadGameFile(const std::string& xbox_path, std::vector<uint8_t>& out) { return ReadTarget(Resolve(xbox_path, 0), out); }
 
 // exports
 

@@ -1,5 +1,9 @@
 #include "app/app.h"
 
+namespace sm2 {
+void SetUpLanguage();  // src/game/language.cpp
+}
+
 // what the runtime asks of the game; strings must be set, hooks may stay null
 const app::GameInfo app::kGame = {
     .title = L"Spider-Man 2",               // window and splash
@@ -13,7 +17,7 @@ const app::GameInfo app::kGame = {
     .options = {},                        // game settings kept in the settings file
     .load = nullptr,                      // reads more from the settings file's toml::table
     .save = nullptr,                      // writes more into it
-    .init = nullptr,                      // after the settings load, before the window and boot
+    .init = sm2::SetUpLanguage,           // after the settings load, before the window and boot
     .loaded = nullptr,                    // image in memory, before its entry point runs
     .window = nullptr,                    // the game window is up
     .message = nullptr,                   // window messages first; true takes one

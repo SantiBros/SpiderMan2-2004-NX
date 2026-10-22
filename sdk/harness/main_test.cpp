@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
     }
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
     app::Load();
+    // XBE_LANGUAGE=n: the console language (XC_LANGUAGE: 1 English, 3 German, 4 French, 5 Spanish, 6 Italian)
+    if (const char* l = std::getenv("XBE_LANGUAGE")) kernel::g_language = uint32_t(std::atoi(l));
     if (app::kGame.init) app::kGame.init();
     if (app::kGame.window) app::kGame.window(nullptr);
     std::string hdd = app::Instance() > 1 ? "hdd" + std::to_string(app::Instance()) : "hdd";
