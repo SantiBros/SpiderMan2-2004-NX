@@ -13,13 +13,13 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 
 [![Latest release](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=release&color=c8202f&logo=github&logoColor=white)](../../releases)
 [![Downloads](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=downloads&color=1b2a4a)](../../releases)
-![Status: early test](https://img.shields.io/badge/status-early%20test-e0a020?style=for-the-badge)
+![Status: test build](https://img.shields.io/badge/status-test%20build-e0a020?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
 ![Original Xbox, 2004](https://img.shields.io/badge/original%20Xbox-2004-1b2a4a?style=for-the-badge)
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
 [![License: MIT](https://img.shields.io/badge/license-MIT-1b2a4a?style=for-the-badge)](LICENSE)
 
-[Install](#how-to-install) · [Controls](#controls) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
+[Install](#how-to-install) · [Controls](#controls) · [Debug menu](#debug-menu) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
 
 </div>
 
@@ -34,22 +34,20 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > newer *Spider-Man* games.
 
 > [!WARNING]
-> **Early test build: not playable yet.** On the port's PC test build the game runs through its menus,
-> cinematics and attract demos into the city. On a Switch it has not yet got past its start in testing,
-> and 0.0.8 to 0.0.10 are the first builds that draw with the Switch's graphics chip, so how fast it runs
-> there is not known yet. [Testers](#help-wanted-testers) are welcome.
+> **Test build: not yet played on a Switch.** On the port's PC test build the game runs through its menus,
+> cinematics and first missions in the city, in five languages. On a Switch it has not yet got past its start
+> in testing, so how fast it runs there is not known yet: 0.1.0 brings a frame-rate counter and the Switch's
+> clocks in a debug menu to find out. [Testers](#help-wanted-testers) are welcome.
 
 > [!TIP]
-> **New in 0.0.10**
-> - **A crash waiting to happen is gone**: a system function the game uses to ask about a drive was missing,
->   and a call to it would have stopped the game.
->
-> **And from 0.0.9**
-> - **The videos play at their real speed**: the Activision logo, the intro and the cutscenes ran twice
->   too fast. The game now runs at its own pace, 30 frames a second, as on the Xbox.
-> - **Building shadows fall where they should**, and half of the screen no longer goes dark.
-> - **Fewer stutters the second time**: the shaders the game needed are kept on the SD card and built
->   again at the start, and the log names any stutter left.
+> **New in 0.1.0**
+> - **A debug menu**: hold **ZL + ZR** and press **−** for the port's settings: a frame-rate counter, the
+>   Switch's CPU, GPU and memory clocks, the language, the sound volume and the renderer, saved on the SD card.
+> - **In your language**: the game follows the console's language, with its menus and subtitles in Spanish,
+>   French, German or Italian (the voices stay in English: the disc only has those). Or pick one in the menu.
+> - **A clean start screen**: "Loading..." instead of the log scrolling by (the log can still be turned on).
+> - **Faster**: the game's thread needs about 14% less processor time a frame (its code is smaller and records
+>   its drawing with less work).
 >
 > All the details are in the [changelog](CHANGELOG.md).
 
@@ -71,19 +69,27 @@ around it. Bring your own copy of the game, build the port from it once, and swi
     <td colspan="2" align="center"><sub>The first rooftop, at dusk</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/status.jpg" alt="The port's start screen with the newest log lines"></td>
+    <td width="50%"><img src="docs/images/screenshots/debug-menu.jpg" alt="The port's debug menu over the game, with the frame-rate counter"></td>
+    <td width="50%"><img src="docs/images/screenshots/title-es.jpg" alt="The title screen in Spanish, PRESIONAR START PARA EMPEZAR"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>The debug menu (ZL + ZR + −) and the frame-rate counter; the numbers are an example</sub></td>
+    <td align="center"><sub>On a console set to Spanish, the game is in Spanish</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/start.jpg" alt="The port's start screen, Loading"></td>
     <td width="50%"><img src="docs/images/screenshots/not-found.jpg" alt="The port explaining what to put in the game folder"></td>
   </tr>
   <tr>
-    <td align="center"><sub>The port's start screen: what it is doing, until the game draws</sub></td>
+    <td align="center"><sub>The port's start screen, until the game draws</sub></td>
     <td align="center"><sub>When no usable copy is found, it says what to put where</sub></td>
   </tr>
 </table>
 
 <p align="center"><sub>The game screenshots come from the port's PC test build, which runs the same recompiled code
 and the same GPU renderer as the Switch build (on the PC's Mesa instead of the Switch's), with the Switch build's
-screen layout: the game's 4:3 picture on the Switch's 1280×720 screen. The two port screens are drawn exactly as
-the Switch shows them.</sub></p>
+screen layout: the game's 4:3 picture on the Switch's 1280×720 screen. The port's own screens and menu are drawn
+by the Switch build's screen code, run on the PC.</sub></p>
 
 ## Features
 
@@ -99,11 +105,16 @@ the Switch shows them.</sub></p>
   them split into parts for a FAT32 card, or the files from the disc.
 - **Built from your copy in one command.** `build.sh` checks that your copy is the supported release,
   recompiles it and builds the `.nro`, with the SD card folder laid out.
+- **In your language.** The game takes the console's language: English, Spanish, French, German or
+  Italian menus and subtitles, from the texts on your disc.
+- **A debug menu** (**ZL + ZR + −**) with a frame-rate counter, the Switch's CPU, GPU and memory clocks
+  (only rates Nintendo's own profiles use, given back in the HOME menu and when you quit), the language, the
+  sound volume and the renderer. Saved in `settings.ini`.
 - **Says what's wrong.** Missing data folder, an archive that needs extracting, an Xbox 360 image, another
   release of the game: the screen explains it in plain words.
-- **Made for testing.** Until the game draws, the screen shows the newest lines of the log. The log
-  reaches the SD card several times a second, so it survives a frozen console, and a status line every
-  2 seconds says what each of the game's threads is doing. Crashes leave a report.
+- **Made for testing.** The log reaches the SD card several times a second, so it survives a frozen console,
+  and a status line every 2 seconds says what each of the game's threads is doing. Crashes leave a report.
+  The start screen can show the newest lines of the log too (the debug menu's start-up log).
 - **Controls mapped by position**, so the buttons the game shows are where your fingers expect them.
 - **Fully offline.** The port doesn't use the network.
 
@@ -125,7 +136,7 @@ the Switch shows them.</sub></p>
 
 1. **Get your game as files.** A disc image of your own disc, or the files from it. PC DVD drives can't
    read original Xbox discs: [how to get them](docs/INSTALL.md#getting-your-game).
-2. **Build the port.** Download `SpiderMan2-2004-NX-0.0.10.zip` from the [Releases](../../releases) page and
+2. **Build the port.** Download `SpiderMan2-2004-NX-0.1.0.zip` from the [Releases](../../releases) page and
    unzip it on your computer, then run one command in its folder, pointing at your game:
    ```sh
    bash build.sh "/path/to/Spider-Man 2.iso"
@@ -152,7 +163,9 @@ sd:/switch/SpiderMan2Xbox/
 │   ├── Spider-Man 2.iso      a disc image (.iso .xiso .cci .cso), or all the parts of a split one
 │   └── default.xbe, data/    or the files from the disc
 ├── hdd/                  the Xbox hard disk: your saves (made at the first start)
-└── logs/                 sm2_NNN.log and crash.txt: attach them to bug reports
+├── logs/                 sm2_NNN.log and crash.txt: attach them to bug reports
+├── settings.ini          the debug menu's settings (delete it for the recommended ones)
+└── shaders.cache         the shaders the game needed, built again at the next start
 ```
 
 </details>
@@ -177,16 +190,41 @@ asks for is where it is on the Xbox controller:
 | X (left) | **Y** | | Start / Back | **+** / **−** |
 | Y (top) | **X** | | Sticks, D-pad | the same |
 
-Hold **+ and −** together for one second to quit.
+Hold **+ and −** together for one second to quit. Hold **ZL + ZR** and press **−** for the port's
+[debug menu](#debug-menu).
 
 To find where a problem comes from, hold one of these while the port starts: **L** turns the sound off,
 **R** uses the old CPU renderer (a still picture every few seconds, without the graphics chip), **ZR** keeps
-the graphics work on the game's own thread (no render thread).
+the graphics work on the game's own thread (no render thread). They last for that start only.
+
+## Debug menu
+
+Hold **ZL + ZR** and press **−** (in any order) to open it; the same, **B** or **+** close it. **Up/Down**
+picks a setting, **Left/Right** or **A** changes it, and the touch screen works too. While it is open the
+game gets no input (press **+** first if you want the game paused). Changes are saved at once in
+`settings.ini` beside the `.nro`.
+
+| Setting | Choices | What it does |
+|---|---|---|
+| Language | Auto, English, Español, Français, Deutsch, Italiano | The game's menus and subtitles. Auto follows the console; a language the game doesn't have is English. The voices are English in every language. From the next start. |
+| CPU clock | Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | The game's translated code runs on the CPU: raise it if the counter stays under 30 in busy places. |
+| GPU clock | Stock, 307.2, 384, 460.8, 614.4, 768 MHz | The graphics chip. 460.8 MHz is the highest Nintendo uses in handheld mode. |
+| Memory clock | Stock, 1331.2, 1600 MHz | 1600 MHz is the docked memory clock. |
+| Frame-rate counter | Off, FPS, Full | In the top left corner, beside the picture. Full adds the time of a frame, the draw calls, the clocks and the memory. |
+| Sound volume | 100% to 25%, Off | The game's sound, before the console's own volume. |
+| Renderer | GPU, CPU | CPU is many times slower: only to tell whether a fault in the picture comes from the GPU renderer. From the next start. |
+| Render thread | On, Off | The graphics work on a core of its own. From the next start. |
+| Start-up log | Off, On | The newest log lines on the start screen while the game loads, for a photo when it doesn't start. From the next start. |
+
+The clocks only offer rates Nintendo's own performance profiles use. The console's own clocks come back
+while the port is in the HOME menu and when it closes, and the port puts yours back after docking or sleep.
+"Restore recommended settings" puts everything back to the defaults (the console's language, stock clocks,
+no counter, full volume, the GPU renderer on its own thread).
 
 ## Status
 
 > [!NOTE]
-> **Early test.** It has not yet been played on a Switch: back up your SD card and use emuMMC.
+> **Test build.** It has not yet been played on a Switch: back up your SD card and use emuMMC.
 
 | Part | State |
 |---|---|
@@ -198,11 +236,13 @@ the graphics work on the game's own thread (no render thread).
 | Sound | 🧪 Through the Switch's speakers and headphones; untested on a console |
 | Controls | 🧪 Mapped, untested on a console |
 | Saves | 🧪 In `hdd/` on the SD card; untested on a console |
-| Language | English (the game's Spanish texts are on the disc; a language option is planned) |
+| Language | ✅ The console's: English, Spanish, French, German or Italian texts (voices in English, as on the disc); on the PC test build |
+| Debug menu, clocks, counter | 🧪 Drawn and checked on the PC; the clocks only take effect on a console |
 | Online | ❌ None: the port doesn't use the network |
 
 **Known issues**
-- How fast it runs on a Switch is not known yet: the first tests will tell.
+- How fast it runs on a Switch is not known yet: the first tests will tell (the debug menu's counter shows it).
+- In Spanish, French, German and Italian the voices are in English: the disc only has the English ones.
 - Only the release above is supported: other releases need their own recompiler config.
 
 See the [changelog](CHANGELOG.md) for what changed in each version.
@@ -295,16 +335,19 @@ parts as one), a compressed `.cci` or `.cso` (this game fits in about 1.5 GB), o
 <details>
 <summary><b>Does it run at full speed?</b></summary>
 
-Not known yet. 0.0.8 to 0.0.10 are the first builds that draw with the Switch's GPU (earlier builds drew a
-still picture on the CPU every few seconds), and they haven't been tried on a console yet. Every 5 seconds the log has a `perf:`
-line with the frame rate and where a frame's time goes, so a test run tells what to speed up next.
+Not known yet: the builds that draw with the Switch's GPU haven't been played on a console yet. The debug
+menu's frame-rate counter shows it on screen, and if it stays under 30 you can raise the CPU clock there
+(up to 1785 MHz, a rate Nintendo's own profiles use). Every 5 seconds the log has a `perf:` line with the frame
+rate and where a frame's time goes, so a test run tells what to speed up next.
 </details>
 
 <details>
 <summary><b>Can I play in Spanish?</b></summary>
 
-Not yet: this release starts in English. The game's Spanish texts are on the disc (its voices are English
-only), and an option for the language is planned.
+Yes. The game takes the console's language: set to Spanish (Spain or Latin America), French, German or
+Italian, its menus and subtitles are in that language, from the texts on your disc. The voices stay in English,
+as the disc only has the English ones. To choose another language than the console's, use the debug menu
+(**ZL + ZR + −**), then start the port again.
 </details>
 
 <details>
@@ -373,6 +416,8 @@ Standing on the shoulders of others:
 - [**libnx**](https://github.com/switchbrew/libnx) and the switchbrew community, [**devkitPro**](https://devkitpro.org)
   (devkitA64, switch-tools, and the Switch port of [**Mesa**](https://mesa3d.org) the GPU renderer draws with) and
   [**Atmosphère**](https://github.com/Atmosphere-NX/Atmosphere).
+- [**sys-clk**](https://github.com/retronx-team/sys-clk): the clock rates of the Switch's performance configurations,
+  which the debug menu's clock settings keep to.
 - The disc image formats: [**extract-xiso**](https://github.com/XboxDev/extract-xiso),
   [**Repackinator** and XboxToolkit](https://github.com/Team-Resurgent/Repackinator) by Team Resurgent (CCI), and
   [**ciso**](https://github.com/antangelo/ciso) by antangelo (CSO), whose formats the port reads; LZ4 by Yann Collet.

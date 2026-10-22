@@ -115,15 +115,15 @@ WSL runs a real Linux inside Windows 10 and 11, and the builder runs there.
 3. **Copy the port's folder into Linux** (building inside Linux is much faster than on `C:`). Your Windows
    drives are under `/mnt/`: `C:\Users\You\Downloads` is `/mnt/c/Users/You/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.0.10" ~/
-   cd ~/SpiderMan2-2004-NX-0.0.10
+   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.1.0" ~/
+   cd ~/SpiderMan2-2004-NX-0.1.0
    ```
 4. **Build**, pointing at your game on the Windows drive (it is only read):
    ```sh
    bash build.sh "/mnt/c/Users/You/Games/Spider-Man 2.iso"
    ```
 5. **Find the result in Windows**: in File Explorer, type `\\wsl$` in the address bar, then open
-   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.0.10\out\sd`.
+   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.1.0\out\sd`.
 
 ### What the builder says
 
@@ -156,8 +156,8 @@ Hold **R** while you start any game: the Homebrew Menu opens instead of the game
 > Don't start it from the Album: there, homebrew only gets about 440 MB of memory, and the game needs about
 > 1.3 GB. The port tells you if it was started that way.
 
-A blue screen shows what the port is doing: the newest lines of its log, until the game draws its first
-picture. From then on the game is drawn by the Switch's graphics chip, every frame.
+A blue screen says **Loading...** until the game draws its first picture. From then on the game is drawn by
+the Switch's graphics chip, every frame. The game is in the console's language (below).
 
 - **Quit:** hold **+ and −** together for one second.
 - **Sound off:** hold **L** while the port starts (until the blue screen appears).
@@ -166,6 +166,37 @@ picture. From then on the game is drawn by the Switch's graphics chip, every fra
   screen, and say so in your report.
 - **No render thread:** hold **ZR** while the port starts. The graphics chip then gets its work from the
   game's own thread: slower, but a way to tell whether a problem comes from the render thread.
+
+The buttons held at start last for that start only; the [debug menu](#the-debug-menu) keeps the same choices
+for every start.
+
+## The debug menu
+
+Hold **ZL + ZR** and press **−** (in any order) to open the port's settings over the game; the same
+combination, **B** or **+** closes it. **Up/Down** picks a setting, **Left/Right** or **A** changes it, and the
+touch screen works too. While it is open the game gets no input (it keeps running: press **+** first to pause
+it). Each setting has a line of help, and an orange note when the chosen value costs something (heat, battery,
+speed). The bottom line shows the frame rate, the time of a frame and the draw calls right now.
+
+- **Language**: Auto (the console's), English, Español, Français, Deutsch or Italiano, from the next start.
+- **CPU, GPU and memory clocks**: stock, or one of the rates Nintendo's own performance profiles use (up to
+  1785 MHz CPU, 768 MHz GPU, 1600 MHz memory). The console's own clocks come back while the port is in the
+  HOME menu and when it closes. If the counter stays under 30 in busy places, try a higher CPU clock first.
+- **Frame-rate counter**: off, FPS, or full (also the time of a frame, the draw calls, the clocks, the memory),
+  in the black bar left of the picture.
+- **Sound volume**, **renderer** (GPU or CPU), **render thread**, and the **start-up log** (the newest log
+  lines on the start screen instead of "Loading...", for a photo when the game doesn't start).
+
+Changes are saved at once in `switch/SpiderMan2Xbox/settings.ini`. To go back to the recommended settings,
+choose **Restore recommended settings**, or delete the file.
+
+## Language
+
+The game takes the console's language (System Settings → System → Language). With English, Spanish (Spain or
+Latin America), French (France or Canada), German or Italian, its menus and subtitles are in that language,
+from the texts on your disc; with any other language, in English. The voices are in English in every language:
+the disc only has the English ones. To play in another language than the console's, set **Language** in the
+debug menu and start the port again.
 
 ## Saves
 
@@ -187,9 +218,10 @@ Build the new version the same way, then copy its `out/sd/switch` folder over th
 | **Another game or version** | The image in `game/` holds another game, or another version of this one. |
 | **Not enough memory in this mode** | Start the port with **R + a game**, not from the Album. |
 | **The game did not start** | The newest file in `logs/` says why. |
-| **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound), once holding **ZR** (no render thread) and once holding **R** (the CPU renderer), and say which ones still freeze. |
+| **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound), once holding **ZR** (no render thread) and once holding **R** (the CPU renderer), and say which ones still freeze. If it freezes on "Loading...", turn on **Start-up log** in the [debug menu](#the-debug-menu) (or in `settings.ini`: `startup_log=on`), so the photo shows how far it got. |
 | **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
-| **It runs slowly** | Send the `logs` folder: every 5 seconds the log has a `perf:` line that says where the time goes. |
+| **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and try a higher CPU clock there. Send the `logs` folder: every 5 seconds the log has a `perf:` line that says where the time goes. |
+| **The game is in the wrong language** | It follows the console's language, read at start. Set **Language** in the [debug menu](#the-debug-menu) and start the port again. The voices are always in English. |
 | **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |
 | **An Atmosphère error screen** | Send the newest file in `atmosphere/crash_reports/` and the `logs` folder. |
 

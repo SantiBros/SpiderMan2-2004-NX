@@ -14,13 +14,13 @@ balancéate por Nueva York.
 
 [![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=c8202f&logo=github&logoColor=white)](../../releases)
 [![Descargas](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=descargas&color=1b2a4a)](../../releases)
-![Estado: prueba temprana](https://img.shields.io/badge/estado-prueba%20temprana-e0a020?style=for-the-badge)
+![Estado: versión de prueba](https://img.shields.io/badge/estado-versi%C3%B3n%20de%20prueba-e0a020?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
 ![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1b2a4a?style=for-the-badge)
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1b2a4a?style=for-the-badge)](LICENSE)
 
-[Instalar](#cómo-instalar) · [Controles](#controles) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
+[Instalar](#cómo-instalar) · [Controles](#controles) · [Menú de depuración](#menú-de-depuración) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
 
 </div>
 
@@ -35,23 +35,23 @@ balancéate por Nueva York.
 > juegos de *Spider-Man* más nuevos.
 
 > [!WARNING]
-> **Versión de prueba temprana: todavía no se puede jugar.** En la versión de prueba para PC del port, el
-> juego pasa por sus menús, cinemáticas y demos hasta llegar a la ciudad. En una Switch todavía no ha pasado
-> de su arranque en las pruebas, y de la 0.0.8 a la 0.0.10 son las primeras versiones que dibujan con el chip
-> gráfico de la Switch, así que todavía no se sabe a qué velocidad va ahí. Se buscan
-> [testers](#se-buscan-testers).
+> **Versión de prueba: todavía no se ha jugado en una Switch.** En la versión de prueba para PC del port, el
+> juego pasa por sus menús, cinemáticas y primeras misiones en la ciudad, en cinco idiomas. En una Switch
+> todavía no ha pasado de su arranque en las pruebas, así que todavía no se sabe a qué velocidad va ahí: la
+> 0.1.0 trae un contador de imágenes por segundo y los relojes de la Switch en un menú de depuración para
+> averiguarlo. Se buscan [testers](#se-buscan-testers).
 
 > [!TIP]
-> **Novedades de la 0.0.10**
-> - **Un cierre inesperado menos**: faltaba una función del sistema que el juego usa para consultar una unidad,
->   y una llamada a ella habría detenido el juego.
->
-> **Y de la 0.0.9**
-> - **Los vídeos van a su velocidad real**: el logo de Activision, la intro y las escenas iban el doble de
->   rápido. El juego va ahora a su propio ritmo, 30 imágenes por segundo, como en la Xbox.
-> - **Las sombras de los edificios caen donde deben**, y la mitad de la pantalla ya no se oscurece.
-> - **Menos tirones la segunda vez**: los shaders que necesitó el juego se guardan en la tarjeta SD y se
->   vuelven a preparar al arrancar, y el registro señala los tirones que queden.
+> **Novedades de la 0.1.0**
+> - **Un menú de depuración**: mantén **ZL + ZR** y pulsa **−** para los ajustes del port: un contador de
+>   imágenes por segundo, los relojes de CPU, GPU y memoria de la Switch, el idioma, el volumen y el
+>   renderizador, guardados en la tarjeta SD.
+> - **En tu idioma**: el juego sigue el idioma de la consola, con sus menús y subtítulos en español, francés,
+>   alemán o italiano (las voces siguen en inglés: el disco solo trae esas). O elige uno en el menú.
+> - **Una pantalla de arranque limpia**: "Loading..." en vez del registro pasando (el registro se puede
+>   volver a activar).
+> - **Más rápido**: el hilo del juego necesita un 14% menos de tiempo de procesador por imagen (su código es más
+>   pequeño y registra lo que dibuja con menos trabajo).
 >
 > Todos los detalles están en la [lista de cambios](CHANGELOG.md) (en inglés).
 
@@ -73,11 +73,19 @@ balancéate por Nueva York.
     <td colspan="2" align="center"><sub>La primera azotea, al atardecer</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/status.jpg" alt="La pantalla de arranque del port con las últimas líneas del registro"></td>
+    <td width="50%"><img src="docs/images/screenshots/debug-menu.jpg" alt="El menú de depuración del port sobre el juego, con el contador de imágenes por segundo"></td>
+    <td width="50%"><img src="docs/images/screenshots/title-es.jpg" alt="La pantalla de título en español, PRESIONAR START PARA EMPEZAR"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>El menú de depuración (ZL + ZR + −) y el contador; los números son un ejemplo</sub></td>
+    <td align="center"><sub>Con la consola en español, el juego está en español</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/start.jpg" alt="La pantalla de arranque del port, Loading"></td>
     <td width="50%"><img src="docs/images/screenshots/not-found.jpg" alt="El port explicando qué poner en la carpeta del juego"></td>
   </tr>
   <tr>
-    <td align="center"><sub>La pantalla de arranque del port: qué está haciendo, hasta que el juego dibuja</sub></td>
+    <td align="center"><sub>La pantalla de arranque del port, hasta que el juego dibuja</sub></td>
     <td align="center"><sub>Si no encuentra una copia que sirva, dice qué poner y dónde</sub></td>
   </tr>
 </table>
@@ -85,7 +93,8 @@ balancéate por Nueva York.
 <p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo
 código recompilado y el mismo renderizador por GPU que la versión de Switch (sobre el Mesa del PC en vez del de la
 Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3 del juego en la pantalla de
-1280×720 de la Switch. Las dos pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
+1280×720 de la Switch. Las pantallas y el menú del port los dibuja el código de pantalla de la versión de Switch,
+ejecutado en el PC.</sub></p>
 
 ## Características
 
@@ -101,12 +110,17 @@ Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
 - **Se compila a partir de tu copia con un solo comando.** `build.sh` comprueba que tu copia sea la edición
   compatible, la recompila y compila el `.nro`, con la carpeta de la tarjeta SD ya armada.
+- **En tu idioma.** El juego toma el idioma de la consola: menús y subtítulos en inglés, español, francés,
+  alemán o italiano, con los textos de tu disco.
+- **Un menú de depuración** (**ZL + ZR + −**) con un contador de imágenes por segundo, los relojes de CPU, GPU
+  y memoria de la Switch (solo velocidades que usan los perfiles de Nintendo, devueltas en el menú HOME y al
+  salir), el idioma, el volumen y el renderizador. Se guarda en `settings.ini`.
 - **Dice qué está mal.** Falta la carpeta data, hay un archivo comprimido que extraer, una imagen de Xbox
   360, otra edición del juego: la pantalla lo explica con palabras sencillas.
-- **Pensado para las pruebas.** Hasta que el juego dibuja, la pantalla muestra las últimas líneas del
-  registro. El registro llega a la tarjeta SD varias veces por segundo, así que sobrevive a una consola
-  congelada, y una línea de estado cada 2 segundos dice qué está haciendo cada hilo del juego. Los
-  cierres inesperados dejan un informe.
+- **Pensado para las pruebas.** El registro llega a la tarjeta SD varias veces por segundo, así que
+  sobrevive a una consola congelada, y una línea de estado cada 2 segundos dice qué está haciendo cada hilo
+  del juego. Los cierres inesperados dejan un informe. La pantalla de arranque también puede mostrar las
+  últimas líneas del registro (el registro de arranque del menú de depuración).
 - **Controles asignados por posición**, para que los botones que muestra el juego estén donde tus dedos
   los esperan.
 - **Totalmente sin conexión.** El port no usa la red.
@@ -129,7 +143,7 @@ Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
-2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.0.10.zip` de la página de [Releases](../../releases) y
+2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.1.0.zip` de la página de [Releases](../../releases) y
    descomprímelo en tu computador. Luego ejecuta un comando en su carpeta, indicando dónde está tu juego:
    ```sh
    bash build.sh "/ruta/a/Spider-Man 2.iso"
@@ -156,7 +170,9 @@ sd:/switch/SpiderMan2Xbox/
 │   ├── Spider-Man 2.iso      una imagen de disco (.iso .xiso .cci .cso), o todas las partes de una dividida
 │   └── default.xbe, data/    o los archivos del disco
 ├── hdd/                  el disco duro de la Xbox: tus partidas (se crea la primera vez)
-└── logs/                 sm2_NNN.log y crash.txt: adjúntalos al reportar un error
+├── logs/                 sm2_NNN.log y crash.txt: adjúntalos al reportar un error
+├── settings.ini          los ajustes del menú de depuración (bórralo para volver a los recomendados)
+└── shaders.cache         los shaders que necesitó el juego, que se preparan de nuevo al arrancar
 ```
 
 </details>
@@ -181,16 +197,41 @@ pide el juego está donde está en el control de la Xbox:
 | X (izquierda) | **Y** | | Start / Back | **+** / **−** |
 | Y (arriba) | **X** | | Palancas, cruceta | lo mismo |
 
-Mantén **+ y −** a la vez durante un segundo para salir.
+Mantén **+ y −** a la vez durante un segundo para salir. Mantén **ZL + ZR** y pulsa **−** para el
+[menú de depuración](#menú-de-depuración) del port.
 
 Para saber de dónde viene un problema, mantén uno de estos mientras arranca el port: **L** quita el sonido,
 **R** usa el renderizador antiguo por CPU (una imagen fija cada pocos segundos, sin el chip gráfico), **ZR**
-deja el trabajo gráfico en el propio hilo del juego (sin hilo de renderizado).
+deja el trabajo gráfico en el propio hilo del juego (sin hilo de renderizado). Valen solo para ese arranque.
+
+## Menú de depuración
+
+Mantén **ZL + ZR** y pulsa **−** (en cualquier orden) para abrirlo; lo mismo, **B** o **+** lo cierran.
+**Arriba/Abajo** elige un ajuste, **Izquierda/Derecha** o **A** lo cambian, y también funciona la pantalla
+táctil. Mientras está abierto, el juego no recibe los botones (pulsa **+** antes si quieres pausar el juego).
+Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú está en inglés.
+
+| Ajuste | Opciones | Qué hace |
+|---|---|---|
+| Language (idioma) | Auto, English, Español, Français, Deutsch, Italiano | Los menús y subtítulos del juego. Auto sigue a la consola; un idioma que el juego no tiene es inglés. Las voces son en inglés en todos. Desde el siguiente arranque. |
+| CPU clock | Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | El código traducido del juego corre en la CPU: súbelo si el contador se queda por debajo de 30 en sitios con mucho movimiento. |
+| GPU clock | Stock, 307.2, 384, 460.8, 614.4, 768 MHz | El chip gráfico. 460,8 MHz es lo más alto que usa Nintendo en modo portátil. |
+| Memory clock | Stock, 1331.2, 1600 MHz | 1600 MHz es el reloj de memoria en el dock. |
+| Frame-rate counter | Off, FPS, Full | Arriba a la izquierda, junto a la imagen. Full añade el tiempo de cada imagen, las llamadas de dibujo, los relojes y la memoria. |
+| Sound volume | 100% a 25%, Off | El sonido del juego, antes del volumen de la consola. |
+| Renderer | GPU, CPU | CPU es muchas veces más lento: solo para saber si un fallo de la imagen viene del renderizador por GPU. Desde el siguiente arranque. |
+| Render thread | On, Off | El trabajo gráfico en un núcleo propio. Desde el siguiente arranque. |
+| Start-up log | Off, On | Las últimas líneas del registro en la pantalla de arranque mientras carga el juego, para una foto si no arranca. Desde el siguiente arranque. |
+
+Los relojes solo ofrecen velocidades que usan los perfiles de rendimiento de Nintendo. Los de la consola
+vuelven mientras el port está en el menú HOME y al cerrarlo, y el port vuelve a poner los tuyos después de
+conectar al dock o del modo reposo. "Restore recommended settings" deja todo como al principio (el idioma de la
+consola, relojes de fábrica, sin contador, volumen completo, el renderizador por GPU en su propio hilo).
 
 ## Estado
 
 > [!NOTE]
-> **Prueba temprana.** Todavía no se ha jugado en una Switch: haz una copia de seguridad de tu tarjeta SD y
+> **Versión de prueba.** Todavía no se ha jugado en una Switch: haz una copia de seguridad de tu tarjeta SD y
 > usa emuMMC.
 
 | Parte | Estado |
@@ -203,11 +244,13 @@ deja el trabajo gráfico en el propio hilo del juego (sin hilo de renderizado).
 | Sonido | 🧪 Por los altavoces y audífonos de la Switch; sin probar en una consola |
 | Controles | 🧪 Asignados, sin probar en una consola |
 | Partidas | 🧪 En `hdd/` en la tarjeta SD; sin probar en una consola |
-| Idioma | Inglés (los textos en español del juego están en el disco; está prevista una opción de idioma) |
+| Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco); en la versión de prueba para PC |
+| Menú de depuración, relojes, contador | 🧪 Dibujado y comprobado en el PC; los relojes solo actúan en una consola |
 | En línea | ❌ Nada: el port no usa la red |
 
 **Problemas conocidos**
-- Todavía no se sabe a qué velocidad va en una Switch: lo dirán las primeras pruebas.
+- Todavía no se sabe a qué velocidad va en una Switch: lo dirán las primeras pruebas (el contador del menú de depuración lo muestra).
+- En español, francés, alemán e italiano las voces son en inglés: el disco solo trae las inglesas.
 - Solo funciona la edición de arriba: otras ediciones necesitan su propia configuración del recompilador.
 
 En la [lista de cambios](CHANGELOG.md) (en inglés) está lo que cambió en cada versión.
@@ -304,17 +347,20 @@ disco. O formatea la tarjeta en exFAT.
 <details>
 <summary><b>¿Va a velocidad completa?</b></summary>
 
-Todavía no se sabe. De la 0.0.8 a la 0.0.10 son las primeras versiones que dibujan con la GPU de la Switch (las
-anteriores dibujaban una imagen fija en la CPU cada pocos segundos), y todavía no se han probado en una consola. Cada 5 segundos el
-registro tiene una línea `perf:` con las imágenes por segundo y en qué se va el tiempo de cada una, así que una
-prueba dice qué hay que acelerar después.
+Todavía no se sabe: las versiones que dibujan con la GPU de la Switch todavía no se han jugado en una consola.
+El contador del menú de depuración lo muestra en pantalla, y si se queda por debajo de 30 puedes subir ahí el
+reloj de la CPU (hasta 1785 MHz, una velocidad que usan los perfiles de Nintendo). Cada 5 segundos el registro
+tiene una línea `perf:` con las imágenes por segundo y en qué se va el tiempo de cada una, así que una prueba dice
+qué hay que acelerar después.
 </details>
 
 <details>
 <summary><b>¿Puedo jugar en español?</b></summary>
 
-Todavía no: esta edición arranca en inglés. Los textos en español del juego están en el disco (las voces son
-solo en inglés), y está prevista una opción para el idioma.
+Sí. El juego toma el idioma de la consola: con la consola en español (de España o de Latinoamérica), francés,
+alemán o italiano, sus menús y subtítulos salen en ese idioma, con los textos de tu disco. Las voces siguen en
+inglés, porque el disco solo trae las inglesas. Para elegir otro idioma que el de la consola, usa el menú de
+depuración (**ZL + ZR + −**) y vuelve a arrancar el port.
 </details>
 
 <details>
@@ -386,6 +432,8 @@ Gracias a quienes hicieron esto posible:
 - [**libnx**](https://github.com/switchbrew/libnx) y la comunidad de switchbrew, [**devkitPro**](https://devkitpro.org)
   (devkitA64, switch-tools, y el port para Switch de [**Mesa**](https://mesa3d.org) con el que dibuja el
   renderizador por GPU) y [**Atmosphère**](https://github.com/Atmosphere-NX/Atmosphere).
+- [**sys-clk**](https://github.com/retronx-team/sys-clk): las velocidades de reloj de los perfiles de rendimiento de
+  la Switch, a las que se ciñen los ajustes de reloj del menú de depuración.
 - Los formatos de imagen de disco: [**extract-xiso**](https://github.com/XboxDev/extract-xiso),
   [**Repackinator** y XboxToolkit](https://github.com/Team-Resurgent/Repackinator) de Team Resurgent (CCI), y
   [**ciso**](https://github.com/antangelo/ciso) de antangelo (CSO), cuyos formatos lee el port; LZ4 de Yann Collet.

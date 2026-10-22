@@ -103,14 +103,38 @@ Two backends take the draws:
 
 | File | What it does |
 |---|---|
-| `main.cpp` | Checks the launch mode (title takeover), finds the game (`kernel/game_source`), asks before a different release, mounts the disc image, boots the game, and keeps the applet alive. Quitting (+ and −) takes no lock the game could hold. |
-| `screen.cpp` | The 1280×720 window. With GL (the default): an EGL window surface and an OpenGL 4.3 core context; the main thread draws the text screens (libnx's console font, as an image) until the renderer takes the context, then the renderer puts the status text over the frames until the game draws its own picture. Without: libnx's framebuffer, presented by the main thread, with the reference renderer's frames scaled to the screen's height. |
+| `main.cpp` | Checks the launch mode (title takeover), loads `settings.ini`, reads the console's language, finds the game (`kernel/game_source`), asks before a different release, mounts the disc image, boots the game, and keeps the applet alive, running the debug menu. Until the game draws, the start screen says "Loading..." (or, with the start-up log on, shows the newest log lines). Quitting (+ and −) takes no lock the game could hold. |
+| `screen.cpp` | The 1280×720 window. With GL (the default): an EGL window surface and an OpenGL 4.3 core context; the main thread draws the text screens (libnx's console font, as an image) until the renderer takes the context, then the renderer puts the status text over the frames until the game draws its own picture. Without: libnx's framebuffer, presented by the main thread, with the reference renderer's frames scaled to the screen's height. Two overlay layers (the frame-rate counter and the debug menu), RGBA pictures the main thread draws on the CPU, are blended over every frame: by the renderer's thread with `glr::DrawOverlay` after the frame, or into the framebuffer. |
+| `menu.cpp` | The debug menu (ZL + ZR + −): its own pad state on the main thread, so it works whatever the game does; the game's controller reads nothing while it is open, nor the − of the combination, nor the buttons that closed it until they are let go. The touch screen picks rows and steps values. The frame-rate counter is counted from the frames presented, every half second. |
+| `settings.cpp` | `settings.ini` beside the `.nro`: language, clocks, counter, volume, renderer, render thread, start-up log; written whole (a new file, then renamed) at every change. The buttons held at start override it for that start. |
+| `clocks.cpp` | CPU, GPU and memory clocks through `clkrst` (`pcv` before 8.0.0), as the NFS Most Wanted port does: only the rates of Nintendo's performance configurations, the configuration's own clocks found through `apm:sys`, put back twice a second after the system resets them (docking, sleep, performance mode changes), given back while out of focus (the focus mode notifies the port of the HOME menu) and at exit; while custom clocks are in use the exit is locked so that closing from HOME first restores them. |
 | `backend.cpp` | The GPU renderer's host (the window, the context, the swap), falling back to the reference renderer when GL doesn't start; the reference renderer paced for the Switch (60 frames a second, a frame drawn when as long as the last drawing has passed, at least half a second). Held at start: R the reference renderer, ZR the GPU renderer on the game's thread (no render thread). |
-| `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer; L at start turns it off. |
-| `input.cpp` | The Xbox controller from the Switch's, mapped by position. |
+| `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer, at the settings' volume; L at start turns it off. |
+| `input.cpp` | The Xbox controller from the Switch's, mapped by position; nothing while the debug menu has it. |
 | `watch.cpp` | Two threads above the game's priority: one puts the log on the SD card every 250 ms (a reset console loses cached writes), one logs a status line every 2 s with each game thread's current kernel or library function. |
 | `crash.cpp` | The exception handler: registers, the module offset of the crash, return addresses from the stack and the game thread's current function, into `logs/crash.txt` and the run's log. |
 | `pthread_detach.cpp` | `pthread_detach`, which libnx doesn't have (below). |
+
+## Language
+
+The disc holds the game's text in English, French, German, Italian and Spanish (`packs/`), but its `game.ini` names
+the English SKU (`SKU=Xbox-E`), with which the game shows English whatever the console says. With the
+multi-language SKU (`Xbox-Multi`) it takes the Xbox's language setting (`XC_LANGUAGE`, read with
+`ExQueryNonVolatileSetting`). So for another language than English, [`src/game/language.cpp`](../src/game/language.cpp)
+asks the file layer for a rewritten `game.ini` (`kernel::RewriteDiscFile`: the copy is made at the first open, in
+`hdd/disc/`, and opened in its place), and the kernel answers the console's language (`kernel::g_language`, set from
+the Switch's system language, or the settings'). The disc only has the English voices and songs: a sound bank of
+another language (`NAME_ES.WBK`) is opened as the English one (`kernel::g_missing_disc_file`), as the game would
+otherwise find no file and play nothing.
+
+| Switch | Xbox (`XC_LANGUAGE`) |
+|---|---|
+| English (US, UK) | 1 English |
+| Spanish (Spain, Latin America) | 5 Spanish |
+| French (France, Canada) | 4 French |
+| German | 3 German |
+| Italian | 6 Italian |
+| any other | 1 English |
 
 ## Disc images
 
@@ -171,7 +195,19 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 - `runtime/kernel/game_source.{h,cpp}` (new): the player's copy found in folders, matched by SHA-1 and entry point.
 - `runtime/kernel/files.cpp`: read-only opens unless written, renames and resizes around open files (above);
   `IoQueryVolumeInformation`, which the game imports, answers as `NtQueryVolumeInformationFile` does (it was missing, and
-  a call would have stopped the game).
+  a call would have stopped the game); `RewriteDiscFile` (a disc file the title layer rewrites, opened from a copy)
+  and `g_missing_disc_file` (a disc file that isn't there opened as another), for the language.
+- `runtime/cpu/x86_ops.h`, `kernel/memory.cpp`: generated functions take guest memory's base pointer `__restrict`,
+  and in the segmented layout reach every guest byte from it (`x86_seg_rel`, the slices' offsets from the base), so
+  the compiler knows a guest store never writes the `X86Context`: the x86 registers stay in host registers across
+  stores, and the generated code is about 5% smaller on AArch64. The backward jumps' compiler barriers still
+  make spinning loops read memory again.
+- `runtime/gpu/render_thread.cpp`: the state recorded with each draw (about 14 KB) compared a KB at a time before
+  its 64 byte pieces, with NEON on AArch64.
+- `runtime/xdk/d3d8.cpp`: a vertex program selected from the program slots is looked up by its key without
+  building a `VertexShader` first (the game selects and loads programs many times a frame).
+- `runtime/cpu/dispatch.cpp`: the continuation table a byte per address instead of `std::vector<bool>` (read on every
+  indirect call).
 - `runtime/kernel/kernel.h`, `exports.h`, `xdk/hle.h`: every kernel and library entry marks the calling thread with
   its name and counts its calls, for the status line and crash reports.
 - `runtime/core/log.cpp`: the newest lines for the start screen, `Sync` (flush and `fsync`), the descriptor for the
@@ -202,7 +238,8 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
   a game folder or disc image as the argument; the reference renderer clips at the near plane and converts floats
   as x86 does, takes `oFog` as the fog factor under a vertex program with table fog off, nudges pixel centres off
   shared edges, and traces a pixel through every triangle over it (`TRACE`, `DUMPTEX`, `DUMPTRIS`, `DRAWLIST`, `IDMAP`);
-  the pad script has the right stick and every button, and `cmd` and `capnow` files play a run live.
+  the pad script has the right stick and every button, and `cmd` and `capnow` files play a run live; `XBE_LANGUAGE`
+  sets the console's language.
 
 Added to `config/game.toml` by hand (located with [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase)
 and by reading the XDK code that uses them): `D3D_Streams`, `D3DDevice_BeginPush`, `D3DDevice_EndPush`,
@@ -228,8 +265,10 @@ VERSION              the port's version
 config/game.toml     recompiler input for the supported default.xbe: addresses and names only
 src/common/          the game's description for the runtime (title, log name)
 src/game/hooks.cpp   the game's own replacements of recompiled functions
+src/game/language.cpp  the game in the console's language (game.ini's SKU, the English voices)
 gl/                  the GPU renderer: OpenGL 4.3 (loader, GLSL translation, the backend)
-switch/              the Switch program: start-up, screen, renderer host, sound, controls, watch, crash handler
+switch/              the Switch program: start-up, screen, debug menu, settings, clocks, renderer host, sound,
+                     controls, watch, crash handler
 tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)

@@ -1,7 +1,36 @@
 # Changelog
 
-All notable changes to the port. Versions before 0.1.0 are early test builds: they have not yet been played
-through on a Switch.
+All notable changes to the port. These are test builds: none has been played through on a Switch yet.
+
+## [0.1.0]
+
+### Added
+- **A debug menu.** Hold **ZL + ZR** and press **−** for the port's settings, over the game: the language, the
+  Switch's CPU, GPU and memory clocks, a frame-rate counter, the sound volume, the renderer (GPU or CPU), the render
+  thread and the start-up log, with a line of help each and the frame rate, frame time and draw calls of the moment.
+  Saved in `settings.ini` beside the `.nro`. The touch screen works too. While it is open the game gets no input, and
+  the − of the combination never reaches it.
+- **The Switch's clocks**, from the debug menu: only the rates Nintendo's own performance profiles use (up to
+  1785 MHz CPU, 768 MHz GPU, 1600 MHz memory), put back after docking or sleep, with the console's own clocks back in
+  the HOME menu and when the port closes. Left at stock unless you change them.
+- **A frame-rate counter** in the black bar left of the picture: the frame rate, or also the time of a frame, the
+  draw calls, the clocks and the memory.
+- **The game in your language.** It follows the console's language: menus and subtitles in Spanish, French, German
+  or Italian, from the texts on the disc (English for any other language). The disc's `game.ini` names the English
+  release, which keeps the game in English; the port hands it the multi-language one. The voices stay in English, as
+  the disc only has the English ones. The debug menu can pick another language than the console's.
+
+### Changed
+- **A clean start screen**: "Loading..." until the game draws, instead of the log lines scrolling by. The debug menu's
+  start-up log brings them back, for a photo when the game doesn't start.
+- **Faster game code.** The recompiled functions now tell the compiler that the game's memory never overlaps the
+  x86 registers, so the registers stay in the processor's own between memory writes: the game's code is about 5%
+  smaller for the Switch's processor, and the game thread needs about 14% less time a frame on the PC test build
+  (6.4 instead of 7.2 ms for the game, 1.4 instead of 1.9 ms for recording its drawing, in the city).
+- **Less work recording each draw**: the drawing state is compared a kilobyte at a time (with the Switch's NEON
+  instructions), and a vertex program the game selects again is found without building it first.
+- The buttons held at start (**L**, **R**, **ZR**) still work, for that start only; the debug menu keeps the same
+  choices for every start.
 
 ## [0.0.10]
 

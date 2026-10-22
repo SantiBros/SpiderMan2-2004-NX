@@ -66,6 +66,7 @@ cd out/run && SWITCH=1 PULSE=1 ../harness/sm2 "/path/to/Spider-Man 2.iso"   # or
 | `cmd`, `capnow` | Playing live: a file `cmd` in the run folder holding `buttons [frames held]` is pressed once and removed; with `GL=1`, an empty file `capnow` saves the next frame as `cap/gl_<frame>.tga` and is removed. |
 | `CAP=1` | With `SWITCH=1`, every drawn frame's draws listed in `cap/draws_<frame>.txt`. |
 | `REF=N` | Without `SWITCH`, every Nth frame drawn into `cap/ref_<frame>.tga` (the game then runs unpaced). |
+| `XBE_LANGUAGE=n` | The console's language as the Xbox's code, as the Switch build sets it from the system language: 1 English, 3 German, 4 French, 5 Spanish, 6 Italian (the game then gets the multi-language `game.ini` and the English voices). |
 
 [`tools/test/switch_screen.py`](../tools/test/switch_screen.py) puts a captured frame on a 1280×720 Switch screen,
 as the Switch build shows it. To reach the city: `1000 START 30`, `1400 Y 30`, then `A 30` at 1800, 2200, 2600

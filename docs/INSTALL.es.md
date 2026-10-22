@@ -115,15 +115,15 @@ WSL ejecuta un Linux de verdad dentro de Windows 10 y 11, y el compilador funcio
 3. **Copia la carpeta del port dentro de Linux** (compilar dentro de Linux es mucho más rápido que en `C:`).
    Tus unidades de Windows están en `/mnt/`: `C:\Users\Tu\Downloads` es `/mnt/c/Users/Tu/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/Tu/Downloads/SpiderMan2-2004-NX-0.0.10" ~/
-   cd ~/SpiderMan2-2004-NX-0.0.10
+   cp -r "/mnt/c/Users/Tu/Downloads/SpiderMan2-2004-NX-0.1.0" ~/
+   cd ~/SpiderMan2-2004-NX-0.1.0
    ```
 4. **Compila**, indicando dónde está tu juego en la unidad de Windows (solo se lee):
    ```sh
    bash build.sh "/mnt/c/Users/Tu/Juegos/Spider-Man 2.iso"
    ```
 5. **Encuentra el resultado en Windows**: en el Explorador de archivos, escribe `\\wsl$` en la barra de
-   direcciones y abre `Ubuntu\home\<tu usuario>\SpiderMan2-2004-NX-0.0.10\out\sd`.
+   direcciones y abre `Ubuntu\home\<tu usuario>\SpiderMan2-2004-NX-0.1.0\out\sd`.
 
 ### Lo que dice el compilador
 
@@ -158,8 +158,8 @@ Mantén **R** mientras abres cualquier juego: se abre el Homebrew Menu en vez de
 > No lo abras desde el Álbum: ahí el homebrew solo recibe unos 440 MB de memoria, y el juego necesita unos
 > 1,3 GB. El port te avisa si se abrió así.
 
-Una pantalla azul muestra qué está haciendo el port: las últimas líneas de su registro, hasta que el juego
-dibuja su primera imagen. Desde ahí, el juego lo dibuja el chip gráfico de la Switch, imagen por imagen.
+Una pantalla azul dice **Loading...** hasta que el juego dibuja su primera imagen. Desde ahí, el juego lo
+dibuja el chip gráfico de la Switch, imagen por imagen. El juego sale en el idioma de la consola (más abajo).
 
 - **Salir:** mantén **+ y −** a la vez durante un segundo.
 - **Sin sonido:** mantén **L** mientras arranca el port (hasta que aparezca la pantalla azul).
@@ -169,6 +169,41 @@ dibuja su primera imagen. Desde ahí, el juego lo dibuja el chip gráfico de la 
 - **Sin hilo de renderizado:** mantén **ZR** mientras arranca el port. El chip gráfico recibe entonces su
   trabajo desde el propio hilo del juego: más lento, pero sirve para saber si un problema viene del hilo de
   renderizado.
+
+Los botones mantenidos al arrancar valen solo para ese arranque; el [menú de depuración](#el-menú-de-depuración)
+guarda las mismas opciones para todos.
+
+## El menú de depuración
+
+Mantén **ZL + ZR** y pulsa **−** (en cualquier orden) para abrir los ajustes del port sobre el juego; la misma
+combinación, **B** o **+** lo cierran. **Arriba/Abajo** elige un ajuste, **Izquierda/Derecha** o **A** lo
+cambian, y también funciona la pantalla táctil. Mientras está abierto, el juego no recibe los botones (sigue
+corriendo: pulsa **+** antes para pausarlo). Cada ajuste tiene una línea de ayuda, y una nota naranja cuando
+el valor elegido cuesta algo (calor, batería, velocidad). La línea de abajo muestra las imágenes por segundo, el
+tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en inglés.
+
+- **Language** (idioma): Auto (el de la consola), English, Español, Français, Deutsch o Italiano, desde el
+  siguiente arranque.
+- **CPU, GPU y memory clock** (relojes): de fábrica, o una de las velocidades que usan los perfiles de
+  rendimiento de Nintendo (hasta 1785 MHz de CPU, 768 MHz de GPU, 1600 MHz de memoria). Los relojes de la consola
+  vuelven mientras el port está en el menú HOME y al cerrarlo. Si el contador se queda por debajo de 30 en
+  sitios con mucho movimiento, prueba primero un reloj de CPU más alto.
+- **Frame-rate counter** (contador): apagado, FPS, o completo (también el tiempo de cada imagen, las llamadas de
+  dibujo, los relojes y la memoria), en la franja negra a la izquierda de la imagen.
+- **Sound volume** (volumen), **Renderer** (GPU o CPU), **Render thread** (hilo de renderizado) y el
+  **Start-up log** (las últimas líneas del registro en la pantalla de arranque en vez de "Loading...", para
+  una foto si el juego no arranca).
+
+Los cambios se guardan al momento en `switch/SpiderMan2Xbox/settings.ini`. Para volver a los ajustes
+recomendados, elige **Restore recommended settings**, o borra el archivo.
+
+## Idioma
+
+El juego toma el idioma de la consola (Configuración del sistema → Sistema → Idioma). En inglés, español (de
+España o de Latinoamérica), francés (de Francia o de Canadá), alemán o italiano, sus menús y subtítulos salen en
+ese idioma, con los textos de tu disco; en cualquier otro idioma, en inglés. Las voces son en inglés en todos los
+idiomas: el disco solo trae las inglesas. Para jugar en otro idioma que el de la consola, cambia **Language** en
+el menú de depuración y vuelve a arrancar el port.
 
 ## Partidas
 
@@ -192,9 +227,10 @@ Los mensajes de la pantalla están en inglés:
 | **Another game or version** | La imagen que está en `game/` es de otro juego, o de otra versión de este. |
 | **Not enough memory in this mode** | Abre el port con **R + un juego**, no desde el Álbum. |
 | **The game did not start** | El archivo más nuevo de `logs/` dice por qué. |
-| **La pantalla se congela** | Toma una foto de la pantalla, reinicia la consola (mantén POWER 12 segundos) y envía la carpeta `logs`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), otra manteniendo **ZR** (sin hilo de renderizado) y otra manteniendo **R** (el renderizador por CPU), y cuenta con cuáles se sigue congelando. |
+| **La pantalla se congela** | Toma una foto de la pantalla, reinicia la consola (mantén POWER 12 segundos) y envía la carpeta `logs`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), otra manteniendo **ZR** (sin hilo de renderizado) y otra manteniendo **R** (el renderizador por CPU), y cuenta con cuáles se sigue congelando. Si se congela en "Loading...", activa **Start-up log** en el [menú de depuración](#el-menú-de-depuración) (o en `settings.ini`: `startup_log=on`), para que la foto muestre hasta dónde llegó. |
 | **La imagen sale mal** (falta, negra, parpadea, colores raros) | Toma una foto y envía la carpeta `logs`. Luego prueba manteniendo **R** al arrancar (el renderizador por CPU): si así la imagen sale bien, el problema está en el renderizador por GPU. |
-| **Va lento** | Envía la carpeta `logs`: cada 5 segundos el registro tiene una línea `perf:` que dice en qué se va el tiempo. |
+| **Va lento** | Activa el contador en el [menú de depuración](#el-menú-de-depuración) y prueba ahí un reloj de CPU más alto. Envía la carpeta `logs`: cada 5 segundos el registro tiene una línea `perf:` que dice en qué se va el tiempo. |
+| **El juego sale en otro idioma** | Sigue el idioma de la consola, que se lee al arrancar. Cambia **Language** en el [menú de depuración](#el-menú-de-depuración) y vuelve a arrancar el port. Las voces siempre son en inglés. |
 | **Da tirones** (paradas cortas al jugar) | Sobre todo la primera vez que pasas por un sitio, mientras el driver gráfico prepara los shaders que necesita; se guardan en `shaders.cache` y la siguiente vez se preparan al arrancar. Si siguen, envía la carpeta `logs`: una línea `hitch:` señala cada tirón y en qué se fue el tiempo. |
 | **Una pantalla de error de Atmosphère** | Envía el archivo más nuevo de `atmosphere/crash_reports/` y la carpeta `logs`. |
 
