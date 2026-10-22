@@ -5,6 +5,8 @@ through on a Switch.
 
 ## [0.0.8]
 
+The first public release.
+
 ### Added
 - **The Switch's graphics chip draws the game.** A new renderer turns the game's Direct3D 8 drawing into
   OpenGL 4.3 for the Switch's GPU (through Mesa, devkitPro's `switch-mesa`), every frame, instead of a still
@@ -32,7 +34,7 @@ through on a Switch.
 
 ## [0.0.7]
 
-The first public release.
+Never published on its own: it went out as part of 0.0.8, the first public release.
 
 ### Added
 - **Your disc image works as it is.** Put one of these in `game/` instead of the disc's files:
