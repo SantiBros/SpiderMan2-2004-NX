@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
 
 // What the Switch shows, on one 1280x720 window for the whole run. Two ways to draw it:
 // - GL (the default): an EGL window surface. The main thread draws the text screens until the game's renderer takes
@@ -18,6 +19,8 @@ void Init(bool gl);
 const std::string& ScreenInfo();
 // the text screen: a title, a block of text and a footer line
 void Message(const std::string& title, const std::string& detail, const std::string& footer);
+// the start screen: a title and one line in the middle, a footer line
+void Loading(const std::string& title, const std::string& line, const std::string& footer);
 // framebuffer mode: a frame of the game, RGBA8 with red in the low byte, top row first; any thread, copied for the
 // next Pump
 void Frame(const uint32_t* rgba, uint32_t w, uint32_t h);
@@ -28,6 +31,24 @@ void Close();
 bool ShowingGame();
 // + and - held together for a second
 bool QuitRequested();
+
+// An RGBA picture drawn on the CPU (red in the low byte, alpha in the top one), with the console's font: 16 x 16
+// pixels a character, times `scale`. For the overlays.
+struct Canvas {
+    uint32_t w = 0, h = 0;
+    std::vector<uint32_t> px;
+    void Reset(uint32_t width, uint32_t height, uint32_t color);
+    // filled; the colour replaces what is there, alpha too
+    void Rect(int x0, int y0, int x1, int y1, uint32_t color);
+    // one line with its top left at x, y, cut at the edge; returns the x after it
+    int Text(int x, int y, const std::string& s, uint32_t color, int scale = 1);
+};
+int TextWidth(const std::string& s, int scale = 1);
+
+// over the game's frames and the text screen, blended by its alpha, at x, y on the 1280x720 screen: layer 0 the
+// frame-rate counter, 1 the debug menu. Any thread; an empty canvas takes the layer away.
+constexpr int kLayers = 2;
+void SetOverlay(int layer, const Canvas& c, int x, int y);
 
 // GL mode, for the renderer
 bool UsingGl();

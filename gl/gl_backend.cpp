@@ -2176,4 +2176,50 @@ void DrawImage(const uint32_t* rgba, uint32_t w, uint32_t h, uint32_t screen_w, 
     glBindVertexArray(GLuint(old_vao));
 }
 
+void DrawOverlay(int slot, const uint32_t* rgba, uint32_t w, uint32_t h, int x, int y, uint32_t screen_w,
+                 uint32_t screen_h, bool upload) {
+    static GLuint program = 0, vao = 0, tex[4] = {};
+    static GLint opts = -1;
+    static uint32_t tw[4] = {}, th[4] = {};
+    if (slot < 0 || slot >= 4 || !w || !h) return;
+    if (!program) {
+        program = Link(Compile(GL_VERTEX_SHADER, glsl::kFullScreenVertex), Compile(GL_FRAGMENT_SHADER, kBlitFragment));
+        if (!program) return;
+        opts = glGetUniformLocation(program, "opts");
+        glGenTextures(4, tex);
+        glGenVertexArrays(1, &vao);
+    }
+    GLint old_vao = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
+    glBindVertexArray(vao);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex[slot]);
+    glBindSampler(0, 0);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    if (w != tw[slot] || h != th[slot]) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(w), GLsizei(h), 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        tw[slot] = w;
+        th[slot] = h;
+    } else if (upload) {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GLsizei(w), GLsizei(h), GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    }
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glViewport(GLint(x), GLint(int(screen_h) - y - int(h)), GLsizei(w), GLsizei(h));
+    glUseProgram(program);
+    glUniform4f(opts, 0.0f, 1.0f, 1.0f, 0.0f);  // its alpha kept, rows flipped onto the window
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDisable(GL_BLEND);
+    glBindVertexArray(GLuint(old_vao));
+}
+
 }  // namespace glr

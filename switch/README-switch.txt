@@ -2,12 +2,12 @@ Spider-Man 2 (Xbox) for Nintendo Switch - TEST BUILD
 ====================================================
 by SantiBros
 
-This is an early test of the recompiled Xbox game on the Switch. It is NOT a
-playable release yet:
+This is a test of the recompiled Xbox game on the Switch. It has not been
+played through on a console yet:
 
   - The picture is drawn by the Switch's graphics chip (OpenGL), every frame.
-    This is the first build that does: how fast it runs on a console is not
-    known yet, and parts of the picture may be wrong.
+    How fast it runs on a console is not known yet (the debug menu's counter
+    shows it), and parts of the picture may be wrong.
   - Sound goes through the Switch speaker/headphones.
   - This .nro was built from YOUR copy of the game. It contains code derived
     from the game, so keep it to yourself: do not share it.
@@ -58,11 +58,16 @@ Open the Homebrew Menu by HOLDING R while you start any game (not from the
 Album: the Album gives homebrew too little memory). Then start
 "Spider-Man 2 (Xbox)".
 
-Until the game draws its first picture, the screen shows the newest lines of
-the log, so a photo of it tells how far the game got.
+Until the game draws its first picture, the screen says "Loading...". With
+the debug menu's "Start-up log" on, it shows the newest lines of the log
+instead, so a photo of it tells how far the game got.
 
-Hold while you start it (until the text screen appears), to find where a
-problem comes from:
+The game is in the console's language: English, Spanish, French, German or
+Italian menus and subtitles (any other language: English). The voices are in
+English in every language: the disc only has those.
+
+Hold while you start it (until the blue screen appears), for that start only,
+to find where a problem comes from:
 
   L    sound off
   R    the old CPU renderer: a still picture every few seconds, without the
@@ -83,8 +88,31 @@ The game shows Xbox buttons. They are mapped by position:
 Hold + and - together for one second to quit.
 
 
+4. Debug menu
+-------------
 
-4. What to send back
+Hold ZL + ZR and press - (in any order) to open the port's settings; the
+same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
+(the touch screen works too). The game gets no input while it is open.
+
+  Language            Auto (the console's), English, Espanol, Francais,
+                      Deutsch, Italiano - from the next start
+  CPU / GPU / memory  stock, or rates Nintendo's own profiles use (up to
+  clock               1785 / 768 / 1600 MHz); the console's own clocks come
+                      back in the HOME menu and when you quit
+  Frame-rate counter  off, FPS, full (top left, beside the picture)
+  Sound volume        100% to 25%, off
+  Renderer            GPU or CPU - from the next start
+  Render thread       on or off - from the next start
+  Start-up log        the log on the start screen - from the next start
+
+The settings are kept in settings.ini beside the .nro: delete it to go back
+to the recommended ones. If the game runs under 30 frames a second in busy
+places, try a higher CPU clock first.
+
+
+
+5. What to send back
 --------------------
 
 The whole sdmc:/switch/SpiderMan2Xbox/logs/ folder (the newest sm2_NNN.log

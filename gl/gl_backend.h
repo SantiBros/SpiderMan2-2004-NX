@@ -40,5 +40,9 @@ std::unique_ptr<gpu::Backend> CreateBackend(Host* host);
 // a w x h RGBA8 image (red in the low byte, top row first) over the whole bound framebuffer; for the platform's own
 // screens. upload false draws the image of the last call again. Made on first use, on the GL thread.
 void DrawImage(const uint32_t* rgba, uint32_t w, uint32_t h, uint32_t screen_w, uint32_t screen_h, bool upload = true);
+// a w x h RGBA8 image blended by its alpha over the bound framebuffer at x, y (pixels from the top left), for the
+// platform's overlays; each slot (0 to 3) keeps its own texture, upload false draws its last image again
+void DrawOverlay(int slot, const uint32_t* rgba, uint32_t w, uint32_t h, int x, int y, uint32_t screen_w,
+                 uint32_t screen_h, bool upload = true);
 
 }  // namespace glr

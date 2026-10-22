@@ -15,6 +15,7 @@ struct Stats {
 inline Stats g_stats;
 
 inline bool g_no_sound = false;  // L held at start
+inline std::atomic<float> g_volume{1.0f};  // the game's sound, from the settings
 
 // log sync every 250 ms and a pulse line every 2 s, on threads of their own
 void StartWatch();

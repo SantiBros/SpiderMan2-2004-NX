@@ -25,8 +25,9 @@ constexpr int kBuffers = 4;
 
 void Fill(const std::function<void(float*, uint32_t)>& render, std::vector<float>& mix, int16_t* out) {
     render(mix.data(), kFrames);
+    const float volume = sw::g_volume.load(std::memory_order_relaxed);
     for (uint32_t i = 0; i < kFrames * 2; i++) {
-        float v = std::clamp(mix[i], -1.0f, 1.0f);
+        float v = std::clamp(mix[i] * volume, -1.0f, 1.0f);
         out[i] = int16_t(v * 32767.0f);
     }
 }

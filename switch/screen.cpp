@@ -22,6 +22,7 @@ constexpr uint32_t kWidth = 1280, kHeight = 720;
 constexpr uint32_t kBack = 0xFF301A10;   // dark blue, ABGR
 constexpr uint32_t kText = 0xFFFFFFFF;
 constexpr uint32_t kTitle = 0xFF40C8FF;  // amber
+constexpr uint32_t kGray = 0xFFA8A8A8;
 
 enum class Mode { None, Framebuffer, Gl };
 std::atomic<Mode> g_mode{Mode::None};
@@ -50,12 +51,67 @@ std::atomic<bool> g_game{false};
 // libnx's console font: 256 glyphs of 16x16, each 16 rows of 16 bits with the leftmost pixel in the top bit
 const uint16_t* Font() { return static_cast<const uint16_t*>(consoleGetDefault()->font.gfx); }
 
-void Glyph(uint32_t* dst, uint32_t stride, int x, int y, uint8_t c, uint32_t color) {
-    if (x < 0 || y < 0 || x + 16 > int(kWidth) || y + 16 > int(kHeight)) return;
+void Glyph(uint32_t* dst, uint32_t stride, int x, int y, uint8_t c, uint32_t color, uint32_t w = kWidth,
+           uint32_t h = kHeight, int scale = 1) {
+    if (x < 0 || y < 0 || x + 16 * scale > int(w) || y + 16 * scale > int(h)) return;
     const uint16_t* g = Font() + 16 * c;
-    for (int r = 0; r < 16; r++)
-        for (int i = 0; i < 16; i++)
-            if (g[r] & (0x8000 >> i)) dst[size_t(y + r) * stride + x + i] = color;
+    for (int r = 0; r < 16 * scale; r++)
+        for (int i = 0; i < 16 * scale; i++)
+            if (g[r / scale] & (0x8000 >> (i / scale))) dst[size_t(y + r) * stride + x + i] = color;
+}
+
+// the overlays: what the main thread set (under g_lock), and each drawer's copy
+struct Layer {
+    std::vector<uint32_t> px;
+    uint32_t w = 0, h = 0;
+    int x = 0, y = 0;
+    uint64_t version = 0;
+};
+Layer g_layers[kLayers];
+
+// a's pixels over dst by their alpha (framebuffer mode)
+void Blend(uint32_t* dst, uint32_t stride, const Layer& l) {
+    for (uint32_t r = 0; r < l.h; r++) {
+        int y = l.y + int(r);
+        if (y < 0 || y >= int(kHeight)) continue;
+        for (uint32_t c = 0; c < l.w; c++) {
+            int x = l.x + int(c);
+            if (x < 0 || x >= int(kWidth)) continue;
+            uint32_t s = l.px[size_t(r) * l.w + c], a = s >> 24;
+            if (!a) continue;
+            uint32_t& d = dst[size_t(y) * stride + x];
+            if (a == 255) {
+                d = s | 0xFF000000u;
+                continue;
+            }
+            uint32_t out = 0xFF000000u;
+            for (int k = 0; k < 24; k += 8) {
+                uint32_t sv = (s >> k) & 255, dv = (d >> k) & 255;
+                out |= ((sv * a + dv * (255 - a) + 127) / 255) << k;
+            }
+            d = out;
+        }
+    }
+}
+
+// the newest overlays into `mine` (a drawer's own copies): true when any changed
+bool TakeLayers(Layer (&mine)[kLayers], bool (&changed)[kLayers]) {
+    bool any = false;
+    std::lock_guard<std::mutex> lock(g_lock);
+    for (int i = 0; i < kLayers; i++) {
+        changed[i] = g_layers[i].version != mine[i].version;
+        if (changed[i]) mine[i] = g_layers[i];
+        any |= changed[i];
+    }
+    return any;
+}
+
+// GL: the overlays over the bound window framebuffer
+void DrawLayersGl(const Layer (&mine)[kLayers], const bool (&changed)[kLayers]) {
+    for (int i = 0; i < kLayers; i++)
+        if (mine[i].w && mine[i].h)
+            glr::DrawOverlay(i, mine[i].px.data(), mine[i].w, mine[i].h, mine[i].x, mine[i].y, kWidth, kHeight,
+                             changed[i]);
 }
 
 // one line, cut at the screen's edge
@@ -64,8 +120,23 @@ int Line(uint32_t* dst, uint32_t stride, int x, int y, const std::string& s, uin
     return y + 18;
 }
 
+// Loading's screens: their detail starts with this
+constexpr char kCentered = '\x01';
+
+void Centered(uint32_t* dst, uint32_t stride, int y, const std::string& s, uint32_t color, int scale = 1) {
+    int x = (int(kWidth) - int(s.size()) * 16 * scale) / 2;
+    for (size_t i = 0; i < s.size(); i++, x += 16 * scale) Glyph(dst, stride, x, y, uint8_t(s[i]), color, kWidth, kHeight, scale);
+}
+
 void DrawText(uint32_t* dst, uint32_t stride, const std::string& title, const std::string& detail, const std::string& footer) {
     for (uint32_t y = 0; y < kHeight; y++) std::fill(dst + size_t(y) * stride, dst + size_t(y) * stride + kWidth, kBack);
+    if (!detail.empty() && detail[0] == kCentered) {
+        Centered(dst, stride, 288, title, kTitle, 2);
+        Centered(dst, stride, 346, detail.substr(1), kText);
+        Centered(dst, stride, int(kHeight) - 72, footer, kGray);
+        Centered(dst, stride, int(kHeight) - 48, "A project by SantiBros", kTitle);
+        return;
+    }
     int y = 32;
     y = Line(dst, stride, 32, y, title, kTitle);
     y = Line(dst, stride, 32, y, std::string(title.size(), '-'), kTitle) + 18;
@@ -90,7 +161,7 @@ void DrawText(uint32_t* dst, uint32_t stride, const std::string& title, const st
         start = end + 1;
     }
     Line(dst, stride, 32, int(kHeight) - 72, footer, kText);
-    Line(dst, stride, 32, int(kHeight) - 48, "Spider-Man 2 (Xbox) for Switch - test build by SantiBros", kTitle);
+    Line(dst, stride, 32, int(kHeight) - 48, "Spider-Man 2 (Xbox) for Switch - a project by SantiBros", kTitle);
 }
 
 // fit the frame's height to the screen, keep its shape, black bars at the sides
@@ -209,6 +280,10 @@ void Message(const std::string& title, const std::string& detail, const std::str
     g_text_dirty = true;
 }
 
+void Loading(const std::string& title, const std::string& line, const std::string& footer) {
+    Message(title, std::string(1, kCentered) + line, footer);
+}
+
 void Frame(const uint32_t* rgba, uint32_t w, uint32_t h) {
     if (!w || !h) return;
     std::lock_guard<std::mutex> lock(g_lock);
@@ -232,22 +307,32 @@ void Pump() {
             g_gl_released = true;
             return;
         }
+        static Layer mine[kLayers];
+        bool changed[kLayers];
+        bool layers = TakeLayers(mine, changed), text = false;
         {
             std::lock_guard<std::mutex> lock(g_lock);
-            if (!g_text_dirty) return;
-            title = g_title;
-            detail = g_detail;
-            footer = g_footer;
-            g_text_dirty = false;
+            if (g_text_dirty) {
+                title = g_title;
+                detail = g_detail;
+                footer = g_footer;
+                g_text_dirty = false;
+                text = true;
+            }
         }
-        DrawText(g_canvas.data(), kWidth, title, detail, footer);
+        if (!text && !layers) return;
+        if (text) DrawText(g_canvas.data(), kWidth, title, detail, footer);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glr::DrawImage(g_canvas.data(), kWidth, kHeight, kWidth, kHeight);
+        glr::DrawImage(g_canvas.data(), kWidth, kHeight, kWidth, kHeight, text);
+        DrawLayersGl(mine, changed);
         eglSwapBuffers(g_dpy, g_surface);
         return;
     }
     if (mode != Mode::Framebuffer) return;
-    uint32_t w = 0, h = 0;
+    static uint32_t w = 0, h = 0;
+    static Layer mine[kLayers];
+    bool changed[kLayers];
+    bool layers = TakeLayers(mine, changed);
     bool text = false, game = false;
     {
         std::lock_guard<std::mutex> lock(g_lock);
@@ -265,16 +350,56 @@ void Pump() {
         }
         g_text_dirty = false;
     }
-    if (!text && !game) return;
+    if (!text && !game && !layers) return;
     uint32_t stride = 0;
     auto* dst = static_cast<uint32_t*>(framebufferBegin(&g_fb, &stride));
     if (!dst) return;
     stride /= 4;
-    if (game)
+    // the whole picture each time: the framebuffer's buffers take turns
+    if (g_game && !frame.empty())
         DrawFrame(dst, stride, frame.data(), w, h);
     else
         DrawText(dst, stride, title, detail, footer);
+    for (const Layer& l : mine)
+        if (l.w && l.h) Blend(dst, stride, l);
     framebufferEnd(&g_fb);
+}
+
+void Canvas::Reset(uint32_t width, uint32_t height, uint32_t color) {
+    w = width;
+    h = height;
+    px.assign(size_t(w) * h, color);
+}
+
+void Canvas::Rect(int x0, int y0, int x1, int y1, uint32_t color) {
+    x0 = std::max(x0, 0), y0 = std::max(y0, 0), x1 = std::min(x1, int(w)), y1 = std::min(y1, int(h));
+    for (int y = y0; y < y1; y++) std::fill(px.begin() + size_t(y) * w + x0, px.begin() + size_t(y) * w + x1, color);
+}
+
+int Canvas::Text(int x, int y, const std::string& s, uint32_t color, int scale) {
+    for (size_t i = 0; i < s.size() && x + 16 * scale <= int(w); i++, x += 16 * scale)
+        Glyph(px.data(), w, x, y, uint8_t(s[i]), color, w, h, scale);
+    return x;
+}
+
+int TextWidth(const std::string& s, int scale) { return int(s.size()) * 16 * scale; }
+
+void SetOverlay(int layer, const Canvas& c, int x, int y) {
+    if (layer < 0 || layer >= kLayers) return;
+    std::lock_guard<std::mutex> lock(g_lock);
+    Layer& l = g_layers[layer];
+    if (!c.w || !c.h) {
+        if (!l.w) return;  // already away
+        l.px.clear();
+        l.w = l.h = 0;
+    } else {
+        l.px = c.px;
+        l.w = c.w;
+        l.h = c.h;
+        l.x = x;
+        l.y = y;
+    }
+    l.version++;
 }
 
 bool ShowingGame() { return g_game; }
@@ -331,7 +456,24 @@ void GlRelease() {
     if (g_mode == Mode::Gl) eglMakeCurrent(g_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
 
+namespace {
+// the renderer's thread: the overlays over the frame it just put on the window
+void PresentedLayers() {
+    static Layer mine[kLayers];
+    bool changed[kLayers];
+    TakeLayers(mine, changed);
+    DrawLayersGl(mine, changed);
+}
+void PresentedText(uint32_t draws);
+}  // namespace
+
 void GlPresented(uint32_t draws) {
+    PresentedText(draws);
+    PresentedLayers();
+}
+
+namespace {
+void PresentedText(uint32_t draws) {
     g_stats.frames.fetch_add(1, std::memory_order_relaxed);
     g_stats.drawn.fetch_add(1, std::memory_order_relaxed);
     g_stats.draws.fetch_add(draws, std::memory_order_relaxed);
@@ -365,6 +507,7 @@ void GlPresented(uint32_t draws) {
     glr::DrawImage(g_canvas.data(), kWidth, kHeight, kWidth, kHeight, dirty || !drawn_once);
     drawn_once = true;
 }
+}  // namespace
 
 void GlSwap() { eglSwapBuffers(g_dpy, g_surface); }
 

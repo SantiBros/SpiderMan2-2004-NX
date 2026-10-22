@@ -1,12 +1,14 @@
 // The Switch's controls as the console's controller on port 0. Face buttons go by position, as the game's prompts
 // show the Xbox letters: Xbox A (bottom) is the Switch's B, Xbox B (right) is A, Xbox X (left) is Y, Xbox Y (top)
-// is X. L and R are the Xbox's white and black buttons, ZL and ZR the triggers, + is Start and - is Back.
+// is X. L and R are the Xbox's white and black buttons, ZL and ZR the triggers, + is Start and - is Back. The debug
+// menu's combination (ZL + ZR + -) and the menu itself don't reach the game.
 #include <switch.h>
 
 #include <mutex>
 
 #include "app/app.h"
 #include "core/input.h"
+#include "switch/menu.h"
 
 namespace input {
 
@@ -29,6 +31,13 @@ Pad Poll(int port) {
         }
         padUpdate(&g_pad);
         uint64_t b = padGetButtons(&g_pad);
+        // the debug menu's: nothing for the game while it is open, and not the - of its combination
+        bool hide_back = false;
+        if (sw::menu::Blocking(hide_back)) {
+            if (app::kGame.pad) app::kGame.pad(port, p);
+            return p;
+        }
+        if (hide_back) b &= ~uint64_t(HidNpadButton_Minus);
         if (b & HidNpadButton_Up) p.buttons |= 1;
         if (b & HidNpadButton_Down) p.buttons |= 2;
         if (b & HidNpadButton_Left) p.buttons |= 4;
