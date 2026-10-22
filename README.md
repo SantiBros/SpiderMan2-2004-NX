@@ -36,18 +36,18 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > [!WARNING]
 > **Early test build: not playable yet.** On the port's PC test build the game runs through its menus,
 > cinematics and attract demos into the city. On a Switch it has not yet got past its start in testing,
-> and 0.0.8 is the first build that draws with the Switch's graphics chip, so how fast it runs there is
-> not known yet. [Testers](#help-wanted-testers) are welcome.
+> and 0.0.8 and 0.0.9 are the first builds that draw with the Switch's graphics chip, so how fast it runs
+> there is not known yet. [Testers](#help-wanted-testers) are welcome.
 
 > [!TIP]
-> **New in 0.0.8**
-> - **The Switch's graphics chip draws the game**, every frame, through OpenGL: no more still pictures
->   from the CPU every few seconds. The work runs on a render thread of its own.
-> - **Spider-Man is drawn when you play** (only his shadow was), and the opening cinematic's sky is no
->   longer grey noise.
-> - **The log says where the time goes**, every 5 seconds, so a test on a console tells what to speed up.
+> **New in 0.0.9**
+> - **The videos play at their real speed**: the Activision logo, the intro and the cutscenes ran twice
+>   too fast. The game now runs at its own pace, 30 frames a second, as on the Xbox.
+> - **Building shadows fall where they should**, and half of the screen no longer goes dark.
+> - **Fewer stutters the second time**: the shaders the game needed are kept on the SD card and built
+>   again at the start, and the log names any stutter left.
 >
-> Building now also needs devkitPro's `switch-mesa`. All the details are in the [changelog](CHANGELOG.md).
+> All the details are in the [changelog](CHANGELOG.md).
 
 ## Screenshots
 
@@ -121,7 +121,7 @@ the Switch shows them.</sub></p>
 
 1. **Get your game as files.** A disc image of your own disc, or the files from it. PC DVD drives can't
    read original Xbox discs: [how to get them](docs/INSTALL.md#getting-your-game).
-2. **Build the port.** Download `SpiderMan2-2004-NX-0.0.8.zip` from the [Releases](../../releases) page and
+2. **Build the port.** Download `SpiderMan2-2004-NX-0.0.9.zip` from the [Releases](../../releases) page and
    unzip it on your computer, then run one command in its folder, pointing at your game:
    ```sh
    bash build.sh "/path/to/Spider-Man 2.iso"
@@ -291,8 +291,8 @@ parts as one), a compressed `.cci` or `.cso` (this game fits in about 1.5 GB), o
 <details>
 <summary><b>Does it run at full speed?</b></summary>
 
-Not known yet. 0.0.8 is the first build that draws with the Switch's GPU (earlier builds drew a still picture
-on the CPU every few seconds), and it hasn't been tried on a console yet. Every 5 seconds the log has a `perf:`
+Not known yet. 0.0.8 and 0.0.9 are the first builds that draw with the Switch's GPU (earlier builds drew a
+still picture on the CPU every few seconds), and they haven't been tried on a console yet. Every 5 seconds the log has a `perf:`
 line with the frame rate and where a frame's time goes, so a test run tells what to speed up next.
 </details>
 

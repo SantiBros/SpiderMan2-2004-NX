@@ -90,6 +90,9 @@ Hold + and - together for one second to quit.
 The whole sdmc:/switch/SpiderMan2Xbox/logs/ folder (the newest sm2_NNN.log
 and crash.txt if there is one), plus a photo of the screen if something looks
 wrong or it stops. Every 5 seconds the log has a "perf:" line that says how
-fast it runs and where the time goes. If the console had to be restarted, also send the newest
+fast it runs and where the time goes, and a "hitch:" line marks each stutter.
+shaders.cache beside the .nro keeps the shaders the game needed, so the next
+start builds them before you need them: leave it there (delete it if the
+picture ever looks wrong after an update). If the console had to be restarted, also send the newest
 files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
 if they are from that time.

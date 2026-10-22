@@ -37,20 +37,19 @@ balancéate por Nueva York.
 > [!WARNING]
 > **Versión de prueba temprana: todavía no se puede jugar.** En la versión de prueba para PC del port, el
 > juego pasa por sus menús, cinemáticas y demos hasta llegar a la ciudad. En una Switch todavía no ha pasado
-> de su arranque en las pruebas, y la 0.0.8 es la primera versión que dibuja con el chip gráfico de la
-> Switch, así que todavía no se sabe a qué velocidad va ahí. Se buscan [testers](#se-buscan-testers).
+> de su arranque en las pruebas, y la 0.0.8 y la 0.0.9 son las primeras versiones que dibujan con el chip
+> gráfico de la Switch, así que todavía no se sabe a qué velocidad va ahí. Se buscan
+> [testers](#se-buscan-testers).
 
 > [!TIP]
-> **Novedades de la 0.0.8**
-> - **El chip gráfico de la Switch dibuja el juego**, imagen por imagen, con OpenGL: se acabaron las
->   imágenes fijas desde la CPU cada pocos segundos. El trabajo va en un hilo de renderizado propio.
-> - **Spider-Man se dibuja mientras juegas** (antes solo su sombra), y el cielo de la cinemática inicial ya
->   no es ruido gris.
-> - **El registro dice en qué se va el tiempo**, cada 5 segundos, así que una prueba en la consola dice qué
->   hay que acelerar.
+> **Novedades de la 0.0.9**
+> - **Los vídeos van a su velocidad real**: el logo de Activision, la intro y las escenas iban el doble de
+>   rápido. El juego va ahora a su propio ritmo, 30 imágenes por segundo, como en la Xbox.
+> - **Las sombras de los edificios caen donde deben**, y la mitad de la pantalla ya no se oscurece.
+> - **Menos tirones la segunda vez**: los shaders que necesitó el juego se guardan en la tarjeta SD y se
+>   vuelven a preparar al arrancar, y el registro señala los tirones que queden.
 >
-> Para compilar ahora también hace falta `switch-mesa` de devkitPro. Todos los detalles están en la
-> [lista de cambios](CHANGELOG.md) (en inglés).
+> Todos los detalles están en la [lista de cambios](CHANGELOG.md) (en inglés).
 
 ## Capturas
 
@@ -126,7 +125,7 @@ Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
-2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.0.8.zip` de la página de [Releases](../../releases) y
+2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.0.9.zip` de la página de [Releases](../../releases) y
    descomprímelo en tu computador. Luego ejecuta un comando en su carpeta, indicando dónde está tu juego:
    ```sh
    bash build.sh "/ruta/a/Spider-Man 2.iso"
@@ -301,8 +300,8 @@ disco. O formatea la tarjeta en exFAT.
 <details>
 <summary><b>¿Va a velocidad completa?</b></summary>
 
-Todavía no se sabe. La 0.0.8 es la primera versión que dibuja con la GPU de la Switch (las anteriores dibujaban
-una imagen fija en la CPU cada pocos segundos), y todavía no se ha probado en una consola. Cada 5 segundos el
+Todavía no se sabe. La 0.0.8 y la 0.0.9 son las primeras versiones que dibujan con la GPU de la Switch (las
+anteriores dibujaban una imagen fija en la CPU cada pocos segundos), y todavía no se han probado en una consola. Cada 5 segundos el
 registro tiene una línea `perf:` con las imágenes por segundo y en qué se va el tiempo de cada una, así que una
 prueba dice qué hay que acelerar después.
 </details>

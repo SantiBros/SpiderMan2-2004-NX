@@ -115,15 +115,15 @@ WSL runs a real Linux inside Windows 10 and 11, and the builder runs there.
 3. **Copy the port's folder into Linux** (building inside Linux is much faster than on `C:`). Your Windows
    drives are under `/mnt/`: `C:\Users\You\Downloads` is `/mnt/c/Users/You/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.0.8" ~/
-   cd ~/SpiderMan2-2004-NX-0.0.8
+   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.0.9" ~/
+   cd ~/SpiderMan2-2004-NX-0.0.9
    ```
 4. **Build**, pointing at your game on the Windows drive (it is only read):
    ```sh
    bash build.sh "/mnt/c/Users/You/Games/Spider-Man 2.iso"
    ```
 5. **Find the result in Windows**: in File Explorer, type `\\wsl$` in the address bar, then open
-   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.0.8\out\sd`.
+   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.0.9\out\sd`.
 
 ### What the builder says
 
@@ -190,6 +190,7 @@ Build the new version the same way, then copy its `out/sd/switch` folder over th
 | **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound), once holding **ZR** (no render thread) and once holding **R** (the CPU renderer), and say which ones still freeze. |
 | **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
 | **It runs slowly** | Send the `logs` folder: every 5 seconds the log has a `perf:` line that says where the time goes. |
+| **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |
 | **An Atmosphère error screen** | Send the newest file in `atmosphere/crash_reports/` and the `logs` folder. |
 
 ## Reporting a bug
