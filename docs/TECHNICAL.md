@@ -261,6 +261,7 @@ A pull request with the config (addresses only, never the `.xbe`) is welcome.
 
 ```
 build.sh             the builder: your copy in, the .nro and the SD card folder out
+build-windows.cmd    the same on Windows, through WSL (tools/windows/build-windows.ps1)
 VERSION              the port's version
 config/game.toml     recompiler input for the supported default.xbe: addresses and names only
 src/common/          the game's description for the runtime (title, log name)

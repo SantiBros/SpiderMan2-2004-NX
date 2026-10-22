@@ -16,22 +16,30 @@ development, the tests, and making a release.
 ## The builder
 
 ```sh
-bash build.sh <your game>      # a disc image, the game's folder, or default.xbe
+bash build.sh [--yes] [--copy-game] <your game>      # a disc image, the game's folder, or default.xbe
 ```
+
+`--copy-game` also copies the game into the SD card folder (every part of a split image, or `default.xbe` and
+`data/`); `--yes` installs missing tools without asking. On Windows, [`build-windows.cmd`](../build-windows.cmd) runs
+[`tools/windows/build-windows.ps1`](../tools/windows/build-windows.ps1): it installs WSL with Ubuntu if there is none
+(`wsl --install -d Ubuntu`, then a restart), asks for the game with a file dialog (or takes the file dropped onto
+it), copies the port's files into `~/SpiderMan2-2004-NX-<version>` in Linux (building on `/mnt/c` is much slower),
+runs `build.sh --yes` there, and copies `out/sd/switch` to `SD card\switch` beside itself, with the game, which it
+copies on the Windows side. `.gitattributes` keeps both files in Windows line endings.
 
 | Step | What it does |
 |---|---|
-| 1. Tools | Checks git, CMake, Ninja, a C++20 compiler and devkitPro (`$DEVKITPRO`, `/opt/devkitpro` by default, with `switch-dev` and `switch-mesa`), then builds the PC tools in `build-tools/` from [`tools/xbe`](../tools/xbe): `xbe_recomp`, `xbe_extract` and `xbe_symbols`. CMake downloads Zydis and toml++ the first time. |
+| 1. Tools | Checks git, CMake, Ninja, a C++20 compiler, wget and devkitPro (`$DEVKITPRO`, `/opt/devkitpro` by default, with `switch-dev` and `switch-mesa`). Where `apt-get` is, it offers to install what is missing: the packages, devkitPro's `install-devkitpro-pacman` (with the `/etc/mtab` link WSL may lack), then `dkp-pacman -S --needed switch-dev switch-mesa`. Then it builds the PC tools in `build-tools/` from [`tools/xbe`](../tools/xbe): `xbe_recomp`, `xbe_extract` and `xbe_symbols`. CMake downloads Zydis and toml++ the first time. |
 | 2. default.xbe | Takes it from the folder, or copies it out of the disc image with `xbe_extract` (the port's own disc reader), checks its SHA-1 against the supported release, and puts it in `assets/default.xbe`. |
 | 3. Recompile | `xbe_recomp config/game.toml --xdk sdk/xdk` writes `generated/game/`: 128 partitions of C++, `x86_func_mapping.cpp` and `image_symbols.h`. |
 | 4. The .nro | [`switch/build.sh`](../switch/build.sh) compiles the generated code and the host code (with the GPU renderer in [`gl/`](../gl)) with devkitA64, links Mesa's OpenGL from `switch-mesa`, and makes `build-switch/SpiderMan2Xbox.nro` (with its `.elf` and `.map`). |
-| 5. SD card folder | `out/sd/switch/SpiderMan2Xbox/` with the `.nro`, `README.txt` and `game/`. |
+| 5. SD card folder | `out/sd/switch/SpiderMan2Xbox/` with the `.nro`, `README.txt` and `game/` (with the game in it, with `--copy-game`). |
 
 Logs: `build-tools.log`, `build-recomp.log`, `build-switch.log`. Tested with Ubuntu 24.04 (also under WSL 2),
 CMake 3.28, Ninja 1.11, GCC 13 and devkitA64 (GCC 16.1) with libnx and switch-mesa 20.1. `JOBS=N` sets the number of compile jobs
 (all cores by default).
 
-`assets/`, `generated/`, `build-switch/` and `out/` hold your copy of the game or code made from it. They are
+`assets/`, `generated/`, `build-switch/`, `out/` and `SD card/` hold your copy of the game or code made from it. They are
 in `.gitignore`: never commit them, never upload what's in them.
 
 ## By hand

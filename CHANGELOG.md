@@ -32,6 +32,10 @@ All notable changes to the port. These are test builds: none has been played thr
 - The buttons held at start (**L**, **R**, **ZR**) still work, for that start only; the debug menu keeps the same
   choices for every start.
 - **A new icon** in the Homebrew Menu: Spider-Man's mask with the game's logo, instead of the placeholder.
+- **Easier to build.** On Windows, double-click `build-windows.cmd` and choose your game: it installs WSL with
+  Ubuntu if needed, builds the `.nro` inside Linux (installing the tools the first time), and makes an `SD card`
+  folder with the port and your game in it, ready to copy. On Linux, `build.sh` offers to install the tools it
+  needs on Ubuntu and Debian (`--yes` without asking), and `--copy-game` puts your game in the SD card folder too.
 - **Saves in a folder of their own**, as in the NFS Most Wanted port: `save/progress/` holds the game's saves (the
   Xbox's `E:\UDATA` for this game) and `save/data/` the game's own data (`E:\TDATA`), apart from the rest of the
   Xbox's hard disk and the shader list, now in `cache/` (safe to delete). An `hdd/` folder from an older version is

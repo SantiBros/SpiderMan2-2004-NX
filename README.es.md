@@ -27,7 +27,7 @@ balancéate por Nueva York.
 > [!IMPORTANT]
 > **No se incluye ningún archivo del juego, ni en este repositorio ni en las versiones publicadas.**
 > Necesitas tu propia copia de *Spider-Man 2* para la **Xbox original**, y compilas el port a partir de
-> ella en tu computador (un solo comando). Por favor, no pidas archivos del juego en los issues y nunca
+> ella en tu computador (un doble clic en Windows, un comando en Linux). Por favor, no pidas archivos del juego en los issues y nunca
 > los subas a ningún sitio, ni el `.nro` que compiles: contiene código hecho a partir del juego.
 >
 > Este port es **solo para la versión de la Xbox original (2004)**. Las versiones de PlayStation 2,
@@ -51,6 +51,8 @@ balancéate por Nueva York.
 > - **Una pantalla de arranque limpia**: "Loading..." en vez del registro pasando (el registro se puede
 >   volver a activar).
 > - **Tus partidas en su propia carpeta**, `save/`, aparte de la caché: fáciles de respaldar.
+> - **Más fácil de compilar**: en Windows, doble clic en `build-windows.cmd` y elige tu juego; en Linux,
+>   `build.sh` instala sus propias herramientas. Los dos ponen tu juego en la carpeta de la tarjeta SD, lista.
 > - **Más rápido**: el hilo del juego necesita un 14% menos de tiempo de procesador por imagen (su código es más
 >   pequeño y registra lo que dibuja con menos trabajo).
 >
@@ -115,8 +117,9 @@ ejecutado en el PC.</sub></p>
 - **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
   volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
-- **Se compila a partir de tu copia con un solo comando.** `build.sh` comprueba que tu copia sea la edición
-  compatible, la recompila y compila el `.nro`, con la carpeta de la tarjeta SD ya armada.
+- **Se compila a partir de tu copia con un doble clic.** En Windows, `build-windows.cmd` prepara todo lo que
+  necesita y te pide tu juego; en Linux es un solo comando. Comprueba que tu copia sea la edición compatible, la
+  recompila, compila el `.nro` y arma la carpeta de la tarjeta SD con tu juego dentro.
 - **En tu idioma.** El juego toma el idioma de la consola: menús y subtítulos en inglés, español, francés,
   alemán o italiano, con los textos de tu disco.
 - **Un menú de depuración** (**ZL + ZR + −**) con un contador de imágenes por segundo, los relojes de CPU, GPU
@@ -140,7 +143,7 @@ ejecutado en el PC.</sub></p>
 |---|---|
 | **Consola** | Una Nintendo Switch, Switch OLED o Switch Lite con [Atmosphère](https://github.com/Atmosphere-NX/Atmosphere) y el Homebrew Menu. Usa emuMMC y guarda una copia de seguridad de tu tarjeta SD. |
 | **Juego** | Tu propio *Spider-Man 2* para la **Xbox original**, la edición cuyo `default.xbe` tiene el SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título `4156002B`, versión 4). Como imagen de disco o como los archivos del disco, unos 1,7 GB. `build.sh` lo comprueba por ti. |
-| **Computador** | Linux, o Windows 10/11 con WSL (el Linux que Windows puede instalar), para compilar el port una vez. Unos 2 GB de espacio y de 10 a 30 minutos. En macOS no está probado. |
+| **Computador** | Windows 10/11 (el compilador prepara solo WSL, el Linux que Windows puede instalar) o Linux, para compilar el port una vez. Unos 2 GB de espacio y de 10 a 30 minutos. En macOS no está probado. |
 | **Tarjeta SD** | Unos 2 GB libres. FAT32 o exFAT (en FAT32, una imagen de disco de más de 4 GB tiene que ir dividida). |
 
 ## Cómo instalar
@@ -154,15 +157,18 @@ ejecutado en el PC.</sub></p>
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
-2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.1.0.zip` de la página de [Releases](../../releases) y
-   descomprímelo en tu computador. Luego ejecuta un comando en su carpeta, indicando dónde está tu juego:
-   ```sh
-   bash build.sh "/ruta/a/Spider-Man 2.iso"
-   ```
-   La primera vez, instala las herramientas que necesita (unos 10 minutos, una sola vez): [paso a paso](docs/INSTALL.es.md#compilar-el-port).
-3. **Copia a la tarjeta SD.** Copia la carpeta `out/sd/switch` que se creó a la raíz de tu tarjeta SD.
-   Luego copia tu juego en `switch/SpiderMan2Xbox/game/`: tu imagen de disco (todas sus partes, si está
-   dividida), o `default.xbe` y la carpeta `data`.
+2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.1.0.zip` de la página de [Releases](../../releases)
+   (en **Assets**) y descomprímelo. Luego:
+   - **En Windows:** haz doble clic en **`build-windows.cmd`** y elige tu juego. La primera vez prepara WSL y
+     las herramientas solo ([paso a paso](docs/INSTALL.es.md#en-windows)).
+   - **En Linux:** ejecuta, en la carpeta, indicando dónde está tu juego (en Ubuntu o Debian instala sus
+     herramientas la primera vez):
+     ```sh
+     bash build.sh --copy-game "/ruta/a/Spider-Man 2.iso"
+     ```
+   En los dos casos tarda de 10 a 30 minutos, más unos 10 la primera vez, y crea una carpeta con el port y tu
+   juego dentro: `SD card` en Windows, `out/sd` en Linux.
+3. **Copia a la tarjeta SD.** Copia la carpeta `switch` de esa carpeta a la raíz de tu tarjeta SD.
 4. **Juega.** Mantén **R** mientras abres cualquier juego para entrar al Homebrew Menu, y elige
    **Spider-Man 2 (Xbox)**.
 
@@ -305,7 +311,8 @@ OpenGL para la GPU de la Switch, con sus shaders traducidos. Mira [Cómo funcion
 
 Porque el `.nro` *es* el código del juego, traducido al procesador de la Switch. Compartirlo sería compartir
 el juego. Por eso las versiones publicadas traen el código del port y el compilador, y tú haces el `.nro` a
-partir de tu propia copia en tu computador. Es un solo comando, y primero comprueba tu copia. Guarda para ti
+partir de tu propia copia en tu computador. En Windows es un doble clic en `build-windows.cmd` (un comando en
+Linux), y primero comprueba tu copia. Guarda para ti
 el `.nro` que hagas.
 </details>
 
@@ -397,7 +404,8 @@ borrar cuando quieras.
 <details>
 <summary><b>¿Puedo compilarlo en Windows sin WSL, o en una Mac?</b></summary>
 
-El compilador es un script de Linux, y WSL es la forma fácil en Windows: [paso a paso](docs/INSTALL.es.md#en-windows-con-wsl).
+El compilador es un script de Linux, así que en Windows funciona en WSL, el Linux gratuito de Microsoft:
+`build-windows.cmd` lo instala si hace falta y hace el resto ([paso a paso](docs/INSTALL.es.md#en-windows)).
 devkitPro también funciona en macOS, pero el script no se ha probado ahí.
 </details>
 
@@ -426,8 +434,10 @@ imagen de disco, las versiones de prueba y la organización del código.
 herramientas `switch-dev` de [devkitPro](https://devkitpro.org/wiki/Getting_Started) y `switch-mesa` (OpenGL):
 
 ```sh
-bash build.sh "/ruta/a/tu/Spider-Man 2.iso"     # o la carpeta del juego, o default.xbe
+bash build.sh --copy-game "/ruta/a/tu/Spider-Man 2.iso"     # o la carpeta del juego, o default.xbe
 ```
+
+En Windows, `build-windows.cmd` ejecuta el mismo compilador en WSL.
 
 El resultado es `build-switch/SpiderMan2Xbox.nro`, ya armado para la tarjeta SD en `out/sd/`.
 [docs/BUILDING.md](docs/BUILDING.md) (en inglés) tiene los detalles, la versión de prueba para PC que se usa para

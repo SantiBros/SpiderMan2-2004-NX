@@ -26,8 +26,8 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > [!IMPORTANT]
 > **No game files are included, not in this repository and not in the releases.** You need your own
 > copy of *Spider-Man 2* for the **original Xbox**, and you build the port from it on your computer
-> (one command). Please don't ask for game files in issues, and never upload them, or the `.nro` you
-> build, anywhere: it contains code made from the game.
+> (a double-click on Windows, one command on Linux). Please don't ask for game files in issues, and never
+> upload them, or the `.nro` you build, anywhere: it contains code made from the game.
 >
 > This port is for the **original Xbox version (2004)** only. The PlayStation 2, GameCube, PC, Game Boy
 > Advance, Nintendo DS and PSP versions are different programs and don't work, and neither do the
@@ -47,6 +47,8 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 >   French, German or Italian (the voices stay in English: the disc only has those). Or pick one in the menu.
 > - **A clean start screen**: "Loading..." instead of the log scrolling by (the log can still be turned on).
 > - **Your saves in their own folder**, `save/`, apart from the cache: easy to back up.
+> - **Easier to build**: on Windows, double-click `build-windows.cmd` and choose your game; on Linux,
+>   `build.sh` installs its own tools. Both put your game in the SD card folder, ready to copy.
 > - **Faster**: the game's thread needs about 14% less processor time a frame (its code is smaller and records
 >   its drawing with less work).
 >
@@ -110,8 +112,9 @@ by the Switch build's screen code, run on the PC.</sub></p>
 - **Your copy in the format you have.** A disc image (`.iso` or `.xiso`, a trimmed XISO or a full disc
   dump), the compressed `.cci` (Cerbios) and `.cso` (StellarOS) images that Repackinator makes, any of
   them split into parts for a FAT32 card, or the files from the disc.
-- **Built from your copy in one command.** `build.sh` checks that your copy is the supported release,
-  recompiles it and builds the `.nro`, with the SD card folder laid out.
+- **Built from your copy with a double-click.** On Windows, `build-windows.cmd` sets up everything it needs
+  and asks for your game; on Linux it's one command. It checks that your copy is the supported release,
+  recompiles it, builds the `.nro`, and lays out the SD card folder with your game in it.
 - **In your language.** The game takes the console's language: English, Spanish, French, German or
   Italian menus and subtitles, from the texts on your disc.
 - **A debug menu** (**ZL + ZR + −**) with a frame-rate counter, the Switch's CPU, GPU and memory clocks
@@ -133,7 +136,7 @@ by the Switch build's screen code, run on the PC.</sub></p>
 |---|---|
 | **Console** | A Nintendo Switch, Switch OLED or Switch Lite running [Atmosphère](https://github.com/Atmosphere-NX/Atmosphere) with the Homebrew Menu. Use emuMMC and keep a backup of your SD card. |
 | **Game** | Your own *Spider-Man 2* for the **original Xbox**, the release whose `default.xbe` has the SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (title ID `4156002B`, version 4). As a disc image or as the disc's files, about 1.7 GB. `build.sh` checks it for you. |
-| **Computer** | Linux, or Windows 10/11 with WSL (the Linux that Windows can install), to build the port once. About 2 GB of space and 10 to 30 minutes. macOS is untested. |
+| **Computer** | Windows 10/11 (the builder sets up WSL, the Linux that Windows can install, by itself) or Linux, to build the port once. About 2 GB of space and 10 to 30 minutes. macOS is untested. |
 | **SD card** | About 2 GB free. FAT32 or exFAT (on FAT32, a disc image over 4 GB must be split). |
 
 ## How to install
@@ -147,15 +150,18 @@ by the Switch build's screen code, run on the PC.</sub></p>
 
 1. **Get your game as files.** A disc image of your own disc, or the files from it. PC DVD drives can't
    read original Xbox discs: [how to get them](docs/INSTALL.md#getting-your-game).
-2. **Build the port.** Download `SpiderMan2-2004-NX-0.1.0.zip` from the [Releases](../../releases) page and
-   unzip it on your computer, then run one command in its folder, pointing at your game:
-   ```sh
-   bash build.sh "/path/to/Spider-Man 2.iso"
-   ```
-   The first time, install the tools it needs (about 10 minutes, once): [step by step](docs/INSTALL.md#building-the-port).
-3. **Copy to the SD card.** Copy the `out/sd/switch` folder it made to the root of your SD card. Then copy
-   your game into `switch/SpiderMan2Xbox/game/`: your disc image (all its parts, if it is split), or
-   `default.xbe` and the `data` folder.
+2. **Build the port.** Download `SpiderMan2-2004-NX-0.1.0.zip` from the [Releases](../../releases) page
+   (under **Assets**) and unzip it, then:
+   - **On Windows:** double-click **`build-windows.cmd`** and choose your game. The first time it sets up WSL
+     and the tools by itself ([step by step](docs/INSTALL.md#on-windows)).
+   - **On Linux:** run, in the folder, pointing at your game (on Ubuntu or Debian it installs its tools the
+     first time):
+     ```sh
+     bash build.sh --copy-game "/path/to/Spider-Man 2.iso"
+     ```
+   Either way it takes 10 to 30 minutes, plus about 10 the first time, and makes a folder with the port and
+   your game in it: `SD card` on Windows, `out/sd` on Linux.
+3. **Copy to the SD card.** Copy the `switch` folder from it to the root of your SD card.
 4. **Play.** Hold **R** while you launch any game to open the Homebrew Menu, then choose
    **Spider-Man 2 (Xbox)**.
 
@@ -296,7 +302,8 @@ its shaders translated. See [How it works](docs/TECHNICAL.md).
 
 Because the `.nro` *is* the game's code, translated to the Switch's processor. Sharing it would be sharing
 the game. So the releases hold the port's source and the builder, and you make the `.nro` from your own copy
-on your computer. It's one command, and the builder checks your copy first. Keep the `.nro` you make for
+on your computer. On Windows it's a double-click on `build-windows.cmd` (one command on Linux), and the builder
+checks your copy first. Keep the `.nro` you make for
 yourself.
 </details>
 
@@ -383,7 +390,8 @@ copy it back to restore. Updates never touch it, and `cache/` beside it can be d
 <details>
 <summary><b>Can I build it on Windows without WSL, or on a Mac?</b></summary>
 
-The builder is a Linux shell script, and WSL is the easy way on Windows: [step by step](docs/INSTALL.md#on-windows-with-wsl).
+The builder is a Linux shell script, so on Windows it runs in WSL, the free Linux from Microsoft:
+`build-windows.cmd` installs it if needed and does the rest ([step by step](docs/INSTALL.md#on-windows)).
 devkitPro also runs on macOS, but the builder hasn't been tried there.
 </details>
 
@@ -409,8 +417,10 @@ test builds and the source layout.
 [devkitPro](https://devkitpro.org/wiki/Getting_Started)'s `switch-dev` tools and `switch-mesa` (OpenGL):
 
 ```sh
-bash build.sh "/path/to/your/Spider-Man 2.iso"     # or the game's folder, or default.xbe
+bash build.sh --copy-game "/path/to/your/Spider-Man 2.iso"     # or the game's folder, or default.xbe
 ```
+
+On Windows, `build-windows.cmd` runs the same builder in WSL.
 
 The result is `build-switch/SpiderMan2Xbox.nro`, laid out for the SD card in `out/sd/`.
 [docs/BUILDING.md](docs/BUILDING.md) has the details, the PC test build used for development, the tests, and

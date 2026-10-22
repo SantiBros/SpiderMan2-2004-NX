@@ -1,7 +1,7 @@
 # Installing Spider-Man 2 (Xbox) on the Switch
 
-[![English](https://img.shields.io/badge/lang-English-c8202f?style=for-the-badge)](INSTALL.md)
-[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-1b2a4a?style=for-the-badge)](INSTALL.es.md)
+[![English](https://img.shields.io/badge/lang-English-dc1e2e?style=for-the-badge)](INSTALL.md)
+[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-1c2233?style=for-the-badge)](INSTALL.es.md)
 
 [← Back to the README](../README.md)
 
@@ -17,8 +17,10 @@ for you. Then it goes on the SD card with your game.
   - [With a modded Xbox](#with-a-modded-xbox)
   - [The formats the port reads](#the-formats-the-port-reads)
 - [Building the port](#building-the-port)
+  - [On Windows](#on-windows)
   - [On Linux](#on-linux)
-  - [On Windows with WSL](#on-windows-with-wsl)
+  - [Installing the tools by hand](#installing-the-tools-by-hand)
+  - [On Windows, by hand](#on-windows-by-hand)
   - [What the builder says](#what-the-builder-says)
 - [Copying it to the SD card](#copying-it-to-the-sd-card)
 - [The first start](#the-first-start)
@@ -70,16 +72,50 @@ tools that convert between these.
 
 ## Building the port
 
-The builder, `build.sh`, needs a few free tools the first time (about 10 minutes, once), then one command:
-it checks your copy, recompiles the game's code and builds `SpiderMan2Xbox.nro`, in 10 to 30 minutes
-depending on the computer. It needs about 2 GB of space.
+The builder makes `SpiderMan2Xbox.nro` from your own copy: it checks your copy, recompiles the game's code and
+builds the port, in 10 to 30 minutes depending on the computer, plus about 10 minutes the first time to install
+its tools. It needs about 2 GB of space, and room for a copy of your game when it puts the game in the SD card
+folder too.
 
-First download `SpiderMan2-2004-NX-<version>.zip` from the [Releases](../../../releases) page and unzip it, or
-clone the repository with git.
+First download `SpiderMan2-2004-NX-<version>.zip` from the [Releases](../../../releases) page (under
+**Assets**, not "Source code") and unzip it.
+
+### On Windows
+
+1. **Double-click `build-windows.cmd`** in the unzipped folder. If Windows says "Windows protected your PC",
+   click **More info**, then **Run anyway**: it is a script from the zip, not a signed program.
+2. **The first time only, if WSL isn't installed** (WSL is the Linux that Windows 10 and 11 can install, free,
+   from Microsoft): it offers to install it, and Windows asks for permission. Then restart the computer, open
+   **Ubuntu** once from the Start menu to choose a user name and a password for it, and double-click
+   `build-windows.cmd` again.
+3. **Choose your game** in the window that opens: your disc image (the first part, if it is split), or
+   `default.xbe` from the disc's files. You can also drop your game onto `build-windows.cmd` instead.
+4. **Wait.** The first time it installs the tools inside Linux and asks once for the Linux password you chose;
+   then it builds.
+5. When it's done, the folder **`SD card`** opens beside `build-windows.cmd`. Its `switch` folder has the
+   port and your game in it, ready for [the SD card](#copying-it-to-the-sd-card).
+
+The Windows builder is new in 0.1.0. If it stops, its message says why, and the
+[same steps by hand](#on-windows-by-hand) always work.
 
 ### On Linux
 
-On Ubuntu or Debian (other distributions have the same packages under similar names):
+On Ubuntu or Debian, one command in the unzipped folder, pointing at your game (a disc image, the first part
+of a split one, the game's folder, or `default.xbe`):
+
+```sh
+bash build.sh --copy-game "/path/to/Spider-Man 2.iso"
+```
+
+The first time it offers to install what it needs (git, cmake, ninja, g++ and devkitPro's Switch tools, with
+`sudo`; `--yes` installs them without asking). `--copy-game` puts your game into the SD card folder it makes,
+`out/sd/switch`, too; without it, you copy the game yourself. On another distribution,
+[install the tools by hand](#installing-the-tools-by-hand) first.
+
+### Installing the tools by hand
+
+What `build.sh` installs by itself on Ubuntu and Debian (other distributions have the same packages under
+similar names):
 
 1. **The build tools:**
    ```sh
@@ -95,53 +131,49 @@ On Ubuntu or Debian (other distributions have the same packages under similar na
    ```
    Press Enter to take all the packages it offers. `switch-mesa` is OpenGL for the Switch, which the GPU renderer
    draws with.
-3. **Build**, in the folder you unzipped, pointing at your game (a disc image, the first part of a split
-   one, the game's folder, or `default.xbe`):
-   ```sh
-   bash build.sh "/path/to/Spider-Man 2.iso"
-   ```
 
-### On Windows with WSL
+### On Windows, by hand
 
-WSL runs a real Linux inside Windows 10 and 11, and the builder runs there.
+What `build-windows.cmd` does, step by step:
 
 1. **Install WSL with Ubuntu.** Open PowerShell as administrator, type `wsl --install`, and restart the
    computer when it asks. At the next start, Ubuntu opens and asks for a user name and password (they are
    only for this Linux).
-2. **In Ubuntu**, make WSL ready for devkitPro, then do steps 1 and 2 of [On Linux](#on-linux):
-   ```sh
-   sudo ln -s /proc/self/mounts /etc/mtab
-   ```
-3. **Copy the port's folder into Linux** (building inside Linux is much faster than on `C:`). Your Windows
-   drives are under `/mnt/`: `C:\Users\You\Downloads` is `/mnt/c/Users/You/Downloads`.
+2. **Copy the port's folder into Linux** (building inside Linux is much faster than on `C:`). Your Windows
+   drives are under `/mnt/`: `C:\Users\You\Downloads` is `/mnt/c/Users/You/Downloads`. In Ubuntu:
    ```sh
    cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.1.0" ~/
    cd ~/SpiderMan2-2004-NX-0.1.0
    ```
-4. **Build**, pointing at your game on the Windows drive (it is only read):
+3. **Build**, pointing at your game on the Windows drive. The first time it installs the tools (on WSL it
+   also makes the `/etc/mtab` link devkitPro's installer needs):
    ```sh
-   bash build.sh "/mnt/c/Users/You/Games/Spider-Man 2.iso"
+   bash build.sh --copy-game "/mnt/c/Users/You/Games/Spider-Man 2.iso"
    ```
-5. **Find the result in Windows**: in File Explorer, type `\\wsl$` in the address bar, then open
+4. **Find the result in Windows**: in File Explorer, type `\\wsl$` in the address bar, then open
    `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.1.0\out\sd`.
 
 ### What the builder says
 
 | Message | What to do |
 |---|---|
-| `missing: ...` | Install what it names (step 1). |
-| `devkitPro's Switch tools were not found` | Do step 2. If devkitPro is somewhere other than `/opt/devkitpro`, run `export DEVKITPRO=/where/it/is` first. |
+| `Missing: ...` and `Install them now?` | Press Enter (or `Y`) and give your password: it installs them. On a distribution without `apt`, [install them by hand](#installing-the-tools-by-hand). |
+| `still missing after installing` | The installation above it says what went wrong (often no internet). Try again, or [install them by hand](#installing-the-tools-by-hand). If devkitPro is somewhere other than `/opt/devkitpro`, run `export DEVKITPRO=/where/it/is` first. |
 | `this default.xbe is not the release the port supports` | Your copy is another release of the game (another region or version). The port only runs the one it was made for: open an issue with the SHA-1 it printed, if you'd like that release supported. |
 | `... is a compressed archive` | Extract the disc image or the game's folder from the `.zip`, `.7z` or `.rar`, and point the builder at that. |
 | `default.xbe could not be read from ...` | The message says why (not an Xbox image, an Xbox 360 image, a missing part of a split image...). |
 | `the PC tools did not build` / `the Switch build failed` | The log it names (`build-tools.log`, `build-switch.log`) says why. Attach it to an issue if it isn't clear. |
+| `WSL cannot see ...` (Windows) | Put your game on a drive of this computer (not a network folder), and try again. |
+| `the build stopped` (Windows) | The messages just above it, from Linux, say why: they are the same as the ones in this table. |
 
 ## Copying it to the SD card
 
-1. Copy the folder `out/sd/switch` to the **root** of your SD card. It merges with the `switch` folder that
-   is already there, and you get `switch/SpiderMan2Xbox/`.
-2. Copy your game into `switch/SpiderMan2Xbox/game/`: your disc image (all its parts, if it is split), or
-   `default.xbe` and the `data` folder, so you have `game/default.xbe` and `game/data/game.ini`.
+1. Copy the `switch` folder the builder made to the **root** of your SD card: from `SD card` on Windows, from
+   `out/sd` on Linux. It merges with the `switch` folder that is already there, and you get
+   `switch/SpiderMan2Xbox/`.
+2. If your game isn't in it yet (you built on Linux without `--copy-game`), copy it into
+   `switch/SpiderMan2Xbox/game/`: your disc image (all its parts, if it is split), or `default.xbe` and the
+   `data` folder, so you have `game/default.xbe` and `game/data/game.ini`.
 
 > [!CAUTION]
 > The `.nro` you built holds code made from your copy of the game. Keep it for yourself: don't share it,

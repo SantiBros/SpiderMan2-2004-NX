@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # build.sh: builds the Switch port from YOUR copy of Spider-Man 2 (Xbox).
 #
-#   bash build.sh <your game>
+#   bash build.sh [--yes] [--copy-game] <your game>
 #
 # <your game> is any of: your disc image (.iso .xiso .cci .cso, whole or the first part of a split one), the
-# folder with the disc's files (default.xbe and data/), or default.xbe itself. Only default.xbe is read: the
-# game's data stays where it is, and goes on your SD card next to the port.
+# folder with the disc's files (default.xbe and data/), or default.xbe itself. Only default.xbe is read for the
+# build: the game's data stays where it is, and goes on your SD card next to the port.
 #
-# It checks the tools, checks that your default.xbe is the release the port supports, recompiles it to C++,
-# builds SpiderMan2Xbox.nro with devkitA64, and lays out the SD card folder in out/sd/.
+#   --copy-game   also copy your game into the SD card folder it makes, so that folder is all there is to copy
+#   --yes         install missing tools without asking (Ubuntu, Debian, WSL)
+#
+# It checks the tools (and offers to install them on Ubuntu or Debian), checks that your default.xbe is the release
+# the port supports, recompiles it to C++, builds SpiderMan2Xbox.nro with devkitA64, and lays out the SD card folder
+# in out/sd/. On Windows, build-windows.cmd does all of it through WSL.
 # The .nro holds code made from your copy of the game: it is for you only, never share or upload it.
 #
 # Needs (see docs/BUILDING.md): Linux or Windows with WSL; git, cmake 3.20+, ninja, a C++20 compiler (g++ 11+ or
@@ -26,23 +30,72 @@ JOBS=${JOBS:-$(nproc 2>/dev/null || echo 4)}
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31mError:\033[0m %s\n' "$*" >&2; exit 1; }
 
+yes_all=0 copy_game=0 src=
+while [ $# -gt 0 ]; do
+    case $1 in
+        --yes | -y) yes_all=1 ;;
+        --copy-game) copy_game=1 ;;
+        -h | --help) sed -n "2,/^set -euo/{/^#/s/^# \{0,1\}//p}" "$0"; exit 0 ;;
+        *) [ -z "$src" ] || fail "one game at a time: $src and $1"; src=$1 ;;
+    esac
+    shift
+done
+
 echo "Spider-Man 2 (Xbox) for Switch $VERSION: build from your own copy of the game"
 
 # 1. tools
 say "[1/5] Checking the tools"
-missing=()
-for t in git cmake sha1sum; do command -v $t > /dev/null || missing+=("$t"); done
-command -v ninja > /dev/null || missing+=("ninja (ninja-build)")
-command -v c++ > /dev/null || command -v g++ > /dev/null || command -v clang++ > /dev/null || missing+=("a C++ compiler (g++)")
-[ ${#missing[@]} -eq 0 ] || fail "missing: ${missing[*]}
-  On Ubuntu or Debian (also in WSL): sudo apt install git cmake ninja-build g++"
-[ -x "$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++" ] && [ -f "$DEVKITPRO/libnx/switch.specs" ] &&
-    [ -x "$DEVKITPRO/tools/bin/elf2nro" ] ||
-    fail "devkitPro's Switch tools were not found under $DEVKITPRO.
-  Install devkitPro (https://devkitpro.org/wiki/Getting_Started), then: sudo dkp-pacman -S switch-dev switch-mesa
+# what is missing, one line each; empty when everything is there
+missing_tools() {
+    for t in git cmake sha1sum wget; do command -v $t > /dev/null || echo "$t"; done
+    command -v ninja > /dev/null || echo "ninja (ninja-build)"
+    command -v c++ > /dev/null || command -v g++ > /dev/null || command -v clang++ > /dev/null || echo "a C++ compiler (g++)"
+    [ -x "$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++" ] && [ -f "$DEVKITPRO/libnx/switch.specs" ] &&
+        [ -x "$DEVKITPRO/tools/bin/elf2nro" ] || echo "devkitPro's Switch tools (switch-dev)"
+    [ -f "$DEVKITPRO/portlibs/switch/lib/libEGL.a" ] && [ -f "$DEVKITPRO/portlibs/switch/lib/libdrm_nouveau.a" ] ||
+        echo "OpenGL for the Switch (switch-mesa)"
+}
+# everything from Ubuntu's or Debian's packages and devkitPro's: once, about 10 minutes
+install_tools() {
+    say "Installing the tools (once, about 10 minutes). sudo asks for your password: on WSL, the one of your Linux user"
+    sudo apt-get update
+    sudo apt-get install -y git cmake ninja-build g++ wget ca-certificates
+    if ! command -v dkp-pacman > /dev/null; then
+        [ -e /etc/mtab ] || sudo ln -s /proc/self/mounts /etc/mtab  # WSL may lack it, devkitPro's installer needs it
+        local tmp
+        tmp=$(mktemp -d)
+        wget -q -O "$tmp/install-devkitpro-pacman" https://apt.devkitpro.org/install-devkitpro-pacman
+        chmod +x "$tmp/install-devkitpro-pacman"
+        sudo "$tmp/install-devkitpro-pacman"
+        rm -rf "$tmp"
+    fi
+    sudo dkp-pacman -Sy --noconfirm
+    sudo dkp-pacman -S --needed --noconfirm switch-dev switch-mesa
+    export DEVKITPRO=/opt/devkitpro
+}
+missing=$(missing_tools)
+if [ -n "$missing" ]; then
+    echo "  Missing:"
+    echo "$missing" | sed 's/^/    /'
+    if command -v apt-get > /dev/null; then
+        answer=y
+        if [ $yes_all = 0 ]; then
+            printf '  Install them now? [Y/n] '
+            { read -r answer < /dev/tty; } 2> /dev/null || answer=n
+        fi
+        case ${answer:-y} in
+            [Yy]* | "") install_tools ;;
+            *) fail "the tools are needed: see docs/INSTALL.md#building-the-port" ;;
+        esac
+        missing=$(missing_tools)
+        [ -z "$missing" ] || fail "still missing after installing: $(echo $missing)
+  See docs/INSTALL.md#building-the-port to install them by hand."
+    else
+        fail "install them with your distribution's packages (git cmake ninja g++ wget), then devkitPro
+  (https://devkitpro.org/wiki/Getting_Started) and: sudo dkp-pacman -S switch-dev switch-mesa
   Open a new terminal afterwards (it sets DEVKITPRO), or run: export DEVKITPRO=/opt/devkitpro"
-[ -f "$DEVKITPRO/portlibs/switch/lib/libEGL.a" ] && [ -f "$DEVKITPRO/portlibs/switch/lib/libdrm_nouveau.a" ] ||
-    fail "OpenGL for the Switch (switch-mesa) is missing, the GPU renderer needs it: sudo dkp-pacman -S switch-mesa"
+    fi
+fi
 echo "  devkitA64: $("$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++" -dumpversion), $JOBS jobs"
 
 # the PC tools: xbe_recomp, xbe_extract
@@ -51,7 +104,6 @@ cmake -S tools/xbe -B build-tools -G Ninja -DCMAKE_BUILD_TYPE=Release > build-to
 
 # 2. your default.xbe
 say "[2/5] Reading default.xbe from your copy"
-src=${1:-}
 if [ -z "$src" ] && [ -f assets/default.xbe ]; then
     src=assets/default.xbe
 fi
@@ -105,12 +157,41 @@ cp switch/README-switch.txt "$sd/README.txt"
 cp switch/game-folder-README.txt "$sd/game/PUT_YOUR_GAME_HERE.txt"
 echo "  $(du -h "$sd/SpiderMan2Xbox.nro" | cut -f1)  $sd/SpiderMan2Xbox.nro"
 
+# your game beside it: a disc image with all its parts, or default.xbe and the data folder
+if [ $copy_game = 1 ]; then
+    echo "  Copying your game into $sd/game/"
+    if [ -d "$src" ] && [ -n "$(find "$src" -maxdepth 1 -iname default.xbe | head -1)" ]; then
+        cp "$(find "$src" -maxdepth 1 -iname default.xbe | head -1)" "$sd/game/default.xbe"
+        data=$(find "$src" -maxdepth 1 -type d -iname data | head -1)
+        [ -n "$data" ] && cp -r "$data" "$sd/game/data" || echo "  (no data folder beside default.xbe: copy it yourself)"
+    elif [[ "${src,,}" == *.xbe ]]; then
+        cp "$src" "$sd/game/default.xbe"
+        data=$(find "$(dirname "$src")" -maxdepth 1 -type d -iname data | head -1)
+        [ -n "$data" ] && cp -r "$data" "$sd/game/data" || echo "  (no data folder beside default.xbe: copy it yourself)"
+    else
+        image=$src
+        [ -d "$src" ] && image=$(find "$src" -maxdepth 1 -type f \( -iname '*.iso' -o -iname '*.xiso' -o -iname '*.cci' -o -iname '*.cso' \) | sort | head -1)
+        name=$(basename "$image")
+        if [[ "$name" =~ ^(.*)\.1\.([A-Za-z]+)$ ]]; then
+            # a split image: every part
+            for part in "$(dirname "$image")/${BASH_REMATCH[1]}".*."${BASH_REMATCH[2]}"; do cp "$part" "$sd/game/"; done
+        else
+            cp "$image" "$sd/game/"
+        fi
+    fi
+fi
+
+if [ $copy_game = 1 ]; then
+    step2="  2. Your game is already in it, in  switch/SpiderMan2Xbox/game/."
+else
+    step2="  2. Put your game in  switch/SpiderMan2Xbox/game/  on the card: your disc image (all its parts if it is
+     split), or default.xbe and the data folder."
+fi
 cat <<EOF
 
 Done. Now:
   1. Copy the folder  out/sd/switch  to the root of your SD card (merge it with the switch folder there).
-  2. Put your game in  switch/SpiderMan2Xbox/game/  on the card: your disc image (all its parts if it is
-     split), or default.xbe and the data folder.
+$step2
   3. Hold R while you start any game, then start "Spider-Man 2 (Xbox)" in the Homebrew Menu.
 
 The .nro holds code made from your copy of the game: keep it for yourself, do not share or upload it.

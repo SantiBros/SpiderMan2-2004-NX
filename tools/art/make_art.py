@@ -177,17 +177,17 @@ def icon_play(d, x, y, s, c, w):
 
 STEPS = {
     "en": [("DOWNLOAD", [("the ", 0), ("SpiderMan2-2004-NX", 1), (" zip from ", 0), ("Releases", 1)], icon_download),
-           ("BUILD", [("run ", 0), ("bash build.sh", 1), (" with your game: it makes the ", 0), (".nro", 1)], icon_build),
-           ("COPY TO SD", [("out/sd/switch", 1), (" to the SD card, your game into ", 0), ("game/", 1)], icon_sd),
+           ("BUILD", [("double-click ", 0), ("build-windows.cmd", 1), (" and choose your game", 0)], icon_build),
+           ("COPY TO SD", [("the ", 0), ("switch", 1), (" folder it made, with your game in it, to the SD card", 0)], icon_sd),
            ("PLAY", [("hold ", 0), ("R", 1), (" while starting any game, then open ", 0), ("Spider-Man 2 (Xbox)", 1)], icon_play)],
     "es": [("DESCARGA", [("el zip ", 0), ("SpiderMan2-2004-NX", 1), (" de ", 0), ("Releases", 1)], icon_download),
-           ("COMPILA", [("ejecuta ", 0), ("bash build.sh", 1), (" con tu juego: crea el ", 0), (".nro", 1)], icon_build),
-           ("COPIA A LA SD", [("out/sd/switch", 1), (" a la tarjeta SD, tu juego en ", 0), ("game/", 1)], icon_sd),
+           ("COMPILA", [("doble clic en ", 0), ("build-windows.cmd", 1), (" y elige tu juego", 0)], icon_build),
+           ("COPIA A LA SD", [("la carpeta ", 0), ("switch", 1), (" que creó, con tu juego dentro, a la tarjeta SD", 0)], icon_sd),
            ("JUEGA", [("mantén ", 0), ("R", 1), (" al abrir un juego y elige ", 0), ("Spider-Man 2 (Xbox)", 1)], icon_play)],
 }
 FOOTER = {
-    "en": "Your own copy of the original Xbox game, and a Linux PC or Windows with WSL to build it once.",
-    "es": "Tu propia copia del juego de la Xbox original, y un PC con Linux o Windows con WSL para compilarlo una vez.",
+    "en": "Your own copy of the original Xbox game, and a PC to build it once (on Linux, with build.sh).",
+    "es": "Tu propia copia del juego de la Xbox original, y un PC para compilarlo una vez (en Linux, con build.sh).",
 }
 
 
