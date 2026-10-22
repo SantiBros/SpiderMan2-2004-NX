@@ -1,19 +1,17 @@
-Spider-Man 2 (Xbox) for Nintendo Switch - TEST BUILD
-====================================================
+Spider-Man 2 (Xbox) for Nintendo Switch
+=======================================
 by SantiBros
 
-This is a test of the recompiled Xbox game on the Switch. It has not been
-played through on a console yet:
+The original Xbox game, recompiled for the Switch. It is playable: it has been
+played on a Switch Lite in handheld mode, smoothly and with its music, sound
+effects and voices.
 
   - The picture is drawn by the Switch's graphics chip (OpenGL), every frame.
-    How fast it runs on a console is not known yet (the debug menu's counter
-    shows it), and parts of the picture may be wrong.
+    The debug menu's counter (ZL + ZR + -) shows the frame rate.
   - Sound goes through the Switch speaker/headphones.
+  - Not confirmed on a console yet: playing docked on a TV, and saving.
   - This .nro was built from YOUR copy of the game. It contains code derived
     from the game, so keep it to yourself: do not share it.
-
-What it tests: that the game runs on the Switch's processor, graphics chip
-and memory, reads its files from the SD card, and reacts to your controls.
 
 
 1. Put your copy of the game on the SD card

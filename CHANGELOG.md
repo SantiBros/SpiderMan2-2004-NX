@@ -1,8 +1,12 @@
 # Changelog
 
-All notable changes to the port. These are test builds: none has been played through on a Switch yet.
+All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
+builds.
 
 ## [0.1.0]
+
+**Playable.** Played on a Switch Lite in handheld mode: the game runs smoothly at its own 30 frames a second, with
+its music, sound effects and voices. Docked play and saving are still to be confirmed on a console.
 
 ### Added
 - **A debug menu.** Hold **ZL + ZR** and press **−** for the port's settings, over the game: the language, the

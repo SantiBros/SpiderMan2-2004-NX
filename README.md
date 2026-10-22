@@ -13,7 +13,7 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 
 [![Latest release](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=download&color=dc1e2e&logo=github&logoColor=white)](../../releases)
 [![Downloads](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=downloads&color=1c2233)](../../releases)
-![Status: test build](https://img.shields.io/badge/status-test%20build-e0a020?style=for-the-badge)
+![Status: playable](https://img.shields.io/badge/status-playable-2ea043?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1c2233?style=for-the-badge)
 ![Original Xbox, 2004](https://img.shields.io/badge/original%20Xbox-2004-1c2233?style=for-the-badge)
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
@@ -33,14 +33,14 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > Advance, Nintendo DS and PSP versions are different programs and don't work, and neither do the
 > newer *Spider-Man* games.
 
-> [!WARNING]
-> **Test build: not yet played on a Switch.** On the port's PC test build the game runs through its menus,
-> cinematics and first missions in the city, in five languages. On a Switch it has not yet got past its start
-> in testing, so how fast it runs there is not known yet: 0.1.0 brings a frame-rate counter and the Switch's
-> clocks in a debug menu to find out. [Testers](#help-wanted-testers) are welcome.
+> [!NOTE]
+> **Playable on the Switch.** 0.1.0 has been played on a Switch Lite, in handheld mode: the game runs smoothly,
+> at its own pace of 30 frames a second, with its music, sound effects and voices. Playing docked on a TV and
+> saving haven't been confirmed on a console yet, so [reports](#help-wanted-testers) are welcome.
 
 > [!TIP]
 > **New in 0.1.0**
+> - **Playable on a real Switch**: tested on a Switch Lite, smooth and with sound.
 > - **A debug menu**: hold **ZL + ZR** and press **−** for the port's settings: a frame-rate counter, the
 >   Switch's CPU, GPU and memory clocks, the language, the sound volume and the renderer, saved on the SD card.
 > - **In your language**: the game follows the console's language, with its menus and subtitles in Spanish,
@@ -244,24 +244,27 @@ no counter, full volume, the GPU renderer on its own thread).
 ## Status
 
 > [!NOTE]
-> **Test build.** It has not yet been played on a Switch: back up your SD card and use emuMMC.
+> **Playable.** Played on a Switch Lite in handheld mode. As with any homebrew, back up your SD card and use emuMMC.
 
 | Part | State |
 |---|---|
-| The game's code on the Switch's processor | ✅ Recompiled and compiled; runs into the city on the ARM test build |
+| The game's code on the Switch's processor | ✅ Recompiled and compiled; runs on a Switch Lite |
 | Reading your copy: disc images and files | ✅ All formats checked byte for byte against the extracted files, on PC and ARM |
-| Starting on a Switch | 🧪 It finds the game and starts it; it froze right after in 0.0.3. 0.0.4 and later fix the causes found and log enough to find the next one |
-| Picture | 🧪 The Switch's GPU through OpenGL, every frame; matches the CPU renderer on the PC test build. Untested on a console |
-| Menus, cinematics, demos, the city | ✅ On the PC test build |
-| Sound | 🧪 Through the Switch's speakers and headphones; untested on a console |
-| Controls | 🧪 Mapped, untested on a console |
-| Saves | 🧪 In `save/` on the SD card, apart from the cache; untested on a console |
-| Language | ✅ The console's: English, Spanish, French, German or Italian texts (voices in English, as on the disc); on the PC test build |
-| Debug menu, clocks, counter | 🧪 Drawn and checked on the PC; the clocks only take effect on a console |
+| Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
+| Speed | ✅ Smooth on a Switch Lite, at the game's own 30 frames a second |
+| Picture | ✅ The Switch's GPU through OpenGL, every frame |
+| Menus, cinematics, the city | ✅ On a Switch Lite and on the PC test build |
+| Sound | ✅ Music, sound effects and voices, on a Switch Lite |
+| Controls | ✅ Mapped by position |
+| Docked (TV) | 🧪 Not tried yet on a console |
+| Saves | 🧪 In `save/` on the SD card, apart from the cache; saving and loading not confirmed on a console yet |
+| Language | ✅ The console's: English, Spanish, French, German or Italian texts (voices in English, as on the disc) |
+| Debug menu, frame-rate counter | ✅ On a Switch Lite; the clocks only offer rates Nintendo's own profiles use |
 | Online | ❌ None: the port doesn't use the network |
 
 **Known issues**
-- How fast it runs on a Switch is not known yet: the first tests will tell (the debug menu's counter shows it).
+- Docked play on a TV and saving haven't been confirmed on a console yet.
+- The first time through a new place can stutter briefly while shaders are built; they are kept for the next time.
 - In Spanish, French, German and Italian the voices are in English: the disc only has the English ones.
 - Only the release above is supported: other releases need their own recompiler config.
 
@@ -269,12 +272,14 @@ See the [changelog](CHANGELOG.md) for what changed in each version.
 
 ## Help wanted: testers
 
-The port is tested on a PC build that runs the same recompiled code and on the ARM build in an emulator.
-What's missing is real consoles. Reports in English or Spanish help most, with the `logs` folder:
+The port plays on a Switch Lite in handheld mode. What helps most now is more consoles and more of the game.
+Reports in English or Spanish help most, with the `logs` folder:
 
 | What | How to help |
 |---|---|
-| 🎮 **Does it start?** | Build it, start it, and tell what the screen shows. A photo of the start screen says how far it got. |
+| 📺 **Docked** | Play with the console in the dock, on a TV, and tell how it runs (the debug menu's counter shows the frame rate). |
+| 💾 **Saves** | Save in the game, quit, start it again and load: does your progress come back? |
+| 🎮 **Further in** | How far did you get? Anything that stops, freezes or looks wrong along the way. |
 | 🧊 **Freezes** | If the console freezes, take a photo, restart, and send the `logs` folder and the newest files in `atmosphere/crash_reports/`. Then try once holding **L** at start (no sound), and once holding **R** (the CPU renderer). |
 | 🎨 **The picture** | A photo of anything drawn wrong, and the `logs` folder: its `perf:` lines say how fast it runs and where the time goes. |
 | 💿 **Your image format** | If your `.cci`, `.cso` or split image isn't accepted, send the log: it says why. |
@@ -356,10 +361,10 @@ parts as one), a compressed `.cci` or `.cso` (this game fits in about 1.5 GB), o
 <details>
 <summary><b>Does it run at full speed?</b></summary>
 
-Not known yet: the builds that draw with the Switch's GPU haven't been played on a console yet. The debug
-menu's frame-rate counter shows it on screen, and if it stays under 30 you can raise the CPU clock there
-(up to 1785 MHz, a rate Nintendo's own profiles use). Every 5 seconds the log has a `perf:` line with the frame
-rate and where a frame's time goes, so a test run tells what to speed up next.
+Yes, on a Switch Lite in handheld mode it plays smoothly at the game's own pace: 30 frames a second, as on
+the Xbox. The debug menu's frame-rate counter shows it on screen, and if a busy place ever drops under 30 you
+can raise the CPU clock there (up to 1785 MHz, a rate Nintendo's own profiles use). Docked play hasn't been
+measured yet.
 </details>
 
 <details>

@@ -14,7 +14,7 @@ balancéate por Nueva York.
 
 [![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=dc1e2e&logo=github&logoColor=white)](../../releases)
 [![Descargas](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=descargas&color=1c2233)](../../releases)
-![Estado: versión de prueba](https://img.shields.io/badge/estado-versi%C3%B3n%20de%20prueba-e0a020?style=for-the-badge)
+![Estado: jugable](https://img.shields.io/badge/estado-jugable-2ea043?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1c2233?style=for-the-badge)
 ![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1c2233?style=for-the-badge)
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
@@ -34,15 +34,15 @@ balancéate por Nueva York.
 > GameCube, PC, Game Boy Advance, Nintendo DS y PSP son programas distintos y no sirven, y tampoco los
 > juegos de *Spider-Man* más nuevos.
 
-> [!WARNING]
-> **Versión de prueba: todavía no se ha jugado en una Switch.** En la versión de prueba para PC del port, el
-> juego pasa por sus menús, cinemáticas y primeras misiones en la ciudad, en cinco idiomas. En una Switch
-> todavía no ha pasado de su arranque en las pruebas, así que todavía no se sabe a qué velocidad va ahí: la
-> 0.1.0 trae un contador de imágenes por segundo y los relojes de la Switch en un menú de depuración para
-> averiguarlo. Se buscan [testers](#se-buscan-testers).
+> [!NOTE]
+> **Jugable en la Switch.** La 0.1.0 se ha jugado en una Switch Lite, en modo portátil: el juego va fluido, a su
+> propio ritmo de 30 imágenes por segundo, con su música, efectos de sonido y voces. Jugar en el dock con la TV
+> y guardar partida todavía no se han comprobado en una consola, así que los [reportes](#se-buscan-testers) son
+> bienvenidos.
 
 > [!TIP]
 > **Novedades de la 0.1.0**
+> - **Jugable en una Switch de verdad**: probado en una Switch Lite, fluido y con sonido.
 > - **Un menú de depuración**: mantén **ZL + ZR** y pulsa **−** para los ajustes del port: un contador de
 >   imágenes por segundo, los relojes de CPU, GPU y memoria de la Switch, el idioma, el volumen y el
 >   renderizador, guardados en la tarjeta SD.
@@ -251,25 +251,28 @@ consola, relojes de fábrica, sin contador, volumen completo, el renderizador po
 ## Estado
 
 > [!NOTE]
-> **Versión de prueba.** Todavía no se ha jugado en una Switch: haz una copia de seguridad de tu tarjeta SD y
-> usa emuMMC.
+> **Jugable.** Jugado en una Switch Lite en modo portátil. Como con cualquier homebrew, haz una copia de
+> seguridad de tu tarjeta SD y usa emuMMC.
 
 | Parte | Estado |
 |---|---|
-| El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; llega a la ciudad en la versión de prueba para ARM |
+| El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; funciona en una Switch Lite |
 | Leer tu copia: imágenes de disco y archivos | ✅ Todos los formatos comprobados byte a byte contra los archivos extraídos, en PC y en ARM |
-| Arrancar en una Switch | 🧪 Encuentra el juego y lo arranca; se congeló justo después en la 0.0.3. De la 0.0.4 en adelante se corrigen las causas encontradas y se registra lo necesario para encontrar la siguiente |
-| Imagen | 🧪 La GPU de la Switch con OpenGL, imagen por imagen; coincide con el renderizador por CPU en la versión de prueba para PC. Sin probar en una consola |
-| Menús, cinemáticas, demos, la ciudad | ✅ En la versión de prueba para PC |
-| Sonido | 🧪 Por los altavoces y audífonos de la Switch; sin probar en una consola |
-| Controles | 🧪 Asignados, sin probar en una consola |
-| Partidas | 🧪 En `save/` en la tarjeta SD, aparte de la caché; sin probar en una consola |
-| Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco); en la versión de prueba para PC |
-| Menú de depuración, relojes, contador | 🧪 Dibujado y comprobado en el PC; los relojes solo actúan en una consola |
+| Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
+| Velocidad | ✅ Fluido en una Switch Lite, a las 30 imágenes por segundo propias del juego |
+| Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
+| Menús, cinemáticas, la ciudad | ✅ En una Switch Lite y en la versión de prueba para PC |
+| Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
+| Controles | ✅ Asignados por posición |
+| En el dock (TV) | 🧪 Todavía no se ha probado en una consola |
+| Partidas | 🧪 En `save/` en la tarjeta SD, aparte de la caché; guardar y cargar todavía no se ha comprobado en una consola |
+| Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco) |
+| Menú de depuración, contador | ✅ En una Switch Lite; los relojes solo ofrecen velocidades que usan los perfiles de Nintendo |
 | En línea | ❌ Nada: el port no usa la red |
 
 **Problemas conocidos**
-- Todavía no se sabe a qué velocidad va en una Switch: lo dirán las primeras pruebas (el contador del menú de depuración lo muestra).
+- Jugar en el dock con la TV y guardar partida todavía no se han comprobado en una consola.
+- La primera vez que pasas por un sitio nuevo puede haber un tirón breve mientras se preparan los shaders; se guardan para la siguiente vez.
 - En español, francés, alemán e italiano las voces son en inglés: el disco solo trae las inglesas.
 - Solo funciona la edición de arriba: otras ediciones necesitan su propia configuración del recompilador.
 
@@ -277,13 +280,14 @@ En la [lista de cambios](CHANGELOG.md) (en inglés) está lo que cambió en cada
 
 ## Se buscan testers
 
-El port se prueba en una versión para PC que ejecuta el mismo código recompilado y en la versión para ARM en
-un emulador. Lo que falta son consolas reales. Los reportes en español o en inglés ayudan mucho, con la
-carpeta `logs`:
+El port se juega en una Switch Lite en modo portátil. Lo que más ayuda ahora son más consolas y más partes del
+juego. Los reportes en español o en inglés ayudan mucho, con la carpeta `logs`:
 
 | Qué | Cómo ayudar |
 |---|---|
-| 🎮 **¿Arranca?** | Compílalo, ábrelo y cuenta qué muestra la pantalla. Una foto de la pantalla de arranque dice hasta dónde llegó. |
+| 📺 **En el dock** | Juega con la consola en el dock, en una TV, y cuenta cómo va (el contador del menú de depuración muestra las imágenes por segundo). |
+| 💾 **Partidas** | Guarda en el juego, sal, vuelve a abrirlo y carga: ¿vuelve tu progreso? |
+| 🎮 **Más adelante** | ¿Hasta dónde llegaste? Cualquier cosa que se detenga, se congele o se vea mal por el camino. |
 | 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), y otra manteniendo **R** (el renderizador por CPU). |
 | 🎨 **La imagen** | Una foto de lo que se dibuje mal, y la carpeta `logs`: sus líneas `perf:` dicen a qué velocidad va y en qué se va el tiempo. |
 | 💿 **El formato de tu imagen** | Si tu `.cci`, `.cso` o imagen dividida no es aceptada, envía el registro: dice por qué. |
@@ -368,11 +372,10 @@ disco. O formatea la tarjeta en exFAT.
 <details>
 <summary><b>¿Va a velocidad completa?</b></summary>
 
-Todavía no se sabe: las versiones que dibujan con la GPU de la Switch todavía no se han jugado en una consola.
-El contador del menú de depuración lo muestra en pantalla, y si se queda por debajo de 30 puedes subir ahí el
-reloj de la CPU (hasta 1785 MHz, una velocidad que usan los perfiles de Nintendo). Cada 5 segundos el registro
-tiene una línea `perf:` con las imágenes por segundo y en qué se va el tiempo de cada una, así que una prueba dice
-qué hay que acelerar después.
+Sí: en una Switch Lite en modo portátil se juega fluido, al ritmo propio del juego, 30 imágenes por segundo,
+como en la Xbox. El contador del menú de depuración lo muestra en pantalla, y si algún sitio con mucho
+movimiento baja de 30 puedes subir ahí el reloj de la CPU (hasta 1785 MHz, una velocidad que usan los perfiles de
+Nintendo). En el dock todavía no se ha medido.
 </details>
 
 <details>
