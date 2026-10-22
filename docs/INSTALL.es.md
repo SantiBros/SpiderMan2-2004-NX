@@ -74,7 +74,7 @@ El compilador, `build.sh`, necesita unas herramientas gratuitas la primera vez (
 y luego un solo comando: comprueba tu copia, recompila el código del juego y compila `SpiderMan2Xbox.nro`, en
 10 a 30 minutos según el computador. Necesita unos 2 GB de espacio.
 
-Primero descarga `SpiderMan2-NX-<versión>.zip` de la página de [Releases](../../../releases) y descomprímelo, o
+Primero descarga `SpiderMan2-2004-NX-<versión>.zip` de la página de [Releases](../../../releases) y descomprímelo, o
 clona el repositorio con git.
 
 ### En Linux
@@ -115,15 +115,15 @@ WSL ejecuta un Linux de verdad dentro de Windows 10 y 11, y el compilador funcio
 3. **Copia la carpeta del port dentro de Linux** (compilar dentro de Linux es mucho más rápido que en `C:`).
    Tus unidades de Windows están en `/mnt/`: `C:\Users\Tu\Downloads` es `/mnt/c/Users/Tu/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/Tu/Downloads/SpiderMan2-NX-0.0.7" ~/
-   cd ~/SpiderMan2-NX-0.0.7
+   cp -r "/mnt/c/Users/Tu/Downloads/SpiderMan2-2004-NX-0.0.8" ~/
+   cd ~/SpiderMan2-2004-NX-0.0.8
    ```
 4. **Compila**, indicando dónde está tu juego en la unidad de Windows (solo se lee):
    ```sh
    bash build.sh "/mnt/c/Users/Tu/Juegos/Spider-Man 2.iso"
    ```
 5. **Encuentra el resultado en Windows**: en el Explorador de archivos, escribe `\\wsl$` en la barra de
-   direcciones y abre `Ubuntu\home\<tu usuario>\SpiderMan2-NX-0.0.7\out\sd`.
+   direcciones y abre `Ubuntu\home\<tu usuario>\SpiderMan2-2004-NX-0.0.8\out\sd`.
 
 ### Lo que dice el compilador
 
@@ -159,12 +159,16 @@ Mantén **R** mientras abres cualquier juego: se abre el Homebrew Menu en vez de
 > 1,3 GB. El port te avisa si se abrió así.
 
 Una pantalla azul muestra qué está haciendo el port: las últimas líneas de su registro, hasta que el juego
-dibuja su primera imagen. En esta versión temprana, la imagen cambia solo cada pocos segundos, porque los
-gráficos del juego se dibujan en la CPU. Pulsa un botón y mantenlo alrededor de un segundo, y luego espera a
-que cambie la pantalla.
+dibuja su primera imagen. Desde ahí, el juego lo dibuja el chip gráfico de la Switch, imagen por imagen.
 
 - **Salir:** mantén **+ y −** a la vez durante un segundo.
 - **Sin sonido:** mantén **L** mientras arranca el port (hasta que aparezca la pantalla azul).
+- **El renderizador antiguo por CPU:** mantén **R** mientras arranca el port. Muestra una imagen fija cada
+  pocos segundos, pero no usa el chip gráfico: pruébalo si la imagen sale mal o si el port se detiene justo
+  después de la pantalla azul, y dilo en tu reporte.
+- **Sin hilo de renderizado:** mantén **ZR** mientras arranca el port. El chip gráfico recibe entonces su
+  trabajo desde el propio hilo del juego: más lento, pero sirve para saber si un problema viene del hilo de
+  renderizado.
 
 ## Partidas
 
@@ -188,7 +192,9 @@ Los mensajes de la pantalla están en inglés:
 | **Another game or version** | La imagen que está en `game/` es de otro juego, o de otra versión de este. |
 | **Not enough memory in this mode** | Abre el port con **R + un juego**, no desde el Álbum. |
 | **The game did not start** | El archivo más nuevo de `logs/` dice por qué. |
-| **La pantalla se congela** | Toma una foto de la pantalla, reinicia la consola (mantén POWER 12 segundos) y envía la carpeta `logs`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido) y cuenta si se sigue congelando. |
+| **La pantalla se congela** | Toma una foto de la pantalla, reinicia la consola (mantén POWER 12 segundos) y envía la carpeta `logs`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), otra manteniendo **ZR** (sin hilo de renderizado) y otra manteniendo **R** (el renderizador por CPU), y cuenta con cuáles se sigue congelando. |
+| **La imagen sale mal** (falta, negra, parpadea, colores raros) | Toma una foto y envía la carpeta `logs`. Luego prueba manteniendo **R** al arrancar (el renderizador por CPU): si así la imagen sale bien, el problema está en el renderizador por GPU. |
+| **Va lento** | Envía la carpeta `logs`: cada 5 segundos el registro tiene una línea `perf:` que dice en qué se va el tiempo. |
 | **Una pantalla de error de Atmosphère** | Envía el archivo más nuevo de `atmosphere/crash_reports/` y la carpeta `logs`. |
 
 ## Reportar un error

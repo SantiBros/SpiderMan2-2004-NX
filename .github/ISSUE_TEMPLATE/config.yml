@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Installation help and troubleshooting
-    url: https://github.com/SantiBros/SpiderMan2-NX/blob/main/docs/INSTALL.md#troubleshooting
+    url: https://github.com/SantiBros/SpiderMan2-2004-NX/blob/main/docs/INSTALL.md#troubleshooting
     about: The most common problems and how to fix them. Please check here first.
   - name: Ayuda de instalación y solución de problemas (español)
-    url: https://github.com/SantiBros/SpiderMan2-NX/blob/main/docs/INSTALL.es.md#solución-de-problemas
+    url: https://github.com/SantiBros/SpiderMan2-2004-NX/blob/main/docs/INSTALL.es.md#solución-de-problemas
     about: Los problemas más comunes y cómo resolverlos.

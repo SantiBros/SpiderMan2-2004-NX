@@ -74,7 +74,7 @@ The builder, `build.sh`, needs a few free tools the first time (about 10 minutes
 it checks your copy, recompiles the game's code and builds `SpiderMan2Xbox.nro`, in 10 to 30 minutes
 depending on the computer. It needs about 2 GB of space.
 
-First download `SpiderMan2-NX-<version>.zip` from the [Releases](../../../releases) page and unzip it, or
+First download `SpiderMan2-2004-NX-<version>.zip` from the [Releases](../../../releases) page and unzip it, or
 clone the repository with git.
 
 ### On Linux
@@ -115,15 +115,15 @@ WSL runs a real Linux inside Windows 10 and 11, and the builder runs there.
 3. **Copy the port's folder into Linux** (building inside Linux is much faster than on `C:`). Your Windows
    drives are under `/mnt/`: `C:\Users\You\Downloads` is `/mnt/c/Users/You/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-NX-0.0.7" ~/
-   cd ~/SpiderMan2-NX-0.0.7
+   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.0.8" ~/
+   cd ~/SpiderMan2-2004-NX-0.0.8
    ```
 4. **Build**, pointing at your game on the Windows drive (it is only read):
    ```sh
    bash build.sh "/mnt/c/Users/You/Games/Spider-Man 2.iso"
    ```
 5. **Find the result in Windows**: in File Explorer, type `\\wsl$` in the address bar, then open
-   `Ubuntu\home\<your user>\SpiderMan2-NX-0.0.7\out\sd`.
+   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.0.8\out\sd`.
 
 ### What the builder says
 
@@ -157,11 +157,15 @@ Hold **R** while you start any game: the Homebrew Menu opens instead of the game
 > 1.3 GB. The port tells you if it was started that way.
 
 A blue screen shows what the port is doing: the newest lines of its log, until the game draws its first
-picture. In this early build the picture then changes only every few seconds, because the game's graphics
-are drawn on the CPU. Press a button and hold it for about a second, then wait for the screen to change.
+picture. From then on the game is drawn by the Switch's graphics chip, every frame.
 
 - **Quit:** hold **+ and −** together for one second.
 - **Sound off:** hold **L** while the port starts (until the blue screen appears).
+- **The old CPU renderer:** hold **R** while the port starts. It shows a still picture every few seconds, but
+  it doesn't use the graphics chip: try it if the picture is wrong or the port stops right after the blue
+  screen, and say so in your report.
+- **No render thread:** hold **ZR** while the port starts. The graphics chip then gets its work from the
+  game's own thread: slower, but a way to tell whether a problem comes from the render thread.
 
 ## Saves
 
@@ -183,7 +187,9 @@ Build the new version the same way, then copy its `out/sd/switch` folder over th
 | **Another game or version** | The image in `game/` holds another game, or another version of this one. |
 | **Not enough memory in this mode** | Start the port with **R + a game**, not from the Album. |
 | **The game did not start** | The newest file in `logs/` says why. |
-| **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound) and say whether it still freezes. |
+| **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound), once holding **ZR** (no render thread) and once holding **R** (the CPU renderer), and say which ones still freeze. |
+| **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
+| **It runs slowly** | Send the `logs` folder: every 5 seconds the log has a `perf:` line that says where the time goes. |
 | **An Atmosphère error screen** | Send the newest file in `atmosphere/crash_reports/` and the `logs` folder. |
 
 ## Reporting a bug

@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for the report! Please **never attach game files**: no `default.xbe`, no `data` folder, no disc image, and not the `.nro` you built (it holds code made from the game). Reports with game files are deleted.
-        Check the [troubleshooting table](https://github.com/SantiBros/SpiderMan2-NX/blob/main/docs/INSTALL.md#troubleshooting) first ([en español](https://github.com/SantiBros/SpiderMan2-NX/blob/main/docs/INSTALL.es.md#solución-de-problemas)).
+        Check the [troubleshooting table](https://github.com/SantiBros/SpiderMan2-2004-NX/blob/main/docs/INSTALL.md#troubleshooting) first ([en español](https://github.com/SantiBros/SpiderMan2-2004-NX/blob/main/docs/INSTALL.es.md#solución-de-problemas)).
   - type: input
     id: version
     attributes:

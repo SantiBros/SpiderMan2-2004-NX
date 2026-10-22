@@ -12,7 +12,7 @@ El código del propio juego, recompilado de antemano para el procesador de la Sw
 reconstruido a su alrededor. Trae tu propia copia del juego, compila el port a partir de ella una vez y
 balancéate por Nueva York.
 
-[![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=c8202f&logo=github&logoColor=white)](../../releases)
+[![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=c8202f&logo=github&logoColor=white)](../../releases)
 ![Estado: prueba temprana](https://img.shields.io/badge/estado-prueba%20temprana-e0a020?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
 ![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1b2a4a?style=for-the-badge)
@@ -35,20 +35,21 @@ balancéate por Nueva York.
 
 > [!WARNING]
 > **Versión de prueba temprana: todavía no se puede jugar.** En la versión de prueba para PC del port, el
-> juego pasa por sus menús y cinemáticas hasta llegar a la ciudad. En una Switch todavía no ha pasado de su
-> arranque en las pruebas, y la imagen la dibuja un renderizador lento en la CPU: una imagen fija cada pocos
-> segundos. Se buscan [testers](#se-buscan-testers).
+> juego pasa por sus menús, cinemáticas y demos hasta llegar a la ciudad. En una Switch todavía no ha pasado
+> de su arranque en las pruebas, y la 0.0.8 es la primera versión que dibuja con el chip gráfico de la
+> Switch, así que todavía no se sabe a qué velocidad va ahí. Se buscan [testers](#se-buscan-testers).
 
 > [!TIP]
-> **Novedades de la 0.0.7**
-> - **Tu imagen de disco funciona tal cual**: `.iso` / `.xiso` (o un volcado completo del disco), `.cci` y
->   `.cso`, también divididas en partes para una tarjeta SD en FAT32. O los archivos del disco, como antes.
-> - **Mensajes claros** cuando algo está mal: un archivo comprimido que hay que extraer, una imagen de Xbox
->   360, otra edición del juego.
-> - **Se compila con un solo comando** a partir de tu copia: `bash build.sh "Spider-Man 2.iso"`.
+> **Novedades de la 0.0.8**
+> - **El chip gráfico de la Switch dibuja el juego**, imagen por imagen, con OpenGL: se acabaron las
+>   imágenes fijas desde la CPU cada pocos segundos. El trabajo va en un hilo de renderizado propio.
+> - **Spider-Man se dibuja mientras juegas** (antes solo su sombra), y el cielo de la cinemática inicial ya
+>   no es ruido gris.
+> - **El registro dice en qué se va el tiempo**, cada 5 segundos, así que una prueba en la consola dice qué
+>   hay que acelerar.
 >
-> Todos los detalles, y las correcciones de la 0.0.3 a la 0.0.6, están en la [lista de cambios](CHANGELOG.md)
-> (en inglés).
+> Para compilar ahora también hace falta `switch-mesa` de devkitPro. Todos los detalles están en la
+> [lista de cambios](CHANGELOG.md) (en inglés).
 
 ## Capturas
 
@@ -80,9 +81,9 @@ balancéate por Nueva York.
 </table>
 
 <p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo
-código recompilado y el mismo renderizador por CPU que la versión de Switch, con los tiempos y la disposición de
-pantalla de la versión de Switch (la imagen 4:3 del juego en la pantalla de 1280×720 de la Switch). Las dos
-pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
+código recompilado y el mismo renderizador por GPU que la versión de Switch (sobre el Mesa del PC en vez del de la
+Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3 del juego en la pantalla de
+1280×720 de la Switch. Las dos pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
 
 ## Características
 
@@ -90,6 +91,9 @@ pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
   traducen a C++ de antemano y se compilan para el procesador ARM de la Switch. El kernel de la Xbox,
   Direct3D 8, DirectSound y los controles se reconstruyen como código nativo de Switch
   ([cómo funciona](#cómo-funciona)).
+- **Lo dibuja la GPU de la Switch.** Lo que el juego dibuja con Direct3D 8 se convierte en OpenGL para el
+  chip gráfico de la Switch: sus programas de vértices y combinadores de píxeles se traducen a shaders, y sus
+  texturas se decodifican una vez y se guardan, en un hilo de renderizado junto al del juego.
 - **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
   volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
@@ -123,7 +127,7 @@ pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
-2. **Compila el port.** Descarga `SpiderMan2-NX-0.0.7.zip` de la página de [Releases](../../releases) y
+2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.0.8.zip` de la página de [Releases](../../releases) y
    descomprímelo en tu computador. Luego ejecuta un comando en su carpeta, indicando dónde está tu juego:
    ```sh
    bash build.sh "/ruta/a/Spider-Man 2.iso"
@@ -175,22 +179,25 @@ pide el juego está donde está en el control de la Xbox:
 | X (izquierda) | **Y** | | Start / Back | **+** / **−** |
 | Y (arriba) | **X** | | Palancas, cruceta | lo mismo |
 
-Mantén **+ y −** a la vez durante un segundo para salir. Mantén **L** mientras arranca el port para quitar el
-sonido (para probar si un problema viene del sonido).
+Mantén **+ y −** a la vez durante un segundo para salir.
+
+Para saber de dónde viene un problema, mantén uno de estos mientras arranca el port: **L** quita el sonido,
+**R** usa el renderizador antiguo por CPU (una imagen fija cada pocos segundos, sin el chip gráfico), **ZR**
+deja el trabajo gráfico en el propio hilo del juego (sin hilo de renderizado).
 
 ## Estado
 
 > [!NOTE]
-> **Prueba temprana.** Esta es la primera versión pública. Todavía no se ha jugado en una Switch: haz una
-> copia de seguridad de tu tarjeta SD y usa emuMMC.
+> **Prueba temprana.** Todavía no se ha jugado en una Switch: haz una copia de seguridad de tu tarjeta SD y
+> usa emuMMC.
 
 | Parte | Estado |
 |---|---|
 | El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; llega a la ciudad en la versión de prueba para ARM |
 | Leer tu copia: imágenes de disco y archivos | ✅ Todos los formatos comprobados byte a byte contra los archivos extraídos, en PC y en ARM |
-| Arrancar en una Switch | 🧪 Encuentra el juego y lo arranca; se congeló justo después en la 0.0.3. De la 0.0.4 a la 0.0.7 se corrigen las causas encontradas y se registra lo necesario para encontrar la siguiente |
-| Imagen | ⚠️ Por ahora un renderizador lento en la CPU: una imagen fija cada pocos segundos. La GPU de la Switch llega más adelante |
-| Menús, cinemáticas, la ciudad | ✅ En la versión de prueba para PC |
+| Arrancar en una Switch | 🧪 Encuentra el juego y lo arranca; se congeló justo después en la 0.0.3. De la 0.0.4 en adelante se corrigen las causas encontradas y se registra lo necesario para encontrar la siguiente |
+| Imagen | 🧪 La GPU de la Switch con OpenGL, imagen por imagen; coincide con el renderizador por CPU en la versión de prueba para PC. Sin probar en una consola |
+| Menús, cinemáticas, demos, la ciudad | ✅ En la versión de prueba para PC |
 | Sonido | 🧪 Por los altavoces y audífonos de la Switch; sin probar en una consola |
 | Controles | 🧪 Asignados, sin probar en una consola |
 | Partidas | 🧪 En `hdd/` en la tarjeta SD; sin probar en una consola |
@@ -198,9 +205,7 @@ sonido (para probar si un problema viene del sonido).
 | En línea | ❌ Nada: el port no usa la red |
 
 **Problemas conocidos**
-- El cuerpo de Spider-Man todavía no se dibuja mientras juegas (su sombra sí), aunque en la demo del propio
-  juego sí aparece. El cielo de la cinemática inicial es ruido gris.
-- Los videos de los logotipos se reproducen, pero no se dibujan.
+- Todavía no se sabe a qué velocidad va en una Switch: lo dirán las primeras pruebas.
 - Solo funciona la edición de arriba: otras ediciones necesitan su propia configuración del recompilador.
 
 En la [lista de cambios](CHANGELOG.md) (en inglés) está lo que cambió en cada versión.
@@ -214,7 +219,8 @@ carpeta `logs`:
 | Qué | Cómo ayudar |
 |---|---|
 | 🎮 **¿Arranca?** | Compílalo, ábrelo y cuenta qué muestra la pantalla. Una foto de la pantalla de arranque dice hasta dónde llegó. |
-| 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido). |
+| 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), y otra manteniendo **R** (el renderizador por CPU). |
+| 🎨 **La imagen** | Una foto de lo que se dibuje mal, y la carpeta `logs`: sus líneas `perf:` dicen a qué velocidad va y en qué se va el tiempo. |
 | 💿 **El formato de tu imagen** | Si tu `.cci`, `.cso` o imagen dividida no es aceptada, envía el registro: dice por qué. |
 
 Abre un [issue](../../issues/new/choose): el formulario pide todo lo necesario.
@@ -230,9 +236,9 @@ del `default.xbe` del juego se traduce a C++ una sola vez, en tu computador, y e
 programa normal de Switch. La Switch ejecuta entonces la lógica del juego como código propio.
 
 Lo que el juego le pide a la Xbox (el kernel, los archivos, los hilos, Direct3D 8, DirectSound, los
-controles) lo responde el propio código del port, escrito para la Switch. La única parte que todavía funciona
-como un emulador es la imagen: por ahora, los comandos de Direct3D del juego los dibuja un renderizador por
-software en la CPU, y por eso va lento. Mira [Cómo funciona](docs/TECHNICAL.md) (en inglés).
+controles) lo responde el propio código del port, escrito para la Switch. La imagen funciona parecido a los
+gráficos de un emulador moderno: los comandos de Direct3D del juego para la GPU de la Xbox se convierten en
+OpenGL para la GPU de la Switch, con sus shaders traducidos. Mira [Cómo funciona](docs/TECHNICAL.md) (en inglés).
 </details>
 
 <details>
@@ -294,12 +300,12 @@ disco. O formatea la tarjeta en exFAT.
 </details>
 
 <details>
-<summary><b>¿Por qué la imagen se actualiza tan lento?</b></summary>
+<summary><b>¿Va a velocidad completa?</b></summary>
 
-Por ahora, los gráficos del juego los dibuja un renderizador por software en la CPU, una imagen fija cada
-pocos segundos, mientras el juego sigue a su propia velocidad entre una y otra. Era la forma más rápida de ver
-el juego en la pantalla y de probar todo lo demás. Un renderizador en la GPU de la Switch es el siguiente gran
-paso.
+Todavía no se sabe. La 0.0.8 es la primera versión que dibuja con la GPU de la Switch (las anteriores dibujaban
+una imagen fija en la CPU cada pocos segundos), y todavía no se ha probado en una consola. Cada 5 segundos el
+registro tiene una línea `perf:` con las imágenes por segundo y en qué se va el tiempo de cada una, así que una
+prueba dice qué hay que acelerar después.
 </details>
 
 <details>
@@ -343,8 +349,9 @@ El juego es el programa x86 `default.xbe`, hecho para el Pentium III de la Xbox 
    y programas de vértices, DirectSound y los controles, como código nativo.
 3. **Acomoda el espacio de direcciones de 4 GB de la Xbox** en la memoria que puede tener un programa homebrew
    de Switch, en trozos de 256 MB.
-4. **Dibuja** por ahora los comandos de Direct3D del juego con un renderizador por software, y los muestra en la
-   pantalla de la Switch.
+4. **Dibuja** los comandos de Direct3D del juego con OpenGL en la GPU de la Switch (el driver de Mesa, de
+   devkitPro): los programas de vértices y los combinadores de píxeles se convierten en shaders, y las texturas
+   se decodifican una vez desde la memoria del juego.
 
 Más en [docs/TECHNICAL.md](docs/TECHNICAL.md) (en inglés): el recompilador, la capa de Switch, los formatos de
 imagen de disco, las versiones de prueba y la organización del código.
@@ -352,7 +359,7 @@ imagen de disco, las versiones de prueba y la organización del código.
 ## Compilar desde el código fuente
 
 `build.sh` hace todo: compila las herramientas de PC, recompila tu `default.xbe` y compila el `.nro` con las
-herramientas `switch-dev` de [devkitPro](https://devkitpro.org/wiki/Getting_Started):
+herramientas `switch-dev` de [devkitPro](https://devkitpro.org/wiki/Getting_Started) y `switch-mesa` (OpenGL):
 
 ```sh
 bash build.sh "/ruta/a/tu/Spider-Man 2.iso"     # o la carpeta del juego, o default.xbe
@@ -375,7 +382,8 @@ Gracias a quienes hicieron esto posible:
   y [**xemu**](https://github.com/xemu-project/xemu): para encontrar las funciones del XDK, y como referencia de cómo
   se comportan la Xbox y su GPU.
 - [**libnx**](https://github.com/switchbrew/libnx) y la comunidad de switchbrew, [**devkitPro**](https://devkitpro.org)
-  (devkitA64, switch-tools) y [**Atmosphère**](https://github.com/Atmosphere-NX/Atmosphere).
+  (devkitA64, switch-tools, y el port para Switch de [**Mesa**](https://mesa3d.org) con el que dibuja el
+  renderizador por GPU) y [**Atmosphère**](https://github.com/Atmosphere-NX/Atmosphere).
 - Los formatos de imagen de disco: [**extract-xiso**](https://github.com/XboxDev/extract-xiso),
   [**Repackinator** y XboxToolkit](https://github.com/Team-Resurgent/Repackinator) de Team Resurgent (CCI), y
   [**ciso**](https://github.com/antangelo/ciso) de antangelo (CSO), cuyos formatos lee el port; LZ4 de Yann Collet.
@@ -384,7 +392,7 @@ Lista completa con licencias: [THIRD_PARTY.md](THIRD_PARTY.md) (en inglés).
 
 ## Licencia
 
-El código propio del port (`switch/`, `src/`, `tools/`, `config/`, `build.sh`) está bajo la [licencia MIT](LICENSE).
+El código propio del port (`switch/`, `gl/`, `src/`, `tools/`, `config/`, `build.sh`) está bajo la [licencia MIT](LICENSE).
 El SDK en `sdk/` mantiene su propia licencia MIT ([sdk/LICENSE](sdk/LICENSE)), y el resto del código de terceros,
 la suya ([THIRD_PARTY.md](THIRD_PARTY.md)). El juego no está incluido y estas licencias no lo cubren de ninguna
 forma.

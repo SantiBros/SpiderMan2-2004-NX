@@ -90,6 +90,11 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
 | `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`. |
 | `GL_CONVERTED=1` | Every vertex converted on the CPU, as the CPU renderer reads them, instead of drawn as the game made them. |
+| `GL_NOMIPS=1` | Textures with their top level only. |
+| `GLPROBE="f x y"` | In frame `f` (the renderer's count, one less than `GLCAP`'s), every draw that changes the pixel (x, y) of a 640×480 target, logged with its shaders and textures: which draw makes a wrong pixel. |
+| `GLSKIPTEX=address` | Draws reading the texture at that guest address (hex) left out. |
+| `GLVERIFY=1` | Every texture's bytes compared in full once a frame, to catch a change the sampled check misses. |
+| `GLTRACE=1` | Targets made, CPU pixels uploaded into them, and copies, logged. |
 
 ## The ARM test build
 
@@ -132,7 +137,7 @@ images you make are your copy of the game: keep them out of the repository.
    the version in the install steps) and the player's guide [`switch/README-switch.txt`](../switch/README-switch.txt).
 2. **Check it:** build with `build.sh` from a clean checkout, run it on the PC test build and, if you can, on a
    console.
-3. **The zip:** commit, then `bash tools/make_release.sh` writes `out/SpiderMan2-NX-<version>.zip` (the
+3. **The zip:** commit, then `bash tools/make_release.sh` writes `out/SpiderMan2-2004-NX-<version>.zip` (the
    repository at that commit) and prints its SHA-256. It refuses a zip with game files in it.
 4. **On GitHub:** tag `v<version>` on that commit, and publish a release with the zip attached, marked as a
    pre-release while the port is an early test.
@@ -140,7 +145,7 @@ images you make are your copy of the game: keep them out of the repository.
 The release description, in English and Spanish:
 
 1. A one-line summary.
-2. **"Which file do I download?" / "¿Qué archivo descargo?"**: a table. `SpiderMan2-NX-<version>.zip` is the one
+2. **"Which file do I download?" / "¿Qué archivo descargo?"**: a table. `SpiderMan2-2004-NX-<version>.zip` is the one
    to download: it holds the builder, which makes the `.nro` from your own copy. "Source code (zip)" and "Source
    code (tar.gz)" are added by GitHub: the same code, without the version's folder name. There is no `.nro` to
    download, and there never will be: it would contain the game's code.

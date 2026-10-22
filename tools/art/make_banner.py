@@ -118,7 +118,7 @@ def main():
         ("ORIGINAL XBOX (2004)", 44, True, AMBER, 70, 305, True),
         ("FOR NINTENDO SWITCH", 44, True, AMBER, 70, 360, True),
         ("Unofficial homebrew port  ·  bring your own copy", 30, False, (215, 220, 235), 70, 440, True),
-        ("github.com/SantiBros/SpiderMan2-NX", 26, True, (170, 180, 210), 70, 560, False),
+        ("github.com/SantiBros/SpiderMan2-2004-NX", 26, True, (170, 180, 210), 70, 560, False),
     ])
     img.save(os.path.join(out, "social-preview.jpg"), quality=92)
 

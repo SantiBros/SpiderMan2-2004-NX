@@ -3,6 +3,33 @@
 All notable changes to the port. Versions before 0.1.0 are early test builds: they have not yet been played
 through on a Switch.
 
+## [0.0.8]
+
+### Added
+- **The Switch's graphics chip draws the game.** A new renderer turns the game's Direct3D 8 drawing into
+  OpenGL 4.3 for the Switch's GPU (through Mesa, devkitPro's `switch-mesa`), every frame, instead of a still
+  picture from the CPU every few seconds. The game's vertex programs, register combiners and fixed function
+  stages become GLSL shaders; its textures (swizzled, compressed, with palettes) are decoded once and kept while
+  they don't change; its vertices go to the GPU as the game made them.
+- **A render thread.** The graphics work runs on a thread of its own, beside the game's, on another core.
+- **Where the time goes**, in the log: every 5 seconds a `perf:` line with the frame rate and what each part of
+  a frame cost.
+- **Start-up switches** for testing, held while the port starts: **R** the old CPU renderer, **ZR** no render
+  thread (**L** still turns the sound off). The port also falls back to the CPU renderer by itself when the
+  graphics chip can't be set up.
+
+### Fixed
+- **Spider-Man's body wasn't drawn when you play** (only his shadow was). The game draws him with recorded push
+  buffers that use the vertex arrays set before them, which weren't passed on.
+- **The sky of the opening cinematic was grey noise.** Its cloud textures are 8-bit with a palette, and the
+  palette set inside a push buffer wasn't used.
+
+### Changed
+- The repository is now [SpiderMan2-2004-NX](https://github.com/SantiBros/SpiderMan2-2004-NX), and the release
+  download `SpiderMan2-2004-NX-<version>.zip`.
+- Building needs `switch-mesa` too: `sudo dkp-pacman -S switch-dev switch-mesa`. `build.sh` says so when it's
+  missing.
+
 ## [0.0.7]
 
 The first public release.

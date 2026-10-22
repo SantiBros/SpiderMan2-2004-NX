@@ -5,15 +5,15 @@ by SantiBros
 This is an early test of the recompiled Xbox game on the Switch. It is NOT a
 playable release yet:
 
-  - The picture is drawn by a slow software renderer and updates only every
-    second or two. The real Switch graphics come later.
-  - Sound goes through the Switch speaker/headphones, but may stutter while a
-    picture is being drawn.
+  - The picture is drawn by the Switch's graphics chip (OpenGL), every frame.
+    This is the first build that does: how fast it runs on a console is not
+    known yet, and parts of the picture may be wrong.
+  - Sound goes through the Switch speaker/headphones.
   - This .nro was built from YOUR copy of the game. It contains code derived
     from the game, so keep it to yourself: do not share it.
 
-What it tests: that the game runs on the Switch's processor and memory, reads
-its files from the SD card, and reacts to your controls.
+What it tests: that the game runs on the Switch's processor, graphics chip
+and memory, reads its files from the SD card, and reacts to your controls.
 
 
 1. Put your copy of the game on the SD card
@@ -61,8 +61,13 @@ Album: the Album gives homebrew too little memory). Then start
 Until the game draws its first picture, the screen shows the newest lines of
 the log, so a photo of it tells how far the game got.
 
-Sound off: hold L while you start it (until the text screen appears). Use it
-to test whether a problem comes from the sound.
+Hold while you start it (until the text screen appears), to find where a
+problem comes from:
+
+  L    sound off
+  R    the old CPU renderer: a still picture every few seconds, without the
+       graphics chip
+  ZR   the graphics chip fed from the game's own thread (no render thread)
 
 
 3. Controls
@@ -77,8 +82,6 @@ The game shows Xbox buttons. They are mapped by position:
 
 Hold + and - together for one second to quit.
 
-Because the picture updates slowly, press a button and hold it for about a
-second, then wait for the screen to change.
 
 
 4. What to send back
@@ -86,6 +89,7 @@ second, then wait for the screen to change.
 
 The whole sdmc:/switch/SpiderMan2Xbox/logs/ folder (the newest sm2_NNN.log
 and crash.txt if there is one), plus a photo of the screen if something looks
-wrong or it stops. If the console had to be restarted, also send the newest
+wrong or it stops. Every 5 seconds the log has a "perf:" line that says how
+fast it runs and where the time goes. If the console had to be restarted, also send the newest
 files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
 if they are from that time.
