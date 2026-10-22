@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <deque>
 #include <map>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -108,6 +109,7 @@ struct Target {
     uint32_t gw = 0, gh = 0;
     uint32_t data = 0, bytes = 0, pitch = 0, format = 0;  // guest memory: virtual address, size, row pitch, D3DFORMAT
     uint64_t epoch = 0, sig = 0;  // last lock seen, guest memory as last matched
+    uint64_t checked = 0;         // frame + 1 its memory was last compared with sig
     bool drawn = false;           // the GPU wrote it since the last read-back
     std::vector<uint8_t> read;    // what Sync left in guest memory, BGRA rows packed
     GLuint fb = 0;                // copy read by draws that sample the target they render to
@@ -121,6 +123,19 @@ bool Changed(const Target& t) {
     for (uint32_t y = 0; y < t.gh; y++)
         if (std::memcmp(p + size_t(y) * t.pitch, &t.read[size_t(y) * row], row)) return true;
     return false;
+}
+
+// Guest memory changed under a target without a lock: the title loaded a texture where a target was (the memory
+// freed and given out again), and those bytes are the surface now. Once a frame per target, before it is drawn into
+// or read: the GPU never changes guest memory, so any change since the target last matched it is the CPU's.
+bool CpuOverwrote(Target& t, uint64_t frame) {
+    if (t.depth || t.checked == frame + 1) return false;
+    t.checked = frame + 1;
+    uint64_t sig = MemSig(t.data, t.bytes);
+    if (sig == t.sig) return false;
+    t.sig = sig;
+    LOG_FIRST(16, "gl: guest memory under target %08X (%ux%u) changed without a lock: the CPU's bytes win", t.data, t.gw, t.gh);
+    return true;
 }
 
 // a lock alone proves nothing, reads lock too: only changed bytes mean the CPU wrote it
@@ -140,6 +155,7 @@ struct Tex {
     TextureDesc d;
     uint32_t levels = 1;
     uint64_t sig = 0, frame = 0, palette = 0;
+    uint64_t full = 0;  // GLVERIFY: every byte's hash at the upload
 };
 
 // a P8 texture's palette: its colours, their address (part of the texture's key) and their hash, all 0 without one
@@ -536,7 +552,11 @@ layout(location = 0) out vec4 o;
 void main() {
     vec2 t = vec2(uv.x, opts.z > 0.0 ? 1.0 - uv.y : uv.y);
     vec4 c = texture(img, t);
-    if (opts.x > 0.0) c.rgb = vec3(texture(lut, vec2(c.r, 0.5)).r, texture(lut, vec2(c.g, 0.5)).g, texture(lut, vec2(c.b, 0.5)).b);
+    // the gamma ramp's entry for each channel's 8 bit value, read exactly (sampled at 1.0 the ramp would wrap)
+    if (opts.x > 0.0) {
+        ivec3 i = clamp(ivec3(c.rgb * 255.0 + 0.5), ivec3(0), ivec3(255));
+        c.rgb = vec3(texelFetch(lut, ivec2(i.r, 0), 0).r, texelFetch(lut, ivec2(i.g, 0), 0).g, texelFetch(lut, ivec2(i.b, 0), 0).b);
+    }
     o = vec4(c.rgb, opts.y > 0.0 ? c.a : 1.0);
 }
 )";
@@ -593,6 +613,32 @@ private:
     void Blit(GLuint tex, float gamma, bool alpha, bool flip);
     void ReleaseOldTextures();
     void LogPerf();
+    // GLPROBE="frame x y": in that frame, every draw that changes the pixel (x, y) of a 640x480 target, logged
+    void Probe(const State& s, const DrawTextures& st, const PixelKey& pk) {
+        static long pf = -1, px = 0, py = 0;
+        static bool init = false;
+        if (!init) {
+            init = true;
+            if (const char* e = std::getenv("GLPROBE")) std::sscanf(e, "%ld %ld %ld", &pf, &px, &py);
+        }
+        if (long(frame_) != pf || !bound_rt_ || bound_rt_->gw != 640) return;
+        static uint32_t last = 0;
+        uint32_t v = 0;
+        glReadPixels(GLint(px), GLint(py), 1, 1, GL_BGRA, GL_UNSIGNED_BYTE, &v);
+        if (v == last) return;
+        last = v;
+        std::string tex;
+        for (int i = 0; i < 4; i++) {
+            TextureDesc d;
+            if (!s.textures[size_t(i)] || !Describe(s.textures[size_t(i)], d)) continue;
+            char b[96];
+            std::snprintf(b, sizeof b, " t%d=%08X:%ux%u/%X%s", i, d.data, d.width, d.height, d.format, st.rt[i] ? "(target)" : "");
+            tex += b;
+        }
+        LOGI("probe: draw %llu rt %08X pixel %08X | vs %X prog %d ps %u modes %X combiners %u%s", (unsigned long long)frame_draws_,
+             bound_rt_->data, v, s.vs_handle, (s.vs_handle & 1) && s.vs && !s.vs->program.empty(), pk.programmable, pk.tex_modes,
+             pk.count, tex.c_str());
+    }
     // the context on the calling thread
     void Own() {
         std::thread::id me = std::this_thread::get_id();
@@ -687,6 +733,8 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
     GLuint fsv = Compile(GL_VERTEX_SHADER, glsl::kFullScreenVertex);
     blit_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kBlitFragment));
@@ -747,6 +795,7 @@ Target* GlBackend::EnsureTarget(const Surface& s, bool depth) {
     t.gw = gw;
     t.gh = gh;
     t.data = data;
+    if (std::getenv("GLTRACE")) LOGI("gl: frame %llu new %s target %08X %ux%u", (unsigned long long)frame_, depth ? "depth" : "colour", data, gw, gh);
     TextureDesc d;
     if (DescribeSurface(s, d)) {
         t.format = d.format;
@@ -825,6 +874,7 @@ void GlBackend::UploadTarget(Target& t, const Surface& s) {
     t.epoch = DirtyEpoch(t.data);
     t.sig = MemSig(t.data, t.bytes);
     LOG_FIRST(8, "gl: CPU pixels uploaded into target %08X", t.data);
+    if (std::getenv("GLTRACE")) LOGI("gl: frame %llu CPU pixels into target %08X (format %X %ux%u)", (unsigned long long)frame_, t.data, d.format, d.width, d.height);
 }
 
 bool GlBackend::BindTargets(const State& s) {
@@ -833,7 +883,7 @@ bool GlBackend::BindTargets(const State& s) {
     if (rt && ds && (rt->gw != ds->gw || rt->gh != ds->gh)) ds = nullptr;
     if (!rt && !ds) return false;
     if (rt) {
-        if (LatchCpuWrite(*rt)) UploadTarget(*rt, s.rt);
+        if (LatchCpuWrite(*rt) | CpuOverwrote(*rt, frame_)) UploadTarget(*rt, s.rt);
         rt->drawn = true;
     }
     if (ds) ds->drawn = true;
@@ -895,6 +945,8 @@ void GlBackend::CreateTexture(Tex& tx, const TextureDesc& d, const FormatInfo& f
     tx.d = d;
     tx.levels = std::max(d.levels, 1u);
     if (fi.compressed && ((d.width & 3) || (d.height & 3))) tx.levels = 1;
+    static const bool no_mips = std::getenv("GL_NOMIPS") != nullptr;  // to compare: the top level only
+    if (no_mips) tx.levels = 1;
     tx.kind = d.cube ? GL_TEXTURE_CUBE_MAP : d.depth > 1 ? GL_TEXTURE_3D : GL_TEXTURE_2D;
     cache_.Forget();
     glGenTextures(1, &tx.tex);
@@ -956,8 +1008,14 @@ void GlBackend::BindGuestTexture(const State& s, int stage, const TextureDesc& d
         tx.frame = frame_ + 1;
         tx.palette = palette.hash;
         uint64_t sig = MemSig(d.data, TotalSize(d)) ^ DirtyEpoch(d.data) ^ palette.hash;
+        static const bool verify = std::getenv("GLVERIFY") != nullptr;
+        uint64_t full = verify ? Hash(kernel::HostPtr(d.data), TotalSize(d)) : 0;
+        if (verify && sig == tx.sig && same && full != tx.full)
+            LOGW("gl: frame %llu texture %08X %ux%u format %X changed and the sampled check missed it", (unsigned long long)frame_,
+                 d.data, d.width, d.height, d.format);
         if (sig != tx.sig || !same) {
             tx.sig = sig;
+            tx.full = full;
             UploadTexture(tx, d, fi, palette.va ? palette.colours : nullptr);
         }
     }
@@ -980,10 +1038,14 @@ void GlBackend::BindTexture(const State& s, int stage, DrawTextures& st) {
     if (tit != targets_.end() && !d.cube && d.depth == 1 && !fi.compressed) {
         Target& t = tit->second;
         if (&t == bound_ds_) return;  // the bound depth buffer: unbound, as the D3D12 path leaves it
+        static std::set<uint64_t> seen;
+        if (seen.insert(uint64_t(t.data) << 32 ^ uint64_t(d.format) << 24 ^ uint64_t(d.width) << 12 ^ d.height).second)
+            LOGI("gl: frame %llu stage %d reads target %08X %ux%u format %X (texture format %X %ux%u%s)", (unsigned long long)frame_,
+                 stage, t.data, t.gw, t.gh, t.format, d.format, d.width, d.height, d.linear ? " linear" : "");
         st.rt[stage] = true;
         info.flags |= kTexTarget;
         info.kind = kTex2D;
-        if (!t.depth && LatchCpuWrite(t)) {
+        if (!t.depth && (LatchCpuWrite(t) | CpuOverwrote(t, frame_))) {
             Surface su;
             su.header = s.textures[size_t(stage)];
             UploadTarget(t, su);
@@ -1277,6 +1339,17 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     sh.vkey = VertexKey(s, a, sh);
     DrawTextures st;
     for (int i = 0; i < 4; i++) BindTexture(s, i, st);
+    // GLSKIPTEX=address: draws reading that texture left out, to see which they are
+    static const uint32_t skip_tex = std::getenv("GLSKIPTEX") ? uint32_t(std::strtoul(std::getenv("GLSKIPTEX"), nullptr, 16)) : 0;
+    if (skip_tex)
+        for (int i = 0; i < 4; i++) {
+            TextureDesc td;
+            if (s.textures[size_t(i)] && Describe(s.textures[size_t(i)], td) && td.data == skip_tex) {
+                LOG_FIRST(16, "gl: frame %llu draw %llu skipped: stage %d reads %08X %ux%u format %X", (unsigned long long)frame_,
+                          (unsigned long long)frame_draws_, i, td.data, td.width, td.height, td.format);
+                return;
+            }
+        }
     // a texture's copy may have moved the framebuffer binding
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer(bound_rt_, bound_ds_));
     PixelKey pk = MakePixelKey(s, st.info);
@@ -1317,6 +1390,7 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     auto tg = Clock::now();
     DrawGeometry(a);
     perf_.submit += Ms(tg);
+    Probe(s, st, pk);
     if (query) {
         glEndQuery(GL_SAMPLES_PASSED);
         counted_.push_back(query);
@@ -1349,7 +1423,7 @@ void GlBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint
     Target* rt = (flags & kClearTarget) ? EnsureTarget(s.rt, false) : nullptr;
     Target* ds = (flags & (kClearZ | kClearStencil)) ? EnsureTarget(s.zs, true) : nullptr;
     // pixels the CPU wrote before this clear go in first, a later upload would paint over the clear
-    if (rt && LatchCpuWrite(*rt)) UploadTarget(*rt, s.rt);
+    if (rt && (LatchCpuWrite(*rt) | CpuOverwrote(*rt, frame_))) UploadTarget(*rt, s.rt);
     std::vector<std::array<int, 4>> area;
     if (count && rects) {
         for (uint32_t i = 0; i < count; i++) {
@@ -1403,6 +1477,9 @@ void GlBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint
 void GlBackend::Copy(const Surface& src, const Surface& dst, uint32_t count, uint32_t src_rects, uint32_t dst_points) {
     Own();
     Target* src_t = FindTarget(src, false);
+    if (std::getenv("GLTRACE"))
+        LOGI("gl: frame %llu copy %08X%s to %08X, %u rects", (unsigned long long)frame_, mem::VirtualFromPhysical(src.data),
+             src_t && src_t->drawn ? " (drawn target)" : "", mem::VirtualFromPhysical(dst.data), count);
     // pixels the CPU made: the copy happens in memory, textures and targets pick it up from there
     if (!src_t || !src_t->drawn) {
         if (!CopySurfaceMemory(src, dst, count, src_rects, dst_points)) LOG_FIRST(8, "gl: CopyRects %08X to %08X skipped", src.data, dst.data);
@@ -1549,6 +1626,24 @@ void DumpTargets(std::unordered_map<uint64_t, Target>& targets, uint64_t frame, 
         std::fwrite(head, 1, 18, f);
         std::fwrite(px.data(), 1, px.size(), f);
         std::fclose(f);
+        // and guest memory under it, decoded as the surface's format: what the CPU renderer would read there
+        TextureDesc d;
+        d.data = t.data;
+        d.format = t.format;
+        d.width = t.gw;
+        d.height = t.gh;
+        d.linear = !Format(t.format).swizzled && !Format(t.format).compressed;
+        d.pitch = t.pitch;
+        if (!t.format || Format(t.format).compressed || Format(t.format).depth) continue;
+        std::vector<uint8_t> mem;
+        uint32_t pitch;
+        DecodeLevel(d, 0, 0, static_cast<const uint8_t*>(kernel::HostPtr(t.data)), nullptr, mem, pitch);
+        std::snprintf(name, sizeof name, "cap/gltarget_%05llu_%08X_%ux%u_mem.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
+        if (FILE* m = std::fopen(name, "wb")) {
+            std::fwrite(head, 1, 18, m);
+            std::fwrite(mem.data(), 1, std::min(mem.size(), px.size()), m);
+            std::fclose(m);
+        }
     }
 }
 
@@ -1559,7 +1654,7 @@ void GlBackend::Present(const Surface& front) {
     if (long(frame_) == dump)
         DumpTargets(targets_, frame_, [](void* self, const Target* t) { return static_cast<GlBackend*>(self)->Framebuffer(t, nullptr); }, this);
     Target* t = EnsureTarget(front, false);
-    if (t && LatchCpuWrite(*t)) UploadTarget(*t, front);
+    if (t && (LatchCpuWrite(*t) | CpuOverwrote(*t, frame_))) UploadTarget(*t, front);
     if (ramp_dirty_) {
         ramp_dirty_ = false;
         uint8_t px[256 * 4];
