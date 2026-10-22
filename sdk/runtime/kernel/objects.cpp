@@ -172,16 +172,28 @@ static void Consume(Object& o, uint32_t me) {
     }
 }
 
+double g_time_scale = 1.0;
+
+int64_t GuestNs() {
+    using namespace std::chrono;
+    int64_t now = duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count();
+    if (g_time_scale == 1.0) return now;
+    static const int64_t start = now;
+    return start + int64_t(double(now - start) * g_time_scale);
+}
+
+int64_t HostNsFor(int64_t guest_ns) { return g_time_scale == 1.0 ? guest_ns : int64_t(double(guest_ns) / g_time_scale); }
+
 int64_t Now100ns() {
     using namespace std::chrono;
     // 1601 to 1970 in 100 ns units
-    auto t = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count();
-    return t / 100 + 116444736000000000ll;
+    if (g_time_scale == 1.0) return duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count() / 100 + 116444736000000000ll;
+    static const int64_t wall = duration_cast<nanoseconds>(system_clock::now().time_since_epoch()).count(), guest = GuestNs();
+    return (wall + GuestNs() - guest) / 100 + 116444736000000000ll;
 }
 
 int64_t ToDeadline(int64_t due) {
-    using namespace std::chrono;
-    int64_t now = duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count();
+    int64_t now = GuestNs();
     if (due < 0) return now + (-due) * 100;  // negative due is relative, positive is absolute system time
     int64_t rel = due - Now100ns();
     return now + std::max<int64_t>(rel, 0) * 100;
@@ -221,10 +233,10 @@ static uint32_t WaitFor(const std::vector<ObjectRef>& objs, bool wait_all, int64
             }
         }
         if (!infinite) {
-            int64_t now = duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count();
+            int64_t now = GuestNs();
             if (now >= deadline) return kTimeout;
             // bounded so alertable waits notice new APCs
-            g_cv.wait_for(lock, nanoseconds(std::min<int64_t>(deadline - now, 50000000)));
+            g_cv.wait_for(lock, nanoseconds(std::min<int64_t>(HostNsFor(deadline - now), 50000000)));
         } else {
             g_cv.wait_for(lock, milliseconds(50));
         }
@@ -357,10 +369,10 @@ static void TimerLoop() {
             g_timer_cv.wait(lock);
             continue;
         }
-        int64_t now = duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count();
+        int64_t now = GuestNs();
         TimerEntry e = g_timers.top();
         if (e.deadline > now) {
-            g_timer_cv.wait_for(lock, nanoseconds(e.deadline - now));
+            g_timer_cv.wait_for(lock, nanoseconds(HostNsFor(e.deadline - now)));
             continue;
         }
         g_timers.pop();

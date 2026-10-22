@@ -357,10 +357,7 @@ void Render(float* out, uint32_t frames) {
     for (uint32_t i = 0; i < frames * 2; i++) out[i] = std::clamp(out[i], -1.0f, 1.0f);
 }
 
-int64_t NowMs() {
-    using namespace std::chrono;
-    return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
-}
+int64_t NowMs() { return kernel::GuestNs() / 1000000; }
 
 void Run(X86Context& ctx, const std::vector<Done>& done) {
     for (const Done& d : done) CallGuest(ctx, d.callback, {d.context, d.packet_context, d.status});

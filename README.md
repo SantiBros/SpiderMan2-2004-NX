@@ -18,7 +18,7 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
 [![License: MIT](https://img.shields.io/badge/license-MIT-1b2a4a?style=for-the-badge)](LICENSE)
 
-[Install](#how-to-install) · [Controls](#controls) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
+[Video](#screenshots-and-video) · [Install](#how-to-install) · [Controls](#controls) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
 
 </div>
 
@@ -48,9 +48,22 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 >
 > Building now also needs devkitPro's `switch-mesa`. All the details are in the [changelog](CHANGELOG.md).
 
-## Screenshots
+## Screenshots and video
+
+<p align="center">
+  <img src="docs/images/clips/swinging.webp" alt="Spider-Man swinging over the streets of Greenwich Village and above a park, in the game's demo" width="720">
+</p>
+<p align="center"><sub>Swinging over Greenwich Village, in the game's own demo. <b><a href="docs/images/clips/gameplay.mp4">▶ Watch a one-minute video</a></b> (MP4): the title screen, swinging through Midtown, a street fight and a trick race.</sub></p>
 
 <table>
+  <tr>
+    <td width="50%"><img src="docs/images/clips/street-fight.webp" alt="Spider-Man fighting thugs on a crosswalk"></td>
+    <td width="50%"><img src="docs/images/clips/trick-race.webp" alt="Spider-Man swinging between skyscrapers in a timed trick race"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>A street fight on a crosswalk</sub></td>
+    <td align="center"><sub>A timed trick race between the skyscrapers</sub></td>
+  </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="The title screen, PRESS START TO BEGIN"></td>
     <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="The swing control menu"></td>
@@ -60,16 +73,32 @@ around it. Bring your own copy of the game, build the port from it once, and swi
     <td align="center"><sub>Choosing the swing controls</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/images/screenshots/city.jpg" alt="On a rooftop in the city with the HUD and the first tutorial hint"></td>
-    <td><img src="docs/images/screenshots/demo.jpg" alt="The game's own demo playing in the streets"></td>
+    <td width="50%"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man on a rooftop at dusk, with the HUD"></td>
+    <td width="50%"><img src="docs/images/screenshots/web-attack.jpg" alt="Spider-Man webbing up a thug in the street"></td>
   </tr>
   <tr>
-    <td align="center"><sub>The first rooftop, with the HUD and a tutorial hint</sub></td>
-    <td align="center"><sub>The game's attract demo, in the streets</sub></td>
+    <td align="center"><sub>The first rooftop, at dusk</sub></td>
+    <td align="center"><sub>Webbing up a thug</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/images/screenshots/status.jpg" alt="The port's start screen with the newest log lines"></td>
-    <td><img src="docs/images/screenshots/not-found.jpg" alt="The port explaining what to put in the game folder"></td>
+    <td width="50%"><img src="docs/images/screenshots/flat-iron.jpg" alt="Swinging past the Flat Iron district under a blue sky"></td>
+    <td width="50%"><img src="docs/images/screenshots/swinging.jpg" alt="Spider-Man in the air between brick buildings"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Swinging into the Flat Iron district</sub></td>
+    <td align="center"><sub>High above the rooftops</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/trick-race.jpg" alt="The trick race HUD: the timer and the next trick, ORBIT"></td>
+    <td width="50%"><img src="docs/images/screenshots/trick-jump.jpg" alt="Spider-Man jumping against the sky over the river during a trick race"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>A trick race: the next trick is an orbit</sub></td>
+    <td align="center"><sub>A jump over the river, against the clock</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/status.jpg" alt="The port's start screen with the newest log lines"></td>
+    <td width="50%"><img src="docs/images/screenshots/not-found.jpg" alt="The port explaining what to put in the game folder"></td>
   </tr>
   <tr>
     <td align="center"><sub>The port's start screen: what it is doing, until the game draws</sub></td>
@@ -77,10 +106,11 @@ around it. Bring your own copy of the game, build the port from it once, and swi
   </tr>
 </table>
 
-<p align="center"><sub>The game screenshots come from the port's PC test build, which runs the same recompiled code
-and the same GPU renderer as the Switch build (on the PC's Mesa instead of the Switch's), with the Switch build's
-screen layout: the game's 4:3 picture on the Switch's 1280×720 screen. The two port screens are drawn exactly as
-the Switch shows them.</sub></p>
+<p align="center"><sub>Everything here comes from the port's PC test build, which runs the same recompiled code and the same GPU
+renderer as the Switch build (on the PC's Mesa instead of the Switch's), with the Switch build's screen layout:
+the game's 4:3 picture on the Switch's 1280×720 screen. The clips are the game's own attract demo, recorded with
+the game's clock slowed down while each frame was drawn and played back at the game's speed: they show what the
+port draws, not how fast a Switch runs it. The two port screens are drawn exactly as the Switch shows them.</sub></p>
 
 ## Features
 

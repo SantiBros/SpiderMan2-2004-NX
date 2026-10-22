@@ -153,7 +153,14 @@ int32_t PulseEvent(Object& o);
 int32_t ReleaseSemaphore(Object& o, int32_t count, uint32_t& status);
 int32_t ReleaseMutant(Object& o, uint32_t& status);
 int64_t Now100ns();                           // system time, 100 ns since 1601
-int64_t ToDeadline(int64_t due_100ns);        // relative or absolute to a steady clock deadline in ns
+int64_t ToDeadline(int64_t due_100ns);        // relative or absolute to a deadline in GuestNs
+// The guest's clock: every time the title can read (tick count, interrupt and system time, the performance
+// counter, the time stamp counter, the vertical blank) and every timeout it waits for, in ns of a steady clock.
+// g_time_scale below 1 runs it slower than the host's, set before Boot: the test build's recordings (TIMESCALE),
+// so a frame the renderer takes long to draw still covers a 60th of a second of the game.
+extern double g_time_scale;
+int64_t GuestNs();
+int64_t HostNsFor(int64_t guest_ns);  // how long the host waits for that much guest time
 void QueueDpc(uint32_t dpc, uint32_t arg1, uint32_t arg2);
 struct Thread;
 // apc_routine runs on apc_thread with (apc_context, due low, due high) each time the timer fires

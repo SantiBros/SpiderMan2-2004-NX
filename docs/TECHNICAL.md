@@ -169,13 +169,16 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
   game's vertices as they are while the reference renderer has them converted.
 - `runtime/gpu/backend.h`, `render_thread.cpp`: the render thread a runtime choice (`gpu::g_render_thread`), started
   with an 8 MB stack outside Windows (drivers compile shaders on it; `std::thread` gets 128 KB on the Switch).
+- `runtime/kernel/objects.cpp`, `xboxkrnl.cpp`, `cpu/dispatch.cpp`, `xdk/d3d8.cpp`, `xdk/dsound.cpp`: every clock the
+  title reads and every timeout it waits for goes through one guest clock (`kernel::GuestNs`), which the test build
+  can run slower than real time (`TIMESCALE`) to record smooth clips.
 - `runtime/xdk/d3d8.cpp`: the `RunPushBuffer` interpreter, and vertex programs by address (program slots,
   `LoadVertexShaderProgram`, `LoadVertexShader`, `SelectVertexShader`, `SetVertexShaderInput`);
   `xdk/5849/layout.toml` gains `CDevice_VertexShaderHandle` and `CDevice_VertexShaderStart`.
 - `runtime/xdk/dsound.cpp`: host `IDirectSoundBuffer_SetMode`, `IDirectSoundBuffer_Pause`,
   `CDirectSoundStream_SetMode`, `CDirectSoundStream_SetAllParameters`, `CDirectSoundStream_SetRolloffCurve`.
 - `harness/`: `SWITCH`, `PULSE` and `CAP` for the test build, the GPU renderer on headless EGL (`gl_harness.cpp`:
-  `GL`, `RT`, `GLCAP`, `REFAT`, `GLDUMP`), ARM builds (`ARCH`, `DEFS`, `GEN_OPT`, `LDFLAGS`),
+  `GL`, `RT`, `GLCAP`, `REFAT`, `GLDUMP`, `GLREC`), `TIMESCALE`, ARM builds (`ARCH`, `DEFS`, `GEN_OPT`, `LDFLAGS`),
   a game folder or disc image as the argument; the reference renderer clips at the near plane and converts floats
   as x86 does.
 

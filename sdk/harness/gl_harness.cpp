@@ -1,7 +1,9 @@
 // GL=1: the test build draws with the GL renderer (gl/) on a headless EGL context (Mesa, llvmpipe without a GPU),
 // every frame, into a 1280x720 screen like the Switch's. Paced to 60 frames a second when it keeps up.
 // GLCAP=N: every Nth frame's screen saved as cap/gl_<frame>.tga (the 4:3 picture, 960x720); GLCAP_AT="f f ...": those
-// frames too. Built with -DXBE_GL_HARNESS and gl/*.cpp, linked with -lEGL.
+// frames too. GLREC="from to": the screen's 4:3 picture of those frames into cap/rec.mp4 at 60 frames a second
+// (through ffmpeg; with TIMESCALE each frame is a 60th of a second of the game). Built with -DXBE_GL_HARNESS and
+// gl/*.cpp, linked with -lEGL.
 #ifdef XBE_GL_HARNESS
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -21,6 +23,7 @@
 #include "gl/gl_backend.h"
 #include "gpu/backend.h"
 #include "harness.h"
+#include "kernel/kernel.h"
 #include "reference_renderer.h"
 
 namespace harness {
@@ -64,6 +67,7 @@ public:
         glGenFramebuffers(1, &screen_);
         glBindFramebuffer(GL_FRAMEBUFFER, screen_);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screen_tex_, 0);
+        if (const char* r = std::getenv("GLREC")) std::sscanf(r, "%ld %ld", &rec_from_, &rec_to_);
         static const long every = Env("GLCAP");
         every_ = every;
         if (const char* at = std::getenv("GLCAP_AT"))
@@ -90,18 +94,45 @@ public:
             LOGI("renderer: first picture at frame %llu", (unsigned long long)frames_);
         }
         if ((every_ && frames_ % uint64_t(every_) == 0) || at_.count(long(frames_))) Save();
+        if (long(frames_) >= rec_from_ && long(frames_) <= rec_to_) Record();
         if (frames_ % 600 == 0) LOGI("renderer: frame %llu", (unsigned long long)frames_);
     }
     void Swap() override {
         glFlush();
-        // the Switch's pace: 60 frames a second at most
-        auto due = last_ + std::chrono::microseconds(16667);
+        // the Switch's pace: 60 frames a second at most, of the guest's clock
+        auto due = last_ + std::chrono::nanoseconds(kernel::HostNsFor(16666667));
         auto now = std::chrono::steady_clock::now();
         if (now < due) std::this_thread::sleep_until(due);
         last_ = std::chrono::steady_clock::now();
     }
 
 private:
+    // one frame of the recording, piped to ffmpeg as it comes
+    void Record() {
+        constexpr uint32_t w = 960, h = 720, x0 = (kScreenW - w) / 2;
+        if (!rec_) {
+            std::string cmd = "ffmpeg -loglevel error -y -f rawvideo -pix_fmt bgra -s 960x720 -r 60 -i - -vf vflip "
+                              "-c:v libx264 -preset veryfast -crf 16 -pix_fmt yuv420p \"" +
+                              (app::ExeDir() / "cap/rec.mp4").string() + "\"";
+            rec_ = popen(cmd.c_str(), "w");
+            if (!rec_) {
+                LOGE("gl harness: ffmpeg did not start, no recording");
+                rec_to_ = -1;
+                return;
+            }
+            LOGI("gl harness: recording frames %ld to %ld", rec_from_, rec_to_);
+        }
+        std::vector<uint8_t> px(size_t(w) * h * 4);
+        glBindFramebuffer(GL_FRAMEBUFFER, screen_);
+        glReadPixels(GLint(x0), 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+        std::fwrite(px.data(), 1, px.size(), rec_);
+        if (long(frames_) == rec_to_) {
+            pclose(rec_);
+            rec_ = nullptr;
+            LOGI("gl harness: recording done, cap/rec.mp4");
+        }
+    }
+
     // the 4:3 picture in the middle of the screen, rows top first
     void Save() {
         constexpr uint32_t w = 960, h = 720, x0 = (kScreenW - w) / 2;
@@ -133,6 +164,8 @@ private:
     long every_ = 0;
     std::set<long> at_;
     bool shown_ = false;
+    long rec_from_ = -1, rec_to_ = -2;
+    FILE* rec_ = nullptr;
     std::chrono::steady_clock::time_point last_ = std::chrono::steady_clock::now();
 };
 

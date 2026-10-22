@@ -233,7 +233,7 @@ void VerticalBlank(X86Context& ctx) {
     uint32_t info = mem::AllocSystem(12), shown = 0;
     auto next = clock::now();
     for (;;) {
-        next = std::max(next + std::chrono::microseconds(16667), clock::now());
+        next = std::max(next + std::chrono::nanoseconds(kernel::HostNsFor(16666667)), clock::now());
         std::this_thread::sleep_until(next);
         uint32_t count = Dev(XDK_CDevice_VBlankCount) + 1, swaps = Dev(kDevSwapCount);
         SetDev(XDK_CDevice_VBlankCount, count);

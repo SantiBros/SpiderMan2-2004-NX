@@ -2,6 +2,8 @@
 // the game folder may come from GAME_DIR instead; a folder is searched as the Switch build does (kernel/game_source)
 // PULSE=1: every 2 s a line naming the kernel or library function each guest thread is in, as the Switch build logs
 // RT=1: the renderer on a render thread of its own (gpu::g_render_thread), as the Switch's GPU renderer runs
+// TIMESCALE=0.2: the guest's clock at a fifth of real time (kernel::g_time_scale), for recordings: with GL=1 every
+// frame then covers a 60th of a second of the game however long it takes to draw
 #include <algorithm>
 #include <chrono>
 #include <map>
@@ -63,6 +65,7 @@ int main(int argc, char** argv) {
         if (it->disc) kernel::MountDisc(std::move(it->disc));
     }
     if (const char* rt = std::getenv("RT")) gpu::g_render_thread = std::atoi(rt) != 0;
+    if (const char* ts = std::getenv("TIMESCALE")) kernel::g_time_scale = std::clamp(std::atof(ts), 0.01, 1.0);
     if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / hdd).string())) return 1;
     const bool pulse = std::getenv("PULSE") != nullptr;
     struct Seen {

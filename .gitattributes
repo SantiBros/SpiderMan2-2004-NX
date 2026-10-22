@@ -9,8 +9,12 @@
 *.jpeg binary
 *.png binary
 *.gif binary
+*.webp binary
+*.mp4 binary
 *.nro binary
 
 # Language statistics: count the port's own code, not the SDK or the docs.
 sdk/** linguist-vendored
 docs/** linguist-documentation
+# the README's clips stay out of the release zip (git archive): players download the builder, not the videos
+docs/images/clips/** export-ignore
