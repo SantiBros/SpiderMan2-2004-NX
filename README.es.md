@@ -88,6 +88,12 @@ balancéate por Nueva York.
     <td align="center"><sub>La pantalla de arranque del port, hasta que el juego dibuja</sub></td>
     <td align="center"><sub>Si no encuentra una copia que sirva, dice qué poner y dónde</sub></td>
   </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="switch/icon.jpg" alt="El ícono del port: la máscara de Spider-Man con el logo de Spider-Man 2" width="160"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>El ícono del port en el Homebrew Menu</sub></td>
+  </tr>
 </table>
 
 <p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo

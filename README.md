@@ -84,6 +84,12 @@ around it. Bring your own copy of the game, build the port from it once, and swi
     <td align="center"><sub>The port's start screen, until the game draws</sub></td>
     <td align="center"><sub>When no usable copy is found, it says what to put where</sub></td>
   </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="switch/icon.jpg" alt="The port's icon: Spider-Man's mask with the Spider-Man 2 logo" width="160"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>The port's icon in the Homebrew Menu</sub></td>
+  </tr>
 </table>
 
 <p align="center"><sub>The game screenshots come from the port's PC test build, which runs the same recompiled code

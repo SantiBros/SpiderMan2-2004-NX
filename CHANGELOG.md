@@ -31,6 +31,7 @@ All notable changes to the port. These are test builds: none has been played thr
   instructions), and a vertex program the game selects again is found without building it first.
 - The buttons held at start (**L**, **R**, **ZR**) still work, for that start only; the debug menu keeps the same
   choices for every start.
+- **A new icon** in the Homebrew Menu: Spider-Man's mask with the game's logo, instead of the placeholder.
 
 ## [0.0.10]
 
