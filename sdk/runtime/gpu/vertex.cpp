@@ -441,6 +441,10 @@ void FvfInputs(uint32_t fvf, VertexShader& vs) {
 }
 
 bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* ip, Assembled& out) {
+    return Assemble(s, prim, start, count, ip, out, kRawVertices);
+}
+
+bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* ip, Assembled& out, bool raw_ok) {
     ResetAssembled(out);
     if (!count || prim < 1 || prim > 10) return false;
 
@@ -467,7 +471,7 @@ bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, con
     Inputs inputs = {*layout, regs, nregs};
 
     // the guest's own vertices when the input assembler can read every element of them
-    bool raw = kRawVertices && RawReadable(s, inputs);
+    bool raw = raw_ok && RawReadable(s, inputs);
     if (raw) return AssembleRaw(s, inputs, d, out);
     return AssembleConverted(s, inputs, d, out);
 }

@@ -58,5 +58,7 @@ void FvfInputs(uint32_t fvf, VertexShader& out);
 // false when there is nothing to draw
 // indices: the title's 16 bit indices, null for an unindexed draw
 bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, Assembled& out);
+// raw: the guest's vertices as they are where the input assembler can read them (the build's choice above)
+bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, Assembled& out, bool raw);
 
 }  // namespace gpu

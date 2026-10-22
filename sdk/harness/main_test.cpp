@@ -1,6 +1,7 @@
 // headless host: <exe> <game folder or disc image> [--instance N], run from the folder that gets logs, hdd and cap
 // the game folder may come from GAME_DIR instead; a folder is searched as the Switch build does (kernel/game_source)
 // PULSE=1: every 2 s a line naming the kernel or library function each guest thread is in, as the Switch build logs
+// RT=1: the renderer on a render thread of its own (gpu::g_render_thread), as the Switch's GPU renderer runs
 #include <algorithm>
 #include <chrono>
 #include <map>
@@ -14,6 +15,7 @@
 
 #include "app/app.h"
 #include "core/log.h"
+#include "gpu/backend.h"
 #include "image_symbols.h"
 #include "kernel/game_source.h"
 #include "kernel/kernel.h"
@@ -60,6 +62,7 @@ int main(int argc, char** argv) {
         xbe = std::move(it->xbe);
         if (it->disc) kernel::MountDisc(std::move(it->disc));
     }
+    if (const char* rt = std::getenv("RT")) gpu::g_render_thread = std::atoi(rt) != 0;
     if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / hdd).string())) return 1;
     const bool pulse = std::getenv("PULSE") != nullptr;
     struct Seen {

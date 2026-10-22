@@ -9,6 +9,9 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
 #include <smmintrin.h>
 #endif
@@ -105,7 +108,24 @@ public:
     explicit Threaded(std::unique_ptr<Backend> inner) : inner_(std::move(inner)), ranges_(StateRanges()) {
         ring_ = mem::AllocSystem(kHeaderRing, 64);
         cur_ = NewBatch();
+#ifdef _WIN32
         std::thread([this] { Run(); }).detach();
+#else
+        // a stack with room: GL drivers compile shaders on it, and std::thread gets 128 KB on the Switch
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize(&attr, 8u << 20);
+        pthread_t th;
+        auto entry = [](void* self) -> void* {
+            static_cast<Threaded*>(self)->Run();
+            return nullptr;
+        };
+        if (pthread_create(&th, &attr, entry, this) == 0)
+            pthread_detach(th);
+        else
+            std::thread([this] { Run(); }).detach();
+        pthread_attr_destroy(&attr);
+#endif
     }
     ~Threaded() override {
         {

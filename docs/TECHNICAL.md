@@ -11,6 +11,7 @@ and the test builds.
 - [Pipeline](#pipeline)
 - [The recompiler](#the-recompiler)
 - [The runtime: the Xbox rebuilt](#the-runtime-the-xbox-rebuilt)
+- [The picture](#the-picture)
 - [The Switch layer](#the-switch-layer)
 - [Disc images](#disc-images)
 - [What the Switch does differently](#what-the-switch-does-differently)
@@ -61,11 +62,26 @@ Direct3D device's streams. It holds addresses and names only, nothing of the gam
 | `xdk/dsound.cpp` | DirectSound: voices, buffers and streams mixed on the host, with the effects image the game loads. |
 | `xdk/xapi.cpp` | The controllers, and XAPI's file and save functions. |
 
-The picture: for now the backend is the CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
-which draws the game's draws into guest memory in software, register combiners and vertex programs included. It
-is exact enough to see the game and slow (seconds per city frame), so the Switch build draws a frame only every
-so often while the game runs at its own speed in between. A GPU backend (deko3d or OpenGL, with the shader
-translator's output as GLSL) is the next big step.
+## The picture
+
+Two backends take the draws:
+
+- The **GPU renderer** ([`gl/`](../gl)), what the Switch draws with: OpenGL 4.3 core through Mesa's nouveau
+  driver (devkitPro's `switch-mesa`), on Linux through any Mesa driver for the test build. It follows the SDK's
+  Direct3D 12 renderer at render scale 1. Console surfaces become GL textures the draws render into, read back to
+  guest memory when the CPU locks them and uploaded again when the CPU writes them; textures are decoded from guest
+  memory (swizzled, S3TC, palettes) and kept while their bytes stay the same. The shader translator's vertex
+  programs, register combiners and fixed function stages come out as GLSL ([`gl/glsl.cpp`](../gl/glsl.cpp), carried
+  over line for line from the HLSL). The game's own vertex bytes go to the GPU as they are; the input assembler
+  converts them (NORMPACKED3 is unpacked in the shader). Vertices, indices and constants go through persistently
+  mapped buffers fenced in quarters, and a draw changes only the GL state that differs from the last one. It runs
+  on a render thread of its own beside the game's (the SDK's `gpu/render_thread.cpp`), and logs a `perf:` line
+  every 5 seconds with where a frame's time goes.
+- The CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
+  which draws into guest memory in software, register combiners and vertex programs included. It is exact enough
+  to compare against and slow (seconds per city frame). The test build uses it, and the Switch falls back to it
+  (a frame drawn every so often while the game runs at its own speed) when GL doesn't start, or with R held at
+  start.
 
 ## The Switch layer
 
@@ -74,8 +90,8 @@ translator's output as GLSL) is the next big step.
 | File | What it does |
 |---|---|
 | `main.cpp` | Checks the launch mode (title takeover), finds the game (`kernel/game_source`), asks before a different release, mounts the disc image, boots the game, and keeps the applet alive. Quitting (+ and −) takes no lock the game could hold. |
-| `screen.cpp` | One 1280×720 framebuffer for the whole run, presented by the main thread only: a text screen (drawn with libnx's console font) until the game draws, then the game's 4:3 frames scaled to the screen's height. |
-| `backend.cpp` | The reference renderer paced for the Switch: 60 frames a second, a frame drawn when as long as the last drawing has passed (at least half a second). The status text stays until a frame actually has draws. |
+| `screen.cpp` | The 1280×720 window. With GL (the default): an EGL window surface and an OpenGL 4.3 core context; the main thread draws the text screens (libnx's console font, as an image) until the renderer takes the context, then the renderer puts the status text over the frames until the game draws its own picture. Without: libnx's framebuffer, presented by the main thread, with the reference renderer's frames scaled to the screen's height. |
+| `backend.cpp` | The GPU renderer's host (the window, the context, the swap), falling back to the reference renderer when GL doesn't start; the reference renderer paced for the Switch (60 frames a second, a frame drawn when as long as the last drawing has passed, at least half a second). Held at start: R the reference renderer, ZR the GPU renderer on the game's thread (no render thread). |
 | `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer; L at start turns it off. |
 | `input.cpp` | The Xbox controller from the Switch's, mapped by position. |
 | `watch.cpp` | Two threads above the game's priority: one puts the log on the SD card every 250 ms (a reset console loses cached writes), one logs a status line every 2 s with each game thread's current kernel or library function. |
@@ -125,8 +141,8 @@ Things the PC test build couldn't show, found on the console or by reading libnx
 ## Test builds
 
 - **PC test build** ([`sdk/harness`](../sdk/harness/README.md)): the runtime and the game code on Linux, headless,
-  with the reference renderer, the Switch build's pacing (`SWITCH=1`) and status line (`PULSE=1`), scripted
-  presses and frame captures. Most of the port's testing happens here.
+  with the reference renderer or the GPU renderer (`GL=1`, on Mesa), the Switch build's pacing (`SWITCH=1`) and
+  status line (`PULSE=1`), scripted presses and frame captures. Most of the port's testing happens here.
 - **ARM test build**: the same, compiled for AArch64 with the Switch build's memory layout, run under
   `qemu-aarch64`. The game reaches the city there too.
 
@@ -149,12 +165,17 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 - `runtime/kernel/xboxkrnl.cpp`: `MmQueryAddressProtect` answers from the committed pages (the game walks up its
   stack in 64 KB steps); `NtUserIoApcDispatcher` for ReadFileEx/WriteFileEx completions, with
   `RtlNtStatusToDosError`'s table shared as `StatusToDosError`.
+- `runtime/gpu/vertex.{h,cpp}`: raw vertices a per-call choice (`Assemble(..., raw)`), so the GPU renderer reads the
+  game's vertices as they are while the reference renderer has them converted.
+- `runtime/gpu/backend.h`, `render_thread.cpp`: the render thread a runtime choice (`gpu::g_render_thread`), started
+  with an 8 MB stack outside Windows (drivers compile shaders on it; `std::thread` gets 128 KB on the Switch).
 - `runtime/xdk/d3d8.cpp`: the `RunPushBuffer` interpreter, and vertex programs by address (program slots,
   `LoadVertexShaderProgram`, `LoadVertexShader`, `SelectVertexShader`, `SetVertexShaderInput`);
   `xdk/5849/layout.toml` gains `CDevice_VertexShaderHandle` and `CDevice_VertexShaderStart`.
 - `runtime/xdk/dsound.cpp`: host `IDirectSoundBuffer_SetMode`, `IDirectSoundBuffer_Pause`,
   `CDirectSoundStream_SetMode`, `CDirectSoundStream_SetAllParameters`, `CDirectSoundStream_SetRolloffCurve`.
-- `harness/`: `SWITCH`, `PULSE` and `CAP` for the test build, ARM builds (`ARCH`, `DEFS`, `GEN_OPT`, `LDFLAGS`),
+- `harness/`: `SWITCH`, `PULSE` and `CAP` for the test build, the GPU renderer on headless EGL (`gl_harness.cpp`:
+  `GL`, `RT`, `GLCAP`, `REFAT`, `GLDUMP`), ARM builds (`ARCH`, `DEFS`, `GEN_OPT`, `LDFLAGS`),
   a game folder or disc image as the argument; the reference renderer clips at the near plane and converts floats
   as x86 does.
 
@@ -182,7 +203,8 @@ VERSION              the port's version
 config/game.toml     recompiler input for the supported default.xbe: addresses and names only
 src/common/          the game's description for the runtime (title, log name)
 src/game/hooks.cpp   the game's own replacements of recompiled functions
-switch/              the Switch program: start-up, screen, renderer pacing, sound, controls, watch, crash handler
+gl/                  the GPU renderer: OpenGL 4.3 (loader, GLSL translation, the backend)
+switch/              the Switch program: start-up, screen, renderer host, sound, controls, watch, crash handler
 tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)

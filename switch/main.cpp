@@ -21,6 +21,7 @@
 
 #include "app/app.h"
 #include "core/log.h"
+#include "gpu/backend.h"
 #include "image_symbols.h"
 #include "kernel/game_source.h"
 #include "kernel/kernel.h"
@@ -98,8 +99,11 @@ int main(int argc, char** argv) {
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     std::string dir = Folder(argc > 0 ? argv[0] : nullptr);
     chdir(dir.c_str());
-    sw::Init();
-    sw::g_no_sound = HeldAtStart() & HidNpadButton_L;
+    // held at start: L no sound, R the CPU renderer, ZR the GPU renderer on the game's own thread
+    uint64_t held = HeldAtStart();
+    sw::g_no_sound = held & HidNpadButton_L;
+    sw::Init(!(held & HidNpadButton_R));
+    gpu::g_render_thread = sw::UsingGl() && !(held & HidNpadButton_ZR);
 
     AppletType at = appletGetAppletType();
     if (at != AppletType_Application && at != AppletType_SystemApplication)
@@ -128,6 +132,8 @@ int main(int argc, char** argv) {
     svcGetInfo(&cores, InfoType_CoreMask, CUR_PROCESS_HANDLE, 0);
     LOGI("switch: core mask %llX, sound %s, built for %s SHA-1 %s", (unsigned long long)cores,
          sw::g_no_sound ? "off (L held)" : "on", IMAGE_XBE, kImageSha1);
+    LOGI("switch: screen %s, %s", sw::ScreenInfo().c_str(),
+         gpu::g_render_thread ? "render thread" : sw::UsingGl() ? "no render thread (ZR held)" : "no render thread");
 
     // the player's copy: in game/, or beside the .nro
     kernel::GameSearch search = kernel::FindGameCopies({game, dir}, IMAGE_XBE, kImageSha1);

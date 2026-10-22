@@ -53,15 +53,17 @@ using namespace kernel;
 #define HAS_D3DDevice_RunPushBuffer 0
 #endif
 
-namespace d3d {
-
-namespace {
-
+namespace gpu {
 // A/B switch: 0 draws on the title's thread, as before
 #ifndef XBE_RENDER_THREAD
 #define XBE_RENDER_THREAD 1
 #endif
-constexpr bool kRenderThread = XBE_RENDER_THREAD;
+bool g_render_thread = XBE_RENDER_THREAD;
+}  // namespace gpu
+
+namespace d3d {
+
+namespace {
 
 // D3D globals of this build
 constexpr uint32_t kDevice = SYM(D3D_Device);        // the static CDevice, g_pDevice points at it
@@ -296,7 +298,10 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     if (!g_backend) {
         g_backend = gpu::CreateBackend();
         if (!g_backend->Init(w, h)) LOGE("d3d: renderer init failed");
-        if (kRenderThread) g_backend = gpu::CreateThreadedBackend(std::move(g_backend));
+        if (gpu::g_render_thread) {
+            LOGI("d3d: the renderer runs on a thread of its own");
+            g_backend = gpu::CreateThreadedBackend(std::move(g_backend));
+        }
     }
     g_state = gpu::State{};
     g_state.viewport = {0, 0, w, h, 0.0f, 1.0f};

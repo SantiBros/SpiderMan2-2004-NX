@@ -12,7 +12,8 @@
 # The .nro holds code made from your copy of the game: it is for you only, never share or upload it.
 #
 # Needs (see docs/BUILDING.md): Linux or Windows with WSL; git, cmake 3.20+, ninja, a C++20 compiler (g++ 11+ or
-# clang 14+), and devkitPro's devkitA64, libnx and switch-tools (the switch-dev group) under $DEVKITPRO.
+# clang 14+), and devkitPro's devkitA64, libnx and switch-tools (the switch-dev group) and switch-mesa (OpenGL for
+# the GPU renderer) under $DEVKITPRO.
 set -euo pipefail
 
 R=$(cd "$(dirname "$0")" && pwd)
@@ -38,8 +39,10 @@ command -v c++ > /dev/null || command -v g++ > /dev/null || command -v clang++ >
 [ -x "$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++" ] && [ -f "$DEVKITPRO/libnx/switch.specs" ] &&
     [ -x "$DEVKITPRO/tools/bin/elf2nro" ] ||
     fail "devkitPro's Switch tools were not found under $DEVKITPRO.
-  Install devkitPro (https://devkitpro.org/wiki/Getting_Started), then: sudo dkp-pacman -S switch-dev
+  Install devkitPro (https://devkitpro.org/wiki/Getting_Started), then: sudo dkp-pacman -S switch-dev switch-mesa
   Open a new terminal afterwards (it sets DEVKITPRO), or run: export DEVKITPRO=/opt/devkitpro"
+[ -f "$DEVKITPRO/portlibs/switch/lib/libEGL.a" ] && [ -f "$DEVKITPRO/portlibs/switch/lib/libdrm_nouveau.a" ] ||
+    fail "OpenGL for the Switch (switch-mesa) is missing, the GPU renderer needs it: sudo dkp-pacman -S switch-mesa"
 echo "  devkitA64: $("$DEVKITPRO/devkitA64/bin/aarch64-none-elf-g++" -dumpversion), $JOBS jobs"
 
 # the PC tools: xbe_recomp, xbe_extract

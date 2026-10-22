@@ -5,7 +5,7 @@
 #   -x regex of sources to leave out (repeatable)   -e extra source file (repeatable)
 #   -G folder for the generated objects (default <out>/gen), shared between builds of the same generated code
 # env: CXX (clang++), JOBS (nproc), ARCH (-march=x86-64-v2), DEFS (extra defines, e.g. -DXBE_SEGMENTED=1),
-#      GEN_OPT (-O1, the generated code's optimisation), LDFLAGS (e.g. -static for an ARM build run under qemu)
+#      GEN_OPT (-O1, the generated code's optimisation), LDFLAGS (e.g. -static for an ARM build run under qemu), LIBS (after the objects)
 # Leaves out the window, SDL input, XAudio2 and D3D12 parts of the runtime and the sources of the repo's other images
 # (src/<name> for each other folder beside the generated one); the harness supplies their stand ins.
 set -e
@@ -23,7 +23,7 @@ EXE=${EXE:-$(basename "$GEN")}; GEN_OBJ=${GEN_OBJ:-$OUT/gen}; mkdir -p "$GEN_OBJ
 H=$(dirname "$(realpath "$0")"); RT=$REPO/sdk/runtime
 CXX=${CXX:-clang++}; JOBS=${JOBS:-$(nproc)}
 BASE="-std=c++20 ${ARCH:--march=x86-64-v2} -fno-strict-aliasing $DEFS"
-HOST="$BASE -O1 -g -I$REPO/src -I$RT -I$GEN -I$H -I$H/compat -DXBE_RAW_VERTICES=0 -DXBE_RENDER_THREAD=0"
+HOST="$BASE -O1 -g -I$REPO -I$REPO/src -I$RT -I$GEN -I$H -I$H/compat -DXBE_RAW_VERTICES=0 -DXBE_RENDER_THREAD=0"
 GEN_OPT=${GEN_OPT:--O1}
 
 # generated code, an object rebuilt only when its partition is newer
@@ -51,5 +51,5 @@ for f in $SRC; do
     [ "$(jobs -r | wc -l)" -ge "$JOBS" ] && wait -n
 done
 wait
-$CXX $LDFLAGS -o "$OUT/$EXE" "${objs[@]}" "$GEN_OBJ"/*.o -lpthread
+$CXX $LDFLAGS -o "$OUT/$EXE" "${objs[@]}" "$GEN_OBJ"/*.o -lpthread $LIBS
 echo "built $OUT/$EXE"

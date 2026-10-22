@@ -91,9 +91,10 @@ En Ubuntu o Debian (otras distribuciones tienen los mismos paquetes con nombres 
    chmod +x ./install-devkitpro-pacman
    sudo ./install-devkitpro-pacman
    sudo dkp-pacman -Sy
-   sudo dkp-pacman -S switch-dev
+   sudo dkp-pacman -S switch-dev switch-mesa
    ```
-   Pulsa Enter para aceptar todos los paquetes que ofrece.
+   Pulsa Enter para aceptar todos los paquetes que ofrece. `switch-mesa` es OpenGL para la Switch, con el que
+   dibuja el renderizador por GPU.
 3. **Compila**, en la carpeta que descomprimiste, indicando dónde está tu juego (una imagen de disco, la
    primera parte de una dividida, la carpeta del juego o `default.xbe`):
    ```sh

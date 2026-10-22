@@ -21,14 +21,14 @@ bash build.sh <your game>      # a disc image, the game's folder, or default.xbe
 
 | Step | What it does |
 |---|---|
-| 1. Tools | Checks git, CMake, Ninja, a C++20 compiler and devkitPro (`$DEVKITPRO`, `/opt/devkitpro` by default), then builds the PC tools in `build-tools/` from [`tools/xbe`](../tools/xbe): `xbe_recomp`, `xbe_extract` and `xbe_symbols`. CMake downloads Zydis and toml++ the first time. |
+| 1. Tools | Checks git, CMake, Ninja, a C++20 compiler and devkitPro (`$DEVKITPRO`, `/opt/devkitpro` by default, with `switch-dev` and `switch-mesa`), then builds the PC tools in `build-tools/` from [`tools/xbe`](../tools/xbe): `xbe_recomp`, `xbe_extract` and `xbe_symbols`. CMake downloads Zydis and toml++ the first time. |
 | 2. default.xbe | Takes it from the folder, or copies it out of the disc image with `xbe_extract` (the port's own disc reader), checks its SHA-1 against the supported release, and puts it in `assets/default.xbe`. |
 | 3. Recompile | `xbe_recomp config/game.toml --xdk sdk/xdk` writes `generated/game/`: 128 partitions of C++, `x86_func_mapping.cpp` and `image_symbols.h`. |
-| 4. The .nro | [`switch/build.sh`](../switch/build.sh) compiles the generated code and the host code with devkitA64 and makes `build-switch/SpiderMan2Xbox.nro` (with its `.elf` and `.map`). |
+| 4. The .nro | [`switch/build.sh`](../switch/build.sh) compiles the generated code and the host code (with the GPU renderer in [`gl/`](../gl)) with devkitA64, links Mesa's OpenGL from `switch-mesa`, and makes `build-switch/SpiderMan2Xbox.nro` (with its `.elf` and `.map`). |
 | 5. SD card folder | `out/sd/switch/SpiderMan2Xbox/` with the `.nro`, `README.txt` and `game/`. |
 
 Logs: `build-tools.log`, `build-recomp.log`, `build-switch.log`. Tested with Ubuntu 24.04 (also under WSL 2),
-CMake 3.28, Ninja 1.11, GCC 13 and devkitA64 (GCC 16.1) with libnx. `JOBS=N` sets the number of compile jobs
+CMake 3.28, Ninja 1.11, GCC 13 and devkitA64 (GCC 16.1) with libnx and switch-mesa 20.1. `JOBS=N` sets the number of compile jobs
 (all cores by default).
 
 `assets/`, `generated/`, `build-switch/` and `out/` hold your copy of the game or code made from it. They are
@@ -69,6 +69,27 @@ cd out/run && SWITCH=1 PULSE=1 ../harness/sm2 "/path/to/Spider-Man 2.iso"   # or
 [`tools/test/switch_screen.py`](../tools/test/switch_screen.py) puts a captured frame on a 1280×720 Switch screen,
 as the Switch build shows it. To reach the city: `1000 START 30`, `1400 Y 30`, then `A 30` at 1800, 2200, 2600
 and 3000.
+
+### With the GPU renderer
+
+The Switch build draws with the OpenGL renderer in [`gl/`](../gl). The test build can run it too, on a headless
+EGL context (Mesa; llvmpipe when there is no GPU), into a 1280×720 screen like the Switch's:
+
+```sh
+sudo apt install libegl-dev libgl-dev libegl-mesa0 libgl1-mesa-dri   # EGL, GL headers, Mesa
+DEFS="-DXBE_GL_HARNESS" LIBS="-lEGL" bash sdk/harness/build.sh -r . -g generated/game -o out/harness_gl \
+    -n sm2 -e gl/gl_api.cpp -e gl/glsl.cpp -e gl/gl_backend.cpp
+cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
+```
+
+| Variable | What it does |
+|---|---|
+| `GL=1` | The GPU renderer, every frame, paced to 60 a second. Every 5 seconds a `perf:` line says where a frame's time goes. |
+| `RT=1` | The renderer on a thread of its own, as on the Switch. |
+| `GLCAP=N`, `GLCAP_AT="f f ..."` | Every Nth frame, or those frames, saved as `cap/gl_<frame>.tga` (the 4:3 picture). |
+| `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
+| `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`. |
+| `GL_CONVERTED=1` | Every vertex converted on the CPU, as the CPU renderer reads them, instead of drawn as the game made them. |
 
 ## The ARM test build
 

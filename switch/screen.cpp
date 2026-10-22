@@ -1,11 +1,18 @@
 #include "switch/screen.h"
 
 #include <switch.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 
 #include <algorithm>
 #include <atomic>
 #include <mutex>
 #include <vector>
+
+#include "core/log.h"
+#include "gl/gl_api.h"
+#include "gl/gl_backend.h"
+#include "switch/state.h"
 
 namespace sw {
 
@@ -16,8 +23,21 @@ constexpr uint32_t kBack = 0xFF301A10;   // dark blue, ABGR
 constexpr uint32_t kText = 0xFFFFFFFF;
 constexpr uint32_t kTitle = 0xFF40C8FF;  // amber
 
+enum class Mode { None, Framebuffer, Gl };
+std::atomic<Mode> g_mode{Mode::None};
+std::string g_info = "none";
+
+// framebuffer mode
 Framebuffer g_fb;
-bool g_fb_ready = false;
+
+// GL mode
+EGLDisplay g_dpy = EGL_NO_DISPLAY;
+EGLSurface g_surface = EGL_NO_SURFACE;
+EGLContext g_ctx = EGL_NO_CONTEXT;
+bool g_main_gl = false;                // the main thread holds the context
+std::atomic<bool> g_gl_wanted{false};  // the renderer asked for it
+std::atomic<bool> g_gl_released{false};
+std::vector<uint32_t> g_canvas;        // the text screen, drawn on the CPU and shown as an image
 
 std::mutex g_lock;  // guards what is waiting for the next Pump, never held while presenting
 std::string g_title, g_detail, g_footer;
@@ -86,15 +106,98 @@ void DrawFrame(uint32_t* dst, uint32_t stride, const uint32_t* rgba, uint32_t w,
     }
 }
 
+bool InitFramebuffer() {
+    if (R_FAILED(framebufferCreate(&g_fb, nwindowGetDefault(), kWidth, kHeight, PIXEL_FORMAT_RGBA_8888, 2))) return false;
+    framebufferMakeLinear(&g_fb);
+    return true;
+}
+
+void CloseGl() {
+    if (g_dpy == EGL_NO_DISPLAY) return;
+    eglMakeCurrent(g_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (g_ctx != EGL_NO_CONTEXT) eglDestroyContext(g_dpy, g_ctx);
+    if (g_surface != EGL_NO_SURFACE) eglDestroySurface(g_dpy, g_surface);
+    eglTerminate(g_dpy);
+    g_dpy = EGL_NO_DISPLAY;
+    g_ctx = EGL_NO_CONTEXT;
+    g_surface = EGL_NO_SURFACE;
+    g_main_gl = false;
+}
+
+// an OpenGL 4.3 core context on the window (Mesa's nouveau driver), current on the main thread
+bool InitGl(std::string& why) {
+    // GL errors are not looked at in play: Mesa skips its checks
+    setenv("MESA_NO_ERROR", "1", 1);
+    char buf[160];
+    auto fail = [&](const char* what) {
+        std::snprintf(buf, sizeof buf, "%s (EGL error %X)", what, unsigned(eglGetError()));
+        why = buf;
+        CloseGl();
+        return false;
+    };
+    g_dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (g_dpy == EGL_NO_DISPLAY) return fail("no EGL display");
+    if (!eglInitialize(g_dpy, nullptr, nullptr)) {
+        g_dpy = EGL_NO_DISPLAY;
+        return fail("EGL did not start");
+    }
+    if (!eglBindAPI(EGL_OPENGL_API)) return fail("no OpenGL in EGL");
+    // the window only takes the finished picture: the game draws into textures of its own
+    const EGLint cfg_attr[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT, EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8,
+                               EGL_ALPHA_SIZE, 8, EGL_NONE};
+    EGLConfig cfg = nullptr;
+    EGLint n = 0;
+    if (!eglChooseConfig(g_dpy, cfg_attr, &cfg, 1, &n) || !n) return fail("no EGL config");
+    g_surface = eglCreateWindowSurface(g_dpy, cfg, nwindowGetDefault(), nullptr);
+    if (g_surface == EGL_NO_SURFACE) return fail("no window surface");
+    const EGLint ctx_attr[] = {EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT,
+                               EGL_CONTEXT_MAJOR_VERSION, 4, EGL_CONTEXT_MINOR_VERSION, 3, EGL_NONE};
+    g_ctx = eglCreateContext(g_dpy, cfg, EGL_NO_CONTEXT, ctx_attr);
+    if (g_ctx == EGL_NO_CONTEXT) return fail("no OpenGL 4.3 core context");
+    if (!eglMakeCurrent(g_dpy, g_surface, g_surface, g_ctx)) return fail("the context did not become current");
+    eglSwapInterval(g_dpy, 1);
+    const char* missing = nullptr;
+    if (!glapi::Load([](const char* name) { return reinterpret_cast<void*>(eglGetProcAddress(name)); }, &missing)) {
+        std::snprintf(buf, sizeof buf, "OpenGL function %s missing", missing);
+        std::string m = buf;
+        CloseGl();
+        why = m;
+        return false;
+    }
+    GLint major = 0, minor = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    std::snprintf(buf, sizeof buf, "GL: %s, %s", reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
+                  reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+    if (major * 10 + minor < 43) {
+        std::string m = std::string(buf) + ": older than OpenGL 4.3";
+        CloseGl();
+        why = m;
+        return false;
+    }
+    why = buf;
+    g_main_gl = true;
+    g_canvas.assign(size_t(kWidth) * kHeight, kBack);
+    return true;
+}
+
 }  // namespace
 
-void Init() {
-    if (g_fb_ready) return;
-    if (R_SUCCEEDED(framebufferCreate(&g_fb, nwindowGetDefault(), kWidth, kHeight, PIXEL_FORMAT_RGBA_8888, 2))) {
-        framebufferMakeLinear(&g_fb);
-        g_fb_ready = true;
+void Init(bool gl) {
+    if (g_mode != Mode::None) return;
+    std::string why = "not tried (R held at start)";
+    if (gl && InitGl(why)) {
+        g_info = why;
+        g_mode = Mode::Gl;
+        return;
+    }
+    if (InitFramebuffer()) {
+        g_info = "framebuffer, CPU renderer (GL: " + why + ")";
+        g_mode = Mode::Framebuffer;
     }
 }
+
+const std::string& ScreenInfo() { return g_info; }
 
 void Message(const std::string& title, const std::string& detail, const std::string& footer) {
     std::lock_guard<std::mutex> lock(g_lock);
@@ -115,9 +218,33 @@ void Frame(const uint32_t* rgba, uint32_t w, uint32_t h) {
 }
 
 void Pump() {
-    if (!g_fb_ready) return;
     static std::vector<uint32_t> frame;
     static std::string title, detail, footer;
+    Mode mode = g_mode;
+    if (mode == Mode::Gl) {
+        if (!g_main_gl) return;
+        if (g_gl_wanted) {
+            // the renderer's thread takes the context from here on
+            eglMakeCurrent(g_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+            g_main_gl = false;
+            g_gl_released = true;
+            return;
+        }
+        {
+            std::lock_guard<std::mutex> lock(g_lock);
+            if (!g_text_dirty) return;
+            title = g_title;
+            detail = g_detail;
+            footer = g_footer;
+            g_text_dirty = false;
+        }
+        DrawText(g_canvas.data(), kWidth, title, detail, footer);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glr::DrawImage(g_canvas.data(), kWidth, kHeight, kWidth, kHeight);
+        eglSwapBuffers(g_dpy, g_surface);
+        return;
+    }
+    if (mode != Mode::Framebuffer) return;
     uint32_t w = 0, h = 0;
     bool text = false, game = false;
     {
@@ -151,8 +278,11 @@ void Pump() {
 bool ShowingGame() { return g_game; }
 
 void Close() {
-    if (g_fb_ready) framebufferClose(&g_fb);
-    g_fb_ready = false;
+    Mode mode = g_mode;
+    if (mode == Mode::Framebuffer) framebufferClose(&g_fb);
+    // the renderer's thread may still be drawing with the context: only the main thread's own is closed
+    if (mode == Mode::Gl && g_main_gl) CloseGl();
+    g_mode = Mode::None;
 }
 
 bool QuitRequested() {
@@ -172,6 +302,81 @@ bool QuitRequested() {
     }
     held_since = 0;
     return false;
+}
+
+bool UsingGl() { return g_mode == Mode::Gl; }
+
+bool GlTake() {
+    if (g_mode != Mode::Gl) return false;
+    g_gl_wanted = true;
+    uint64_t start = armTicksToNs(armGetSystemTick());
+    bool said = false;
+    while (!g_gl_released) {
+        svcSleepThread(1'000'000);
+        if (!said && armTicksToNs(armGetSystemTick()) - start > 3'000'000'000ull) {
+            LOGW("screen: still waiting for the main thread to hand over the GL context");
+            said = true;
+        }
+    }
+    if (!eglMakeCurrent(g_dpy, g_surface, g_surface, g_ctx)) {
+        LOGE("screen: the GL context did not become current on the renderer's thread (EGL error %X)", unsigned(eglGetError()));
+        return false;
+    }
+    return true;
+}
+
+void GlRelease() {
+    if (g_mode == Mode::Gl) eglMakeCurrent(g_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+}
+
+void GlPresented(uint32_t draws) {
+    g_stats.frames.fetch_add(1, std::memory_order_relaxed);
+    g_stats.drawn.fetch_add(1, std::memory_order_relaxed);
+    g_stats.draws.fetch_add(draws, std::memory_order_relaxed);
+    if (g_game) {
+        g_stats.shown.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    if (draws) {
+        // the game's own picture: the status text goes for good
+        LOGI("renderer: first picture with %u draws, the status text goes", draws);
+        g_game = true;
+        g_stats.shown.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    // only clears so far: the newest status text instead of the black frame
+    static std::string title, detail, footer;
+    static bool drawn_once = false;
+    bool dirty = false;
+    {
+        std::lock_guard<std::mutex> lock(g_lock);
+        if (g_text_dirty) {
+            title = g_title;
+            detail = g_detail;
+            footer = g_footer;
+            g_text_dirty = false;
+            dirty = true;
+        }
+    }
+    if (dirty) DrawText(g_canvas.data(), kWidth, title, detail, footer);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glr::DrawImage(g_canvas.data(), kWidth, kHeight, kWidth, kHeight, dirty || !drawn_once);
+    drawn_once = true;
+}
+
+void GlSwap() { eglSwapBuffers(g_dpy, g_surface); }
+
+void GlFallBack() {
+    if (g_mode != Mode::Gl) return;
+    LOGW("screen: back to the framebuffer and the CPU renderer");
+    CloseGl();
+    if (InitFramebuffer()) {
+        g_info = "framebuffer, CPU renderer (GL failed)";
+        g_mode = Mode::Framebuffer;
+    } else {
+        LOGE("screen: no framebuffer either, nothing will show");
+        g_mode = Mode::None;
+    }
 }
 
 }  // namespace sw

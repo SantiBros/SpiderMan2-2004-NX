@@ -134,7 +134,8 @@ private:
         last_present_ = Clock::now();
         harness::g_frames = ++frames_;
         if (frames_ % 600 == 0) LOGI("renderer: frame %llu, %llu draws", frames_, draws_);
-        drawing_ = last_present_ >= next_draw_;
+        static const bool never = harness::Env("NODRAW") != 0;  // pacing only: what the game itself costs
+        drawing_ = !never && last_present_ >= next_draw_;
         if (drawing_) {
             draw_start_ = last_present_;
             draws_at_draw_ = draws_;
@@ -254,6 +255,22 @@ private:
 
 }  // namespace
 
-std::unique_ptr<Backend> CreateBackend() { return std::make_unique<NullBackend>(); }
+}  // namespace gpu
+
+#ifdef XBE_GL_HARNESS
+namespace harness {
+std::unique_ptr<gpu::Backend> CreateGlBackend();
+}
+#endif
+
+namespace gpu {
+
+// GL=1 in a build with the GL renderer: it draws, else the headless renderer above
+std::unique_ptr<Backend> CreateBackend() {
+#ifdef XBE_GL_HARNESS
+    if (harness::Env("GL")) return harness::CreateGlBackend();
+#endif
+    return std::make_unique<NullBackend>();
+}
 
 }  // namespace gpu

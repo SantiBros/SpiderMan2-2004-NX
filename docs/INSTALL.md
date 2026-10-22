@@ -91,9 +91,10 @@ On Ubuntu or Debian (other distributions have the same packages under similar na
    chmod +x ./install-devkitpro-pacman
    sudo ./install-devkitpro-pacman
    sudo dkp-pacman -Sy
-   sudo dkp-pacman -S switch-dev
+   sudo dkp-pacman -S switch-dev switch-mesa
    ```
-   Press Enter to take all the packages it offers.
+   Press Enter to take all the packages it offers. `switch-mesa` is OpenGL for the Switch, which the GPU renderer
+   draws with.
 3. **Build**, in the folder you unzipped, pointing at your game (a disc image, the first part of a split
    one, the game's folder, or `default.xbe`):
    ```sh
