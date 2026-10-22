@@ -32,6 +32,10 @@ All notable changes to the port. These are test builds: none has been played thr
 - The buttons held at start (**L**, **R**, **ZR**) still work, for that start only; the debug menu keeps the same
   choices for every start.
 - **A new icon** in the Homebrew Menu: Spider-Man's mask with the game's logo, instead of the placeholder.
+- **Saves in a folder of their own**, as in the NFS Most Wanted port: `save/progress/` holds the game's saves (the
+  Xbox's `E:\UDATA` for this game) and `save/data/` the game's own data (`E:\TDATA`), apart from the rest of the
+  Xbox's hard disk and the shader list, now in `cache/` (safe to delete). An `hdd/` folder from an older version is
+  sorted out at the first start: its saves move to `save/`, the rest becomes `cache/`, nothing is deleted.
 
 ## [0.0.10]
 

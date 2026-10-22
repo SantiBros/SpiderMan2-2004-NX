@@ -207,13 +207,18 @@ el menú de depuración y vuelve a arrancar el port.
 
 ## Partidas
 
-El port tiene un disco duro de Xbox en `switch/SpiderMan2Xbox/hdd/`, y el juego guarda ahí como lo haría en la
-Xbox. Haz una copia de esa carpeta de vez en cuando; las actualizaciones no la tocan.
+Tus partidas están en `switch/SpiderMan2Xbox/save/`: las partidas del juego en `save/progress/` (lo que la Xbox
+guarda en `E:\UDATA` para este juego) y sus datos propios en `save/data/` (`E:\TDATA`). Haz una copia de la
+carpeta `save` de vez en cuando, y vuelve a copiarla para restaurar; las actualizaciones no la tocan. El resto del
+disco duro de la Xbox (sus unidades de caché) y la lista de shaders están en `cache/`, que se puede borrar cuando
+quieras: se vuelve a crear al arrancar.
 
 ## Actualizar
 
 Compila la versión nueva igual que la anterior y copia su carpeta `out/sd/switch` encima de la vieja. `game/` y
-`hdd/` se quedan como están.
+`save/` se quedan como están. Las versiones anteriores a la 0.1.0 lo guardaban todo en `hdd/`: en el primer
+arranque de la 0.1.0 las partidas que tenga pasan a `save/`, `hdd/` se convierte en `cache/` y `shaders.cache` pasa
+a su interior. Si una partida está en los dos sitios, la de `hdd/` se queda donde está y se usa, y el registro lo dice.
 
 ## Solución de problemas
 
@@ -231,7 +236,7 @@ Los mensajes de la pantalla están en inglés:
 | **La imagen sale mal** (falta, negra, parpadea, colores raros) | Toma una foto y envía la carpeta `logs`. Luego prueba manteniendo **R** al arrancar (el renderizador por CPU): si así la imagen sale bien, el problema está en el renderizador por GPU. |
 | **Va lento** | Activa el contador en el [menú de depuración](#el-menú-de-depuración) y prueba ahí un reloj de CPU más alto. Envía la carpeta `logs`: cada 5 segundos el registro tiene una línea `perf:` que dice en qué se va el tiempo. |
 | **El juego sale en otro idioma** | Sigue el idioma de la consola, que se lee al arrancar. Cambia **Language** en el [menú de depuración](#el-menú-de-depuración) y vuelve a arrancar el port. Las voces siempre son en inglés. |
-| **Da tirones** (paradas cortas al jugar) | Sobre todo la primera vez que pasas por un sitio, mientras el driver gráfico prepara los shaders que necesita; se guardan en `shaders.cache` y la siguiente vez se preparan al arrancar. Si siguen, envía la carpeta `logs`: una línea `hitch:` señala cada tirón y en qué se fue el tiempo. |
+| **Da tirones** (paradas cortas al jugar) | Sobre todo la primera vez que pasas por un sitio, mientras el driver gráfico prepara los shaders que necesita; se guardan en `cache/shaders.cache` y la siguiente vez se preparan al arrancar. Si siguen, envía la carpeta `logs`: una línea `hitch:` señala cada tirón y en qué se fue el tiempo. |
 | **Una pantalla de error de Atmosphère** | Envía el archivo más nuevo de `atmosphere/crash_reports/` y la carpeta `logs`. |
 
 ## Reportar un error

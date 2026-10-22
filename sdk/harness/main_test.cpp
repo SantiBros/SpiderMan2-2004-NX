@@ -68,6 +68,14 @@ int main(int argc, char** argv) {
     }
     if (const char* rt = std::getenv("RT")) gpu::g_render_thread = std::atoi(rt) != 0;
     if (const char* ts = std::getenv("TIMESCALE")) kernel::g_time_scale = std::clamp(std::atof(ts), 0.01, 1.0);
+    // SAVES=1: the Switch build's save folders, save/progress and save/data (the title ID from the image header)
+    if (std::getenv("SAVES") && xbe.size() >= 0x180) {
+        uint32_t cert = 0, title = 0, base = 0;
+        std::memcpy(&base, &xbe[0x104], 4);
+        std::memcpy(&cert, &xbe[0x118], 4);
+        if (cert - base + 12 <= xbe.size()) std::memcpy(&title, &xbe[cert - base + 8], 4);
+        kernel::UseSaveFolders(title, (app::ExeDir() / "save" / "progress").string(), (app::ExeDir() / "save" / "data").string());
+    }
     if (!kernel::Boot(std::move(xbe), IMAGE_XBE, game, (app::ExeDir() / hdd).string())) return 1;
     const bool pulse = std::getenv("PULSE") != nullptr;
     struct Seen {

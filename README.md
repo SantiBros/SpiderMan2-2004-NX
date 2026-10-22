@@ -46,6 +46,7 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > - **In your language**: the game follows the console's language, with its menus and subtitles in Spanish,
 >   French, German or Italian (the voices stay in English: the disc only has those). Or pick one in the menu.
 > - **A clean start screen**: "Loading..." instead of the log scrolling by (the log can still be turned on).
+> - **Your saves in their own folder**, `save/`, apart from the cache: easy to back up.
 > - **Faster**: the game's thread needs about 14% less processor time a frame (its code is smaller and records
 >   its drawing with less work).
 >
@@ -121,6 +122,8 @@ by the Switch build's screen code, run on the PC.</sub></p>
 - **Made for testing.** The log reaches the SD card several times a second, so it survives a frozen console,
   and a status line every 2 seconds says what each of the game's threads is doing. Crashes leave a report.
   The start screen can show the newest lines of the log too (the debug menu's start-up log).
+- **Your saves in one folder**, `save/`, apart from the cache: back it up by copying one folder, and it's kept
+  across updates.
 - **Controls mapped by position**, so the buttons the game shows are where your fingers expect them.
 - **Fully offline.** The port doesn't use the network.
 
@@ -170,10 +173,12 @@ sd:/switch/SpiderMan2Xbox/
 ├── game/                 YOUR game, one of:
 │   ├── Spider-Man 2.iso      a disc image (.iso .xiso .cci .cso), or all the parts of a split one
 │   └── default.xbe, data/    or the files from the disc
-├── hdd/                  the Xbox hard disk: your saves (made at the first start)
+├── save/                 YOUR saves: back this folder up
+│   ├── progress/             the game's saves (the Xbox's E:\UDATA for this game)
+│   └── data/                 what the game keeps for itself on the Xbox's hard disk (E:\TDATA)
+├── cache/                the rest of the Xbox's hard disk and the shader list: safe to delete
 ├── logs/                 sm2_NNN.log and crash.txt: attach them to bug reports
-├── settings.ini          the debug menu's settings (delete it for the recommended ones)
-└── shaders.cache         the shaders the game needed, built again at the next start
+└── settings.ini          the debug menu's settings (delete it for the recommended ones)
 ```
 
 </details>
@@ -184,7 +189,8 @@ and [troubleshooting](docs/INSTALL.md#troubleshooting).
 ### Updating
 
 Build the new version the same way, then copy its `out/sd/switch` folder over the old one. Your `game/`
-and `hdd/` folders stay as they are.
+and `save/` folders stay as they are. Coming from a version before 0.1.0, which kept everything in `hdd/`? At the
+first start your saves are moved to `save/` and the rest of `hdd/` becomes `cache/`, by themselves.
 
 ## Controls
 
@@ -243,7 +249,7 @@ no counter, full volume, the GPU renderer on its own thread).
 | Menus, cinematics, demos, the city | ✅ On the PC test build |
 | Sound | 🧪 Through the Switch's speakers and headphones; untested on a console |
 | Controls | 🧪 Mapped, untested on a console |
-| Saves | 🧪 In `hdd/` on the SD card; untested on a console |
+| Saves | 🧪 In `save/` on the SD card, apart from the cache; untested on a console |
 | Language | ✅ The console's: English, Spanish, French, German or Italian texts (voices in English, as on the disc); on the PC test build |
 | Debug menu, clocks, counter | 🧪 Drawn and checked on the PC; the clocks only take effect on a console |
 | Online | ❌ None: the port doesn't use the network |
@@ -369,8 +375,9 @@ and keeping your SD card backed up is the usual advice.
 <details>
 <summary><b>Where is my save, and how do I back it up?</b></summary>
 
-The port keeps an Xbox hard disk in `switch/SpiderMan2Xbox/hdd/`, and the game saves there as it would on the
-Xbox. Copy that folder somewhere safe from time to time.
+In `switch/SpiderMan2Xbox/save/`: the game saves into `save/progress/` as it would on the Xbox's hard disk, and
+keeps a little data of its own in `save/data/`. Copy the `save` folder somewhere safe from time to time, and
+copy it back to restore. Updates never touch it, and `cache/` beside it can be deleted at any time.
 </details>
 
 <details>

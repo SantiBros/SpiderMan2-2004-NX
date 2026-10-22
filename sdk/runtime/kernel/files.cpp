@@ -269,6 +269,21 @@ void MountDefaults(const std::string& game_dir, const std::string& data_dir) {
     LOGI("files: D: is %s, hard disk under %s", disc ? disc->Path().string().c_str() : game_dir.c_str(), data_dir.c_str());
 }
 
+void MapFolder(const std::string& device_path, const std::string& host_dir) {
+    std::lock_guard<std::mutex> lock(g_links_lock);
+    g_devices[Upper(Normalize(device_path))] = host_dir;
+    std::error_code ec;
+    fs::create_directories(host_dir, ec);
+    LOGI("files: %s in %s", device_path.c_str(), host_dir.c_str());
+}
+
+void UseSaveFolders(uint32_t title_id, const std::string& saves, const std::string& title_data) {
+    char id[9];
+    std::snprintf(id, sizeof id, "%08X", title_id);
+    MapFolder(std::string("\\Device\\Harddisk0\\Partition1\\UDATA\\") + id, saves);
+    MapFolder(std::string("\\Device\\Harddisk0\\Partition1\\TDATA\\") + id, title_data);
+}
+
 bool CreateSymbolicLink(const std::string& link, const std::string& target) {
     std::lock_guard<std::mutex> lock(g_links_lock);
     g_links[Upper(Normalize(link))] = Normalize(target);

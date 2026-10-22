@@ -55,7 +55,7 @@ Direct3D device's streams. It holds addresses and names only, nothing of the gam
 
 | Part | What it does |
 |---|---|
-| `kernel/` | The 120 kernel functions the game imports (one, `IoQueryVolumeInformation`, is avoided by replacing the XAPI function that calls it): threads, events, semaphores, timers, DPCs and APCs, the file system over a host folder or a disc image, the memory manager, the hard disk under `hdd/`, the EEPROM settings (language 1, English). |
+| `kernel/` | The 120 kernel functions the game imports (one, `IoQueryVolumeInformation`, is avoided by replacing the XAPI function that calls it): threads, events, semaphores, timers, DPCs and APCs, the file system over a host folder or a disc image, the memory manager, the hard disk under `cache/` with the title's saves in `save/`, the EEPROM settings (language 1, English). |
 | `kernel/memory.cpp` | The guest's 4 GB address space. On the PC it is reserved whole. On the Switch, where homebrew can't reserve that much with pages committed on demand, the address space is cut into 16 slices of 256 MB, and the used ones (code and heap, physical memory and its mirror, the system area, the stacks) sit in one 1 GB block through a table. The generated code goes through the table (`XBE_SEGMENTED`). |
 | `xdk/d3d8.cpp` | Direct3D 8 as the XDK has it: the device, resources, render states, and the push buffer the game writes NV2A commands into, read back as draws. This game draws mostly with vertex programs selected by address and with recorded push buffers (`RunPushBuffer`), both done on the host. |
 | `gpu/` | The draws as the backend gets them: vertex formats, textures (swizzled, compressed), the shader translator (vertex programs and register combiners). |
@@ -80,7 +80,7 @@ Two backends take the draws:
 
   Frames are shown at the pace the game asks for with `D3DRS_PRESENTATIONINTERVAL`: a frame every two vertical
   blanks, 30 a second, which is also what its movies are timed for. Every GLSL program the game needed is kept in
-  `shaders.cache` beside the `.nro` and built again at the next start, a little each frame, so a scene played once
+  `cache/shaders.cache` beside the `.nro` and built again at the next start, a little each frame, so a scene played once
   doesn't stall the next time on shaders it already had (the Switch's Mesa keeps no shader cache of its own). A
   depth buffer the game reads as a colour texture (its shadow pass looks up `LIN_A8R8G8B8` texels over the depth
   target) is copied into a colour view of its 24-bit words first.
@@ -122,7 +122,7 @@ the English SKU (`SKU=Xbox-E`), with which the game shows English whatever the c
 multi-language SKU (`Xbox-Multi`) it takes the Xbox's language setting (`XC_LANGUAGE`, read with
 `ExQueryNonVolatileSetting`). So for another language than English, [`src/game/language.cpp`](../src/game/language.cpp)
 asks the file layer for a rewritten `game.ini` (`kernel::RewriteDiscFile`: the copy is made at the first open, in
-`hdd/disc/`, and opened in its place), and the kernel answers the console's language (`kernel::g_language`, set from
+`cache/disc/`, and opened in its place), and the kernel answers the console's language (`kernel::g_language`, set from
 the Switch's system language, or the settings'). The disc only has the English voices and songs: a sound bank of
 another language (`NAME_ES.WBK`) is opened as the English one (`kernel::g_missing_disc_file`), as the game would
 otherwise find no file and play nothing.

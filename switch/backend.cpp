@@ -101,7 +101,7 @@ public:
     void Presented(uint32_t draws) override { sw::GlPresented(draws); }
     void SetSwapInterval(uint32_t blanks) override { sw::GlSwapInterval(blanks); }
     // beside the .nro (the working folder): the programs built, built again ahead at the next start
-    std::string CachePath() override { return "shaders.cache"; }
+    std::string CachePath() override { return "cache/shaders.cache"; }
     void Swap() override { sw::GlSwap(); }
 };
 

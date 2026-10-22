@@ -33,6 +33,11 @@ void RewriteDiscFile(const std::string& device_path, std::function<bool(std::vec
 // A disc file the title asks for that isn't there: another device path (upper case) to open in its place, or empty
 // for none. Set before boot.
 extern std::function<std::string(const std::string& device_path)> g_missing_disc_file;
+// a folder of a drive kept in another host folder, before boot: everything under device_path (for example
+// "\\Device\\Harddisk0\\Partition1\\UDATA\\4156002B") is read and written in host_dir instead
+void MapFolder(const std::string& device_path, const std::string& host_dir);
+// the title's saves (E:\UDATA\<title>) and its own data on the hard disk (E:\TDATA\<title>) in host folders
+void UseSaveFolders(uint32_t title_id, const std::string& saves, const std::string& title_data);
 
 // NTSTATUS values the kernel hands back
 enum : uint32_t {

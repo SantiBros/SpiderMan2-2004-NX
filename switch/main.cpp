@@ -4,7 +4,9 @@
 //   game/                                the player's own copy, one of:
 //     a disc image                         .iso .xiso .cci .cso, whole or split (name.1.iso, name.2.iso, ...)
 //     default.xbe and data/...             the disc's files
-//   hdd/                                 saves, made on the first run
+//   save/progress/                       the game's saves (the Xbox's E:\UDATA\<title>), made on the first run
+//   save/data/                           the game's own data on the Xbox's hard disk (E:\TDATA\<title>)
+//   cache/                               the rest of the Xbox's hard disk and the shader list: safe to delete
 //   logs/                                sm2_NNN.log, what to send back when something goes wrong
 //   settings.ini                         the debug menu's settings (ZL + ZR + -)
 #include <switch.h>
@@ -28,6 +30,7 @@
 #include "kernel/game_source.h"
 #include "kernel/kernel.h"
 #include "switch/clocks.h"
+#include "switch/folders.h"
 #include "switch/menu.h"
 #include "switch/screen.h"
 #include "switch/settings.h"
@@ -232,9 +235,13 @@ int main(int argc, char** argv) {
     sw::Loading(start_title, "Loading...", start_footer);
     sw::Pump();
 
+    // the saves in save/, the rest of the Xbox's hard disk in cache/ (hdd/ before 0.1.0, moved there)
+    sw::Folders folders = sw::SetUpFolders(app::ExeDir(), copy.title_id);
+    kernel::UseSaveFolders(copy.title_id, folders.saves.string(), folders.title_data.string());
+
     if (copy.disc) kernel::MountDisc(std::move(copy.disc));
     if (app::kGame.init) app::kGame.init();
-    if (!kernel::Boot(std::move(copy.xbe), IMAGE_XBE, copy.folder.string(), (app::ExeDir() / "hdd").string()))
+    if (!kernel::Boot(std::move(copy.xbe), IMAGE_XBE, copy.folder.string(), folders.cache.string()))
         Fail("The game did not start", "See the newest file in " + dir + "/logs");
 
     // the guest runs on its own threads. This one keeps the applet alive, runs the debug menu and puts things on

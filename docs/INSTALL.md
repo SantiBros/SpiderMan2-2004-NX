@@ -200,13 +200,17 @@ debug menu and start the port again.
 
 ## Saves
 
-The port keeps an Xbox hard disk in `switch/SpiderMan2Xbox/hdd/`, and the game saves there as it would on
-the Xbox. Back that folder up from time to time; updates don't touch it.
+Your saves are in `switch/SpiderMan2Xbox/save/`: the game's saves in `save/progress/` (what the Xbox keeps in
+`E:\UDATA` for this game) and its own data in `save/data/` (`E:\TDATA`). Back the `save` folder up from time to
+time, and copy it back to restore; updates don't touch it. The rest of the Xbox's hard disk (its cache drives) and
+the shader list are in `cache/`, which can be deleted at any time: it is made again at the next start.
 
 ## Updating
 
 Build the new version the same way, then copy its `out/sd/switch` folder over the old one. `game/` and
-`hdd/` stay as they are.
+`save/` stay as they are. Versions before 0.1.0 kept everything in `hdd/`: at the first start of 0.1.0 the saves
+in it are moved to `save/`, `hdd/` becomes `cache/`, and `shaders.cache` moves into it. If a save is in both
+places, the one in `hdd/` stays where it is and is used, and the log says so.
 
 ## Troubleshooting
 
@@ -222,7 +226,7 @@ Build the new version the same way, then copy its `out/sd/switch` folder over th
 | **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
 | **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and try a higher CPU clock there. Send the `logs` folder: every 5 seconds the log has a `perf:` line that says where the time goes. |
 | **The game is in the wrong language** | It follows the console's language, read at start. Set **Language** in the [debug menu](#the-debug-menu) and start the port again. The voices are always in English. |
-| **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |
+| **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `cache/shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |
 | **An Atmosphère error screen** | Send the newest file in `atmosphere/crash_reports/` and the `logs` folder. |
 
 ## Reporting a bug

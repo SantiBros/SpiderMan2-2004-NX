@@ -74,6 +74,13 @@ to find where a problem comes from:
        graphics chip
   ZR   the graphics chip fed from the game's own thread (no render thread)
 
+Your saves are in save/ beside the .nro: save/progress/ holds the game's
+saves, save/data/ what the game keeps for itself. Back up the save folder
+from time to time; updates don't touch it. cache/ holds the rest of the Xbox's
+hard disk and the shader list, and can be deleted at any time. A version
+before 0.1.0 kept everything in hdd/: its saves are moved to save/ at the
+first start.
+
 
 3. Controls
 -----------
@@ -119,8 +126,8 @@ The whole sdmc:/switch/SpiderMan2Xbox/logs/ folder (the newest sm2_NNN.log
 and crash.txt if there is one), plus a photo of the screen if something looks
 wrong or it stops. Every 5 seconds the log has a "perf:" line that says how
 fast it runs and where the time goes, and a "hitch:" line marks each stutter.
-shaders.cache beside the .nro keeps the shaders the game needed, so the next
-start builds them before you need them: leave it there (a new version of the
-port starts it again by itself). If the console had to be restarted, also send the newest
+cache/shaders.cache keeps the shaders the game needed, so the next start
+builds them before you need them: leave it there (a new version of the port
+starts it again by itself). If the console had to be restarted, also send the newest
 files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
 if they are from that time.

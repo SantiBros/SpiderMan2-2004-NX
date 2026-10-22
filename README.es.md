@@ -50,6 +50,7 @@ balancéate por Nueva York.
 >   alemán o italiano (las voces siguen en inglés: el disco solo trae esas). O elige uno en el menú.
 > - **Una pantalla de arranque limpia**: "Loading..." en vez del registro pasando (el registro se puede
 >   volver a activar).
+> - **Tus partidas en su propia carpeta**, `save/`, aparte de la caché: fáciles de respaldar.
 > - **Más rápido**: el hilo del juego necesita un 14% menos de tiempo de procesador por imagen (su código es más
 >   pequeño y registra lo que dibuja con menos trabajo).
 >
@@ -127,6 +128,8 @@ ejecutado en el PC.</sub></p>
   sobrevive a una consola congelada, y una línea de estado cada 2 segundos dice qué está haciendo cada hilo
   del juego. Los cierres inesperados dejan un informe. La pantalla de arranque también puede mostrar las
   últimas líneas del registro (el registro de arranque del menú de depuración).
+- **Tus partidas en una carpeta**, `save/`, aparte de la caché: se respaldan copiando una sola carpeta, y se
+  conservan entre actualizaciones.
 - **Controles asignados por posición**, para que los botones que muestra el juego estén donde tus dedos
   los esperan.
 - **Totalmente sin conexión.** El port no usa la red.
@@ -177,10 +180,12 @@ sd:/switch/SpiderMan2Xbox/
 ├── game/                 TU juego, una de estas dos cosas:
 │   ├── Spider-Man 2.iso      una imagen de disco (.iso .xiso .cci .cso), o todas las partes de una dividida
 │   └── default.xbe, data/    o los archivos del disco
-├── hdd/                  el disco duro de la Xbox: tus partidas (se crea la primera vez)
+├── save/                 TUS partidas: haz copias de esta carpeta
+│   ├── progress/             las partidas del juego (el E:\UDATA de la Xbox para este juego)
+│   └── data/                 lo que el juego guarda para sí en el disco duro de la Xbox (E:\TDATA)
+├── cache/                el resto del disco duro de la Xbox y la lista de shaders: se puede borrar
 ├── logs/                 sm2_NNN.log y crash.txt: adjúntalos al reportar un error
-├── settings.ini          los ajustes del menú de depuración (bórralo para volver a los recomendados)
-└── shaders.cache         los shaders que necesitó el juego, que se preparan de nuevo al arrancar
+└── settings.ini          los ajustes del menú de depuración (bórralo para volver a los recomendados)
 ```
 
 </details>
@@ -191,7 +196,8 @@ con WSL, cómo actualizar y la [solución de problemas](docs/INSTALL.es.md#soluc
 ### Actualizar
 
 Compila la versión nueva igual que la anterior y copia su carpeta `out/sd/switch` encima de la vieja. Tus
-carpetas `game/` y `hdd/` se quedan como están.
+carpetas `game/` y `save/` se quedan como están. ¿Vienes de una versión anterior a la 0.1.0, que lo guardaba todo
+en `hdd/`? En el primer arranque tus partidas pasan solas a `save/` y el resto de `hdd/` se convierte en `cache/`.
 
 ## Controles
 
@@ -251,7 +257,7 @@ consola, relojes de fábrica, sin contador, volumen completo, el renderizador po
 | Menús, cinemáticas, demos, la ciudad | ✅ En la versión de prueba para PC |
 | Sonido | 🧪 Por los altavoces y audífonos de la Switch; sin probar en una consola |
 | Controles | 🧪 Asignados, sin probar en una consola |
-| Partidas | 🧪 En `hdd/` en la tarjeta SD; sin probar en una consola |
+| Partidas | 🧪 En `save/` en la tarjeta SD, aparte de la caché; sin probar en una consola |
 | Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco); en la versión de prueba para PC |
 | Menú de depuración, relojes, contador | 🧪 Dibujado y comprobado en el PC; los relojes solo actúan en una consola |
 | En línea | ❌ Nada: el port no usa la red |
@@ -382,8 +388,10 @@ Nintendo. Lo habitual es usar el homebrew en un emuMMC y tener una copia de segu
 <details>
 <summary><b>¿Dónde está mi partida y cómo la respaldo?</b></summary>
 
-El port tiene un disco duro de Xbox en `switch/SpiderMan2Xbox/hdd/`, y el juego guarda ahí como lo haría en
-la Xbox. Copia esa carpeta a un lugar seguro de vez en cuando.
+En `switch/SpiderMan2Xbox/save/`: el juego guarda sus partidas en `save/progress/` como lo haría en el disco
+duro de la Xbox, y algunos datos propios en `save/data/`. Copia la carpeta `save` a un lugar seguro de vez en
+cuando, y vuelve a copiarla para restaurar. Las actualizaciones nunca la tocan, y `cache/`, a su lado, se puede
+borrar cuando quieras.
 </details>
 
 <details>
