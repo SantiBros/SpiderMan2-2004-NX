@@ -875,8 +875,14 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     blit_opts_ = glGetUniformLocation(blit_, "opts");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    // the port's version too: another build's shaders differ, and would only be built for nothing
+#ifdef SM2NX_VERSION
+    const std::string port = ", port " SM2NX_VERSION;
+#else
+    const std::string port;
+#endif
     shader_list_.Open(host_->CachePath(), std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + ", " +
-                                             reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+                                             reinterpret_cast<const char*>(glGetString(GL_VERSION)) + port);
     // the first call from whichever thread draws takes the context
     glFinish();
     host_->Release();

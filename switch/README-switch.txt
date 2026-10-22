@@ -92,7 +92,7 @@ and crash.txt if there is one), plus a photo of the screen if something looks
 wrong or it stops. Every 5 seconds the log has a "perf:" line that says how
 fast it runs and where the time goes, and a "hitch:" line marks each stutter.
 shaders.cache beside the .nro keeps the shaders the game needed, so the next
-start builds them before you need them: leave it there (delete it if the
-picture ever looks wrong after an update). If the console had to be restarted, also send the newest
+start builds them before you need them: leave it there (a new version of the
+port starts it again by itself). If the console had to be restarted, also send the newest
 files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
 if they are from that time.
