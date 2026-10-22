@@ -12,6 +12,7 @@ The game's own code, recompiled ahead of time for the Switch's processor, with t
 around it. Bring your own copy of the game, build the port from it once, and swing through New York.
 
 [![Latest release](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=release&color=c8202f&logo=github&logoColor=white)](../../releases)
+[![Downloads](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=downloads&color=1b2a4a)](../../releases)
 ![Status: early test](https://img.shields.io/badge/status-early%20test-e0a020?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
 ![Original Xbox, 2004](https://img.shields.io/badge/original%20Xbox-2004-1b2a4a?style=for-the-badge)

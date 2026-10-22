@@ -13,6 +13,7 @@ reconstruido a su alrededor. Trae tu propia copia del juego, compila el port a p
 balancéate por Nueva York.
 
 [![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=c8202f&logo=github&logoColor=white)](../../releases)
+[![Descargas](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=descargas&color=1b2a4a)](../../releases)
 ![Estado: prueba temprana](https://img.shields.io/badge/estado-prueba%20temprana-e0a020?style=for-the-badge)
 ![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
 ![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1b2a4a?style=for-the-badge)
