@@ -663,8 +663,8 @@ KERNEL_EXPORT(226, NtSetInformationFile, 5) {
     return kSuccess;
 }
 
-KERNEL_EXPORT(218, NtQueryVolumeInformationFile, 5) {
-    uint32_t iosb = a[1], out = a[2], len = a[3], cls = a[4];
+// a volume's information by class: 0 and the bytes written, else the status
+static uint32_t VolumeInformation(uint32_t out, uint32_t len, uint32_t cls, uint32_t& written) {
     std::memset(HostPtr(out), 0, len);
     switch (cls) {
         case 3:  // FileFsSizeInformation: 16 GiB total, 8 GiB free in 16 KiB units
@@ -672,7 +672,7 @@ KERNEL_EXPORT(218, NtQueryVolumeInformationFile, 5) {
             W64(out + 8, 0x80000);
             W32(out + 0x10, 32);
             W32(out + 0x14, 512);
-            IoStatus(iosb, kSuccess, 0x18);
+            written = 0x18;
             return kSuccess;
         case 7:  // FileFsFullSizeInformation
             W64(out, 0x100000);
@@ -680,23 +680,39 @@ KERNEL_EXPORT(218, NtQueryVolumeInformationFile, 5) {
             W64(out + 0x10, 0x80000);
             W32(out + 0x18, 32);
             W32(out + 0x1C, 512);
-            IoStatus(iosb, kSuccess, 0x20);
+            written = 0x20;
             return kSuccess;
         case 1:  // FileFsVolumeInformation
             W32(out + 8, 0x12345678);  // VolumeSerialNumber
-            IoStatus(iosb, kSuccess, 0x18);
+            written = 0x18;
             return kSuccess;
         case 5:  // FileFsAttributeInformation: attributes, max name, name length, "FATX"
             W32(out, 0);
             W32(out + 4, 42);
             W32(out + 8, 4);
             std::memcpy(HostPtr(out + 12), "FATX", 4);
-            IoStatus(iosb, kSuccess, 16);
+            written = 16;
             return kSuccess;
         default:
-            LOG_FIRST(8, "NtQueryVolumeInformationFile: class %u", cls);
+            LOG_FIRST(8, "volume information: class %u", cls);
+            written = 0;
             return kInvalidParameter;
     }
+}
+
+KERNEL_EXPORT(218, NtQueryVolumeInformationFile, 5) {
+    uint32_t iosb = a[1], out = a[2], len = a[3], cls = a[4], written = 0;
+    uint32_t status = VolumeInformation(out, len, cls, written);
+    if (status == kSuccess) IoStatus(iosb, kSuccess, written);
+    return status;
+}
+
+// (FileObject, FsInformationClass, Length, FsInformation, ReturnedLength): the same answers, every volume alike
+KERNEL_EXPORT(76, IoQueryVolumeInformation, 5) {
+    uint32_t cls = a[1], len = a[2], out = a[3], ret = a[4], written = 0;
+    uint32_t status = VolumeInformation(out, len, cls, written);
+    if (ret) W32(ret, written);
+    return status;
 }
 
 KERNEL_EXPORT(207, NtQueryDirectoryFile, 10) {

@@ -169,7 +169,9 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 - `runtime/kernel/image.{h,cpp}` (new): the disc image containers (plain, split, CCI, CSO v2) and the LZ4 decoder;
   `kernel/disc.cpp` reads through it and names Xbox 360 images.
 - `runtime/kernel/game_source.{h,cpp}` (new): the player's copy found in folders, matched by SHA-1 and entry point.
-- `runtime/kernel/files.cpp`: read-only opens unless written, renames and resizes around open files (above).
+- `runtime/kernel/files.cpp`: read-only opens unless written, renames and resizes around open files (above);
+  `IoQueryVolumeInformation`, which the game imports, answers as `NtQueryVolumeInformationFile` does (it was missing, and
+  a call would have stopped the game).
 - `runtime/kernel/kernel.h`, `exports.h`, `xdk/hle.h`: every kernel and library entry marks the calling thread with
   its name and counts its calls, for the status line and crash reports.
 - `runtime/core/log.cpp`: the newest lines for the start screen, `Sync` (flush and `fsync`), the descriptor for the
@@ -198,7 +200,9 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 - `harness/`: `SWITCH`, `PULSE` and `CAP` for the test build, the GPU renderer on headless EGL (`gl_harness.cpp`:
   `GL`, `RT`, `GLCAP`, `REFAT`, `GLDUMP`, `GLREC`), `TIMESCALE`, ARM builds (`ARCH`, `DEFS`, `GEN_OPT`, `LDFLAGS`),
   a game folder or disc image as the argument; the reference renderer clips at the near plane and converts floats
-  as x86 does, and traces a pixel through every triangle over it (`TRACE`, `DUMPTEX`, `DUMPTRIS`, `IDMAP`).
+  as x86 does, takes `oFog` as the fog factor under a vertex program with table fog off, nudges pixel centres off
+  shared edges, and traces a pixel through every triangle over it (`TRACE`, `DUMPTEX`, `DUMPTRIS`, `DRAWLIST`, `IDMAP`);
+  the pad script has the right stick and every button, and `cmd` and `capnow` files play a run live.
 
 Added to `config/game.toml` by hand (located with [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase)
 and by reading the XDK code that uses them): `D3D_Streams`, `D3DDevice_BeginPush`, `D3DDevice_EndPush`,

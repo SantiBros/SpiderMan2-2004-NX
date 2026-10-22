@@ -1147,6 +1147,13 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
     if (Watch().trace.x >= 0 && s.textures[0])
         LOGI("trace: draw %u, %u vertices, rt %08X, texture 0 at %08X", draw, as.vertex_count, s.rt.data,
              kernel::R32(s.textures[0] + 4));
+    // DRAWLIST=1: a line for every draw: vertices, primitive, its first texture, blending and tests
+    static const bool draw_list = std::getenv("DRAWLIST") != nullptr;
+    if (draw_list)
+        LOGI("drawlist: %u prim %u count %u vertices %u rt %08X vs %X t0 %08X blend %u %X %X atest %u %X %u z %u/%u fill %X", draw, prim,
+             count, as.vertex_count, s.rt.data, s.vs_handle, s.textures[0] ? kernel::R32(s.textures[0] + 4) : 0,
+             s.simple[kMBlendEnable >> 2], s.simple[kMSrcBlend >> 2], s.simple[kMDestBlend >> 2], s.simple[kMAlphaTestEnable >> 2],
+             s.simple[kMAlphaFunc >> 2], s.simple[kMAlphaRef >> 2] & 0xFF, s.rs[kRsZEnable], s.simple[kMZWriteEnable >> 2], s.rs[kRsFillMode]);
     if (!rt.ok && !zs.ok) return;
     g_stats.skipped = false;
     IdMap* idmap = nullptr;
@@ -1259,8 +1266,13 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
                     }
                 for (int r = 0; r < 16; r++)
                     if (slot[r] >= 0) LOGI("dump: v%u in v%d %g %g %g %g", vi, r, vp.in[r][0], vp.in[r][1], vp.in[r][2], vp.in[r][3]);
-                LOGI("dump: v%u oPos %g %g %g %g a0 %d R4 %g %g %g %g", vi, vp.out[0][0], vp.out[0][1], vp.out[0][2], vp.out[0][3], vp.a0,
-                     vp.temp[4][0], vp.temp[4][1], vp.temp[4][2], vp.temp[4][3]);
+                LOGI("dump: v%u oPos %g %g %g %g a0 %d R4 %g %g %g %g oFog %g oD0 %g %g %g %g", vi, vp.out[0][0], vp.out[0][1], vp.out[0][2],
+                     vp.out[0][3], vp.a0, vp.temp[4][0], vp.temp[4][1], vp.temp[4][2], vp.temp[4][3], vp.out[5][0], vp.out[3][0], vp.out[3][1],
+                     vp.out[3][2], vp.out[3][3]);
+                if (vi == 0)
+                    LOGI("dump: fog enable %u table %u start %g end %g density %g colour %08X range %u", s.rs[kRsFogEnable],
+                         s.rs[kRsFogTableMode], AsFloat(s.rs[kRsFogStart]), AsFloat(s.rs[kRsFogEnd]), AsFloat(s.rs[kRsFogDensity]),
+                         s.rs[kRsFogColor], s.rs[kRsRangeFogEnable]);
             }
             o.pos = vp.out[0];
             o.pos[3] = MagClamp(o.pos[3]);
@@ -1268,7 +1280,9 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
             o.attr[kD1] = vp.out[4];
             o.attr[kB0] = vp.out[7];
             o.attr[kB1] = vp.out[8];
-            o.attr[kFog] = Splat(FogAmount(s, vp.out[5][0]));
+            // table mode none under a vertex program: oFog.x is the fog factor itself (vertex fog), as the GPU renderers take it
+            bool vertex_fog = s.rs[kRsFogEnable] && s.rs[kRsFogTableMode] == 0;
+            o.attr[kFog] = Splat(vertex_fog ? vp.out[5][0] : FogAmount(s, vp.out[5][0]));
             for (int t = 0; t < 4; t++) o.attr[kT0 + t] = vp.out[9 + t];
         } else {
             const Vec& q = vp.in[0];
@@ -1443,8 +1457,9 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
             float inv_area = 1 / area;
             for (int y = y0; y <= y1; y++)
                 for (int x = x0; x <= x1; x++) {
-                    // barycentrics at the pixel centre
-                    float cx = x + 0.5f, cy = y + 0.5f;
+                    // barycentrics at the pixel centre, nudged off it: a centre on an edge two triangles share then falls in
+                    // one of them only (a quad's diagonal was drawn twice), as the GPU's fill rule has it
+                    float cx = x + 0.5f + 1.0f / 1024, cy = y + 0.5f + 1.0f / 4096;
                     float b0 = ((p1.x - cx) * (p2.y - cy) - (p2.x - cx) * (p1.y - cy)) * inv_area;
                     float b1 = ((p2.x - cx) * (p0.y - cy) - (p0.x - cx) * (p2.y - cy)) * inv_area;
                     float b2 = 1 - b0 - b1;

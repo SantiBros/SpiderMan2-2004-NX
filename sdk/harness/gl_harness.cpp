@@ -98,7 +98,13 @@ public:
             shown_ = true;
             LOGI("renderer: first picture at frame %llu", (unsigned long long)frames_);
         }
-        if ((every_ && frames_ % uint64_t(every_) == 0) || at_.count(long(frames_))) Save();
+        // a file named capnow in the run folder: this frame saved, the file removed (for scripts that play live)
+        bool now = false;
+        if (frames_ % 4 == 0) {
+            std::error_code ec;
+            now = std::filesystem::remove(app::ExeDir() / "capnow", ec);
+        }
+        if ((every_ && frames_ % uint64_t(every_) == 0) || at_.count(long(frames_)) || now) Save();
         if (long(frames_) >= rec_from_ && long(frames_) <= rec_to_) Record();
         if (frames_ % 600 == 0) LOGI("renderer: frame %llu", (unsigned long long)frames_);
     }

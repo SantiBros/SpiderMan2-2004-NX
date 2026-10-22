@@ -1114,6 +1114,23 @@ void GlBackend::UploadTexture(Tex& tx, const TextureDesc& d, const FormatInfo& f
         for (uint32_t l = 0; l < tx.levels; l++) {
             uint32_t pitch;
             DecodeLevel(d, l, f, p, colours, px, pitch);
+            // GLDUMPTEX=address: that texture's levels as decoded, to gltex_<address>_<level>.tga (uncompressed formats)
+            static const uint32_t dump_tex = std::getenv("GLDUMPTEX") ? uint32_t(std::strtoul(std::getenv("GLDUMPTEX"), nullptr, 16)) : 0;
+            if (dump_tex && d.data == dump_tex && !fi.compressed && f == 0) {
+                uint32_t w = d.linear ? d.width : std::max(d.width >> l, 1u), h = d.linear ? d.height : std::max(d.height >> l, 1u);
+                char name[64];
+                std::snprintf(name, sizeof name, "gltex_%08X_%u.tga", d.data, l);
+                if (FILE* o = std::fopen(name, "wb")) {
+                    uint8_t hdr[18] = {0, 0, 2};
+                    hdr[12] = uint8_t(w), hdr[13] = uint8_t(w >> 8), hdr[14] = uint8_t(h), hdr[15] = uint8_t(h >> 8), hdr[16] = 32, hdr[17] = 0x28;
+                    std::fwrite(hdr, 1, 18, o);
+                    std::fwrite(px.data(), 1, size_t(w) * h * 4, o);
+                    std::fclose(o);
+                }
+                LOGI("gl: texture %08X level %u %ux%u format %X palette %s: first texels %08X %08X %08X %08X", d.data, l, w, h, d.format,
+                     colours ? "yes" : "no", reinterpret_cast<const uint32_t*>(px.data())[0], reinterpret_cast<const uint32_t*>(px.data())[1],
+                     reinterpret_cast<const uint32_t*>(px.data())[2], reinterpret_cast<const uint32_t*>(px.data())[3]);
+            }
             uint32_t w = d.linear ? d.width : std::max(d.width >> l, 1u), h = d.linear ? d.height : std::max(d.height >> l, 1u);
             uint32_t z = d.linear ? 1 : std::max(d.depth >> l, 1u);
             perf_.texup_bytes += px.size();
@@ -1538,6 +1555,9 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     bool assembled = Assemble(s, prim, start, count, indices, a, raw);
     perf_.assemble += Ms(ta);
     if (!assembled || (!a.index_count && !a.draw_count)) return;
+    if (a.topology == Topology::Points)  // drawn a pixel a point: sprites and sizes are not drawn yet
+        LOG_FIRST(8, "gl: %u points, size %g, sprites %u, scale %u", a.draw_count ? a.draw_count : a.index_count,
+                  Bits(s.rs[kRsPointSize]), s.rs[kRsPointSpriteEnable], s.rs[kRsPointScaleEnable]);
     if (!BindTargets(s)) return;
     DrawShaders sh = ClassifyShaders(s, a, count);
     sh.vkey = VertexKey(s, a, sh);

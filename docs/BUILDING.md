@@ -62,7 +62,8 @@ cd out/run && SWITCH=1 PULSE=1 ../harness/sm2 "/path/to/Spider-Man 2.iso"   # or
 |---|---|
 | `SWITCH=1` | The Switch build's pacing: 60 frames a second, a frame drawn when as long as the last drawing has passed (at least half a second), saved as `cap/switch_<frame>.tga` from the first one with draws. |
 | `PULSE=1` | The Switch build's status line every 2 seconds: the kernel or library function each game thread is in. |
-| `SCRIPT=pad.txt` | Presses from a script, lines of `frame buttons [frames held]`, for example `1000 START 30`. Buttons: `UP DOWN LEFT RIGHT START BACK A B X Y LT RT LS LSD LSL LSR`, joined with `+`. |
+| `SCRIPT=pad.txt` | Presses from a script, lines of `frame buttons [frames held]`, for example `1000 START 30`. Buttons: `UP DOWN LEFT RIGHT START BACK A B X Y BLACK WHITE LT RT LTHUMB RTHUMB`, the left stick `LS LSD LSL LSR` (up, down, left, right) and the right stick `RS RSD RSL RSR`, joined with `+`. |
+| `cmd`, `capnow` | Playing live: a file `cmd` in the run folder holding `buttons [frames held]` is pressed once and removed; with `GL=1`, an empty file `capnow` saves the next frame as `cap/gl_<frame>.tga` and is removed. |
 | `CAP=1` | With `SWITCH=1`, every drawn frame's draws listed in `cap/draws_<frame>.txt`. |
 | `REF=N` | Without `SWITCH`, every Nth frame drawn into `cap/ref_<frame>.tga` (the game then runs unpaced). |
 
@@ -104,6 +105,8 @@ frame `f - 1` is `REFAT`'s frame `f`; draws count from 1 there and from 0 in the
 | `IDMAP=1` | `cap/ids_<frame>.bin`: for each pixel, the last four CPU renderer draws that wrote it. |
 | `DUMPDRAW=n`, `DUMPTEX=address` | That draw, or every draw reading that texture (physical address, hex): its vertices in and out, each vertex program instruction, the constants. |
 | `DUMPTRIS=n`, `DUMPTRIS=stencil` | That draw's triangles, or every stencil draw's, as the vertex stage left them, to `dump_tris_<draw>.txt`. |
+| `DRAWLIST=1` | In `REFAT`'s frames, a line for every draw: primitive, vertices, target, first texture, blending, alpha and depth tests, fill mode. |
+| `GLDUMPTEX=address` | That texture's levels as the GPU renderer decodes them, to `gltex_<address>_<level>.tga` (uncompressed formats). |
 
 A recording for clips: `RT=1 GL=1 TIMESCALE=0.15 GLREC="from to"` with a `SCRIPT`, then
 [`tools/art/make_clip.sh`](../tools/art/make_clip.sh) for an animated WebP and

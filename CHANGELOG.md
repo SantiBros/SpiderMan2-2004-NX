@@ -3,6 +3,18 @@
 All notable changes to the port. Versions before 0.1.0 are early test builds: they have not yet been played
 through on a Switch.
 
+## [Unreleased]
+
+### Fixed
+- **A system call the game uses had no implementation** (`IoQueryVolumeInformation`, for the free space and
+  details of a drive): had the game called it, it would have stopped. It now answers like the other drive queries.
+
+### Changed
+- The PC test build was played through the logos, menus, name entry, opening cinematic and the first tutorial on the
+  rooftop, and compared against the CPU renderer frame by frame. The CPU renderer now fogs like the GPU (the game's
+  distant buildings are hazy by design) and no longer draws a quad's diagonal twice, so the comparisons point only at
+  real differences. The test build's pad script gained the right stick and every button, and a run can be played live.
+
 ## [0.0.9]
 
 ### Fixed
