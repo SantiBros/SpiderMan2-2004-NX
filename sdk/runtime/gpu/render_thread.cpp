@@ -14,6 +14,8 @@
 #endif
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
 #include <smmintrin.h>
+#elif defined(__aarch64__)
+#include <arm_neon.h>
 #endif
 
 #include <algorithm>
@@ -87,7 +89,13 @@ std::vector<Range> StateRanges() {
 
 // equal bytes, 16 at a time: most of the state is compared on every draw
 bool Same(const uint8_t* a, const uint8_t* b, size_t n) {
-#if !(defined(__x86_64__) || defined(_M_X64) || defined(__i386__))
+#if defined(__aarch64__)
+    size_t i = 0;
+    uint8x16_t diff = vdupq_n_u8(0);
+    for (; i + 16 <= n; i += 16) diff = vorrq_u8(diff, veorq_u8(vld1q_u8(a + i), vld1q_u8(b + i)));
+    if (vmaxvq_u8(diff)) return false;
+    return i == n || !std::memcmp(a + i, b + i, n - i);
+#elif !(defined(__x86_64__) || defined(_M_X64) || defined(__i386__))
     return !std::memcmp(a, b, n);
 #else
     size_t i = 0;
@@ -338,14 +346,20 @@ private:
         std::memcpy(cur_->bytes.data() + at + 8, value, n);
     }
 
-    // what changed since the last command, in 64 byte pieces
+    // what changed since the last command, in 64 byte pieces. About 14 KB are compared at every draw: a KB at a time
+    // first, as from one draw to the next only a few pieces change
     void SendState(const State& s) {
         const uint8_t* now = reinterpret_cast<const uint8_t*>(&s);
+        const uint8_t* sent = reinterpret_cast<const uint8_t*>(&sent_);
         Cmd c{Op::State};
         size_t first = cur_->bytes.size();
         for (const Range& r : ranges_)
-            for (size_t off = r.off, end = r.off + r.len; off < end; off += 64)
-                Delta(reinterpret_cast<const uint8_t*>(&sent_) + off, now + off, std::min<size_t>(64, end - off));
+            for (size_t block = r.off, end = r.off + r.len; block < end; block += 1024) {
+                size_t block_end = std::min(end, block + 1024);
+                if (Same(sent + block, now + block, block_end - block)) continue;
+                for (size_t off = block; off < block_end; off += 64)
+                    Delta(sent + off, now + off, std::min<size_t>(64, block_end - off));
+            }
         std::array<uint32_t, 4> textures;
         for (size_t i = 0; i < 4; i++) textures[i] = Header(s.textures[i]);
         Delta(&sent_.textures, &textures, sizeof(textures));

@@ -18,7 +18,10 @@
 #endif
 
 // the slice table of the segmented layout (cpu/x86_ops.h); unused in the flat one
-extern "C" uintptr_t x86_seg[16] = {};
+extern "C" {
+uintptr_t x86_seg[16] = {};
+uintptr_t x86_seg_rel[16] = {};  // the same from the base pointer, for generated code
+}
 
 namespace mem {
 
@@ -59,6 +62,7 @@ bool Init() {
         x86_seg[kSystemBase >> 28] = uintptr_t(b + kLow + kPhys) - kSystemBase;
         x86_seg[kStackBase >> 28] = uintptr_t(b + kLow + kPhys + kSystemSize) - kStackBase;
         g_base = b;  // not a flat window: guest bytes go through x86_seg
+        for (uint32_t i = 0; i < 16; i++) x86_seg_rel[i] = x86_seg[i] - uintptr_t(b);
     }
     if (!g_base) {
         LOGE("memory: could not allocate %zu MB for the guest", total >> 20);

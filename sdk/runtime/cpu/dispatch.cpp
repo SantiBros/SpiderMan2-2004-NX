@@ -19,7 +19,7 @@
 namespace {
 
 std::vector<X86Func*> g_table;  // one slot per code byte
-std::vector<bool> g_continuation;
+std::vector<uint8_t> g_continuation;  // a byte each: read on every indirect call
 uint32_t g_lo = 0, g_hi = 0;
 
 struct Export {
@@ -43,9 +43,9 @@ void Init() {
     size_t n = 0;
     for (const X86FuncMapping* m = X86FuncMappings; m->host; m++, n++)
         if (m->guest >= g_lo && m->guest < g_hi) g_table[m->guest - g_lo] = m->host;
-    g_continuation.assign(g_hi - g_lo, false);
+    g_continuation.assign(g_hi - g_lo, 0);
     for (const uint32_t* c = X86Continuations; *c; c++)
-        if (*c >= g_lo && *c < g_hi) g_continuation[*c - g_lo] = true;
+        if (*c >= g_lo && *c < g_hi) g_continuation[*c - g_lo] = 1;
     LOGI("dispatch: %zu functions over %08X..%08X", n, g_lo, g_hi);
 }
 

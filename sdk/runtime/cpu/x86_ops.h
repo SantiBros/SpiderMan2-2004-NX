@@ -15,10 +15,14 @@ typedef double __attribute__((aligned(1), may_alias)) x86_f64u;
 
 // Guest address to host. Flat: one 4 GB window at base. Segmented (XBE_SEGMENTED, for hosts that cannot reserve
 // 4 GB of address space with pages committed on demand, the Switch): 16 slices of 256 MB, each placed anywhere in
-// host memory by kernel/memory.cpp, x86_seg[slice] + address being the host byte.
+// host memory by kernel/memory.cpp, x86_seg[slice] + address being the host byte. Generated code reaches it from
+// base (x86_seg_rel[slice] = x86_seg[slice] - base): a guest byte is then always base plus something, which with base
+// __restrict tells the compiler guest memory is never the X86Context, so the registers stay in host registers
+// across guest stores (about 5% less code on AArch64).
 #if defined(XBE_SEGMENTED) && XBE_SEGMENTED
 extern "C" uintptr_t x86_seg[16];
-#define X86_HOST(a) ((uint8_t*)(x86_seg[(uint32_t)(a) >> 28] + (uint32_t)(a)))
+extern "C" uintptr_t x86_seg_rel[16];
+#define X86_HOST(a) (base + (x86_seg_rel[(uint32_t)(a) >> 28] + (uint32_t)(a)))
 #else
 #define X86_HOST(a) (base + (uint32_t)(a))
 #endif
@@ -45,13 +49,13 @@ struct __attribute__((packed, may_alias)) x86_pf64 { double v; };
 #endif
 #define X86_PTR(T, a) ((T*)X86_HOST(a))
 
-#define X86_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* base)
-#define X86_EXTERN_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* base)
+#define X86_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* __restrict base)
+#define X86_EXTERN_FUNC(name) extern "C" void name(X86Context& __restrict ctx, uint8_t* __restrict base)
 #define X86_WEAK_FUNC(name, impl) \
-    extern "C" __attribute__((weak, noinline)) void name(X86Context& __restrict ctx, uint8_t* base) { impl(ctx, base); }
+    extern "C" __attribute__((weak, noinline)) void name(X86Context& __restrict ctx, uint8_t* __restrict base) { impl(ctx, base); }
 // [xbe] trace: logs the caller and arguments on entry, eax on return
 #define X86_TRACED_FUNC(name, impl, va)                                                                    \
-    extern "C" __attribute__((weak, noinline)) void name(X86Context& __restrict ctx, uint8_t* base) {      \
+    extern "C" __attribute__((weak, noinline)) void name(X86Context& __restrict ctx, uint8_t* __restrict base) {      \
         uint32_t x86_ret = x86_trace(ctx, va, 0);                                                         \
         impl(ctx, base);                                                                                  \
         x86_trace(ctx, va, x86_ret);                                                                      \

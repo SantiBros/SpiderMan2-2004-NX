@@ -940,26 +940,27 @@ void RunProgramCommands(uint32_t p, uint32_t end, uint32_t slot) {
 }
 
 // the VertexShader the next draws use: the slots from the start to the instruction with the final bit, the
-// override's layout or the selected object's
+// override's layout or the selected object's. The title selects and loads programs many times a frame: the key is
+// made from the slots and the layout in place, and a VertexShader only for one not seen before.
 void SelectFromSlots() {
     uint32_t object = g_input_object ? g_input_object : g_slot_object;
     if (!object) return;
-    auto vs = std::make_shared<gpu::VertexShader>();
-    vs->program_type = 0x2078;
-    for (uint32_t i = g_slot_start; i < kProgramSlots; i++) {
-        vs->program.insert(vs->program.end(), &g_slots[i * 4], &g_slots[i * 4] + 4);
-        if (g_slots[i * 4 + 3] & 1) break;  // FINAL
-    }
+    uint32_t last = g_slot_start;
+    while (last + 1 < kProgramSlots && !(g_slots[last * 4 + 3] & 1)) last++;  // FINAL
+    const uint32_t* program = &g_slots[g_slot_start * 4];
+    const size_t words = size_t(last + 1 - g_slot_start) * 4;
+    std::array<gpu::VertexShader::Input, 16> inputs{};
     uint32_t vaf = object + kVsoAttributes;
     for (uint32_t r = 0; r < 16; r++) {
         uint32_t stream = R32(vaf + r * 16), offset = R32(vaf + r * 16 + 4), format = R32(vaf + r * 16 + 8);
         if ((format & 0xF0) == 0 || stream >= 16) continue;  // D3DVSDT_NONE: no element
         if (g_input_object && stream < g_stream_input_count) offset += g_stream_inputs[stream].offset;
-        vs->inputs[r] = {int(stream), offset, format & 0xFF};
+        inputs[r] = {int(stream), offset, format & 0xFF};
     }
     // bytes per vertex: the override's strides, else the end of each stream's last element (inline vertices)
+    std::array<uint32_t, 16> stride{};
     for (uint32_t r = 0; r < 16; r++) {
-        const auto& in = vs->inputs[r];
+        const auto& in = inputs[r];
         if (in.stream < 0) continue;
         uint32_t t = in.type, n = (t >> 4) & 15, bytes;
         switch (t == 0x72 ? 7 : t & 15) {  // D3DVSDT kind; 0x72 FLOAT2H is three floats
@@ -969,22 +970,27 @@ void SelectFromSlots() {
             case 4: bytes = n; break;  // PBYTE
             default: bytes = 4 * n; break;  // FLOAT
         }
-        auto& st = vs->stream_stride[size_t(in.stream)];
+        auto& st = stride[size_t(in.stream)];
         st = std::max(st, in.offset + bytes);
     }
-    for (uint32_t i = 0; g_input_object && i < g_stream_input_count; i++) vs->stream_stride[i] = g_stream_inputs[i].stride;
-    uint64_t h = gpu::Hash(vs->program.data(), vs->program.size() * 4);
-    h = gpu::Hash(vs->inputs.data(), sizeof(vs->inputs), h);
-    h = gpu::Hash(vs->stream_stride.data(), sizeof(vs->stream_stride), h);
+    for (uint32_t i = 0; g_input_object && i < g_stream_input_count; i++) stride[i] = g_stream_inputs[i].stride;
+    uint64_t h = gpu::Hash(program, words * 4);
+    h = gpu::Hash(inputs.data(), sizeof(inputs), h);
+    h = gpu::Hash(stride.data(), sizeof(stride), h);
     auto& cached = g_slot_vs[h];
     if (!cached) {
+        auto vs = std::make_shared<gpu::VertexShader>();
+        vs->program_type = 0x2078;
+        vs->program.assign(program, program + words);
+        vs->inputs = inputs;
+        vs->stream_stride = stride;
         vs->hash = h;
         vs->handle = object | 1;
         cached = vs;
         LOG_FIRST(32, "d3d: vertex program at slot %u, %zu instructions, object %08X%s", g_slot_start,
                   vs->program.size() / 4, object, g_input_object ? " (input override)" : "");
     }
-    g_state.vs = cached;
+    if (g_state.vs != cached) g_state.vs = cached;
     g_state.vs_handle = object | 1;
 }
 }  // namespace
