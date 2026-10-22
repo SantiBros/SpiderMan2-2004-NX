@@ -46,7 +46,7 @@ constexpr uint32_t kHeaderRing = 1u << 20;  // guest memory for header copies; a
 
 enum class WaitFor : uint8_t { ReadBack, Resource, Fence, Flush, Copy, Frame, Count };
 
-enum class Op : uint8_t { State, Draw, Clear, Copy, Present, Sync, RecordLate, Flush, Gamma, ClearReport, GetReport };
+enum class Op : uint8_t { State, Draw, Clear, Copy, Present, Sync, RecordLate, Flush, Gamma, ClearReport, GetReport, Interval };
 
 struct Cmd {
     Op op;
@@ -235,6 +235,12 @@ public:
     void SetGamma(const uint8_t* ramp) override {
         Cmd c{Op::Gamma};
         c.data = Put(ramp, 768);
+        cur_->cmds.push_back(c);
+    }
+
+    void SetSwapInterval(uint32_t blanks) override {
+        Cmd c{Op::Interval};
+        c.a = blanks;
         cur_->cmds.push_back(c);
     }
 
@@ -466,6 +472,7 @@ private:
             case Op::Gamma: inner_->SetGamma(data); break;
             case Op::ClearReport: inner_->ClearReport(); break;
             case Op::GetReport: inner_->GetReport(c.a); break;
+            case Op::Interval: inner_->SetSwapInterval(c.a); break;
         }
     }
 

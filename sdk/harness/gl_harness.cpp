@@ -2,12 +2,13 @@
 // every frame, into a 1280x720 screen like the Switch's. Paced to 60 frames a second when it keeps up.
 // GLCAP=N: every Nth frame's screen saved as cap/gl_<frame>.tga (the 4:3 picture, 960x720); GLCAP_AT="f f ...": those
 // frames too. GLREC="from to": the screen's 4:3 picture of those frames into cap/rec.mp4 at 60 frames a second
-// (through ffmpeg; with TIMESCALE each frame is a 60th of a second of the game). Built with -DXBE_GL_HARNESS and
+// (through ffmpeg; with TIMESCALE each frame shows for its blanks, a 30th of a second of the game at this game's pace). Built with -DXBE_GL_HARNESS and
 // gl/*.cpp, linked with -lEGL.
 #ifdef XBE_GL_HARNESS
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -36,6 +37,7 @@ class EglHost final : public glr::Host {
 public:
     bool MakeCurrent() override {
         if (ctx_ != EGL_NO_CONTEXT) return eglMakeCurrent(dpy_, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx_);
+        setenv("ST_DEBUG", "precompile", 0);  // as the Switch build: programs made when linked
         auto get_display = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
         if (get_display) dpy_ = get_display(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
         if (!dpy_) dpy_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -82,6 +84,9 @@ public:
     }
     void Release() override { eglMakeCurrent(dpy_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT); }
     uint32_t ScreenFramebuffer() override { return screen_; }
+    void SetSwapInterval(uint32_t blanks) override { blanks_ = blanks; }
+    // NOCACHE=1: no shader list, every program built in play as on a first run
+    std::string CachePath() override { return Env("NOCACHE") ? std::string() : (app::ExeDir() / "shaders.cache").string(); }
     void ScreenSize(uint32_t& w, uint32_t& h) override {
         w = kScreenW;
         h = kScreenH;
@@ -99,8 +104,8 @@ public:
     }
     void Swap() override {
         glFlush();
-        // the Switch's pace: 60 frames a second at most, of the guest's clock
-        auto due = last_ + std::chrono::nanoseconds(kernel::HostNsFor(16666667));
+        // the Switch's pace: a frame every `blanks_` 60ths of a second of the guest's clock at most
+        auto due = last_ + std::chrono::nanoseconds(kernel::HostNsFor(16666667 * int64_t(blanks_)));
         auto now = std::chrono::steady_clock::now();
         if (now < due) std::this_thread::sleep_until(due);
         last_ = std::chrono::steady_clock::now();
@@ -125,7 +130,8 @@ private:
         std::vector<uint8_t> px(size_t(w) * h * 4);
         glBindFramebuffer(GL_FRAMEBUFFER, screen_);
         glReadPixels(GLint(x0), 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, px.data());
-        std::fwrite(px.data(), 1, px.size(), rec_);
+        // 60 frames a second in the file: a frame shown for two blanks is written twice
+        for (uint32_t i = 0; i < std::max<uint32_t>(blanks_, 1); i++) std::fwrite(px.data(), 1, px.size(), rec_);
         if (long(frames_) == rec_to_) {
             pclose(rec_);
             rec_ = nullptr;
@@ -164,6 +170,7 @@ private:
     long every_ = 0;
     std::set<long> at_;
     bool shown_ = false;
+    uint32_t blanks_ = 1;
     long rec_from_ = -1, rec_to_ = -2;
     FILE* rec_ = nullptr;
     std::chrono::steady_clock::time_point last_ = std::chrono::steady_clock::now();
@@ -201,6 +208,16 @@ public:
             char name[64];
             std::snprintf(name, sizeof name, "cap/ref_%05llu.tga", (unsigned long long)frame_ + 1);
             reference::WriteTga(front, (app::ExeDir() / name).string().c_str());
+            uint32_t w = 0, h = 0;
+            if (const std::vector<uint16_t>* ids = reference::DrawIds(front, w, h)) {
+                std::snprintf(name, sizeof name, "cap/ids_%05llu.bin", (unsigned long long)frame_ + 1);
+                if (FILE* f = std::fopen((app::ExeDir() / name).string().c_str(), "wb")) {
+                    std::fwrite(&w, 4, 1, f);
+                    std::fwrite(&h, 4, 1, f);
+                    std::fwrite(ids->data(), 2, ids->size(), f);
+                    std::fclose(f);
+                }
+            }
         }
         gl_->Present(front);
         frame_++;
@@ -211,6 +228,7 @@ public:
     void SyncLate(uint32_t data) override { gl_->SyncLate(data); }
     void Flush() override { gl_->Flush(); }
     void SetGamma(const uint8_t* ramp) override { gl_->SetGamma(ramp); }
+    void SetSwapInterval(uint32_t blanks) override { gl_->SetSwapInterval(blanks); }
     void ClearReport() override { gl_->ClearReport(); }
     void GetReport(uint32_t r) override { gl_->GetReport(r); }
 

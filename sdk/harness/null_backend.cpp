@@ -84,6 +84,8 @@ public:
     void SyncLate(uint32_t) override {}
     void Flush() override {}
     void SetGamma(const uint8_t*) override {}
+    void SetSwapInterval(uint32_t blanks) override { blanks_ = blanks; }
+    uint32_t blanks_ = 1;
     // visibility tests: a frame the reference renderer draws counts its pixels; in the others nothing is drawn, so a
     // report repeats the count it had when it was last drawn, and one never drawn says visible
     void ClearReport() override { reference::ResetCount(); }
@@ -128,7 +130,7 @@ private:
                 LOGI("renderer: frame %llu drawn in %lld ms, %llu draws in it, %llu so far", frames_, (long long)took,
                      draws_ - draws_at_draw_, draws_);
         } else {
-            auto due = last_present_ + std::chrono::microseconds(16667);
+            auto due = last_present_ + std::chrono::nanoseconds(kernel::HostNsFor(16666667 * int64_t(std::max<uint32_t>(blanks_, 1))));
             if (now < due) std::this_thread::sleep_until(due);
         }
         last_present_ = Clock::now();

@@ -1076,6 +1076,9 @@ void Clear(const State& s, uint32_t count, const uint8_t* rects, uint32_t flags,
             int x = int(s.viewport.x), y = int(s.viewport.y);
             area.push_back({x, y, x + int(s.viewport.w), y + int(s.viewport.h)});
         }
+        for (auto& r : area) {  // the title's pixels to samples
+            r[0] *= int(s.aa_x), r[2] *= int(s.aa_x), r[1] *= int(s.aa_y), r[3] *= int(s.aa_y);
+        }
         for (auto& r : area)
             for (int y = std::max(r[1], 0); y < std::min<int>(r[3], int(p.h)); y++)
                 for (int x = std::max(r[0], 0); x < std::min<int>(r[2], int(p.w)); x++) fn(uint32_t(x), uint32_t(y));
@@ -1135,9 +1138,15 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
     g_stats.min_x = g_stats.min_y = INFINITY;
     g_stats.max_x = g_stats.max_y = -INFINITY;
     Assembled as;
-    if (!Assemble(s, prim, start, count, indices, as) || as.topology != Topology::Triangles) return;
+    if (!Assemble(s, prim, start, count, indices, as) || as.topology != Topology::Triangles) {
+        if (Watch().trace.x >= 0) LOGI("trace: draw %u not drawn: primitive %u, %u vertices", draw, prim, count);
+        return;
+    }
     Plane rt = OpenPlane(s.rt);
     Plane zs = s.rs[kRsZEnable] || s.rs[kRsStencilEnable] ? OpenPlane(s.zs) : Plane{};
+    if (Watch().trace.x >= 0 && s.textures[0])
+        LOGI("trace: draw %u, %u vertices, rt %08X, texture 0 at %08X", draw, as.vertex_count, s.rt.data,
+             kernel::R32(s.textures[0] + 4));
     if (!rt.ok && !zs.ok) return;
     g_stats.skipped = false;
     IdMap* idmap = nullptr;
@@ -1195,8 +1204,12 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
         Shaded& o = verts[vi];
         // DUMPDRAW=n: draw n's first vertices in and out, and the constants its program reads
         static const long dump_draw = std::getenv("DUMPDRAW") ? std::atol(std::getenv("DUMPDRAW")) : -1;
+        // DUMPTEX=address: the same for every draw whose texture 0 is there (physical, hex)
+        static const uint32_t dump_tex = std::getenv("DUMPTEX") ? uint32_t(std::strtoul(std::getenv("DUMPTEX"), nullptr, 16)) : 0;
+        bool dumping = long(draw) == dump_draw ||
+                       (dump_tex && s.textures[0] && (kernel::R32(s.textures[0] + 4) & 0x7FFFFFFF) == dump_tex);
         if (program) {
-            vp.trace = long(draw) == dump_draw && vi == 0;
+            vp.trace = dumping && vi == 0;
             vp.Run(s.vs->program);
             // DUMPPOS="a b ...": every vertex's oPos of those draws, appended to dump_pos.txt
             static const std::vector<long> dump_pos = [] {
@@ -1219,7 +1232,26 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
                     std::fprintf(pf, "%u %u %u %g %g %g %g %08X\n", g_frame, draw, vi, vp.out[0][0], vp.out[0][1], vp.out[0][2],
                                  vp.out[0][3], s.rt.data);
             }
-            if (long(draw) == dump_draw && vi < 6) {
+            if (dumping && vi == 0 && s.vs) {  // the stream behind v0, a little past the draw's vertices
+                const auto& in = s.vs->inputs[0];
+                if (in.stream >= 0 && s.streams[size_t(in.stream)].vb) {
+                    const auto& st = s.streams[size_t(in.stream)];
+                    uint32_t va = mem::VirtualFromPhysical(kernel::R32(st.vb + 4));
+                    uint32_t stride = st.stride ? st.stride : s.vs->stream_stride[size_t(in.stream)];
+                    LOGI("dump: draw %u prim %u start %u count %u, stream %d at %08X stride %u", draw, prim, start, count, in.stream, va,
+                         stride);
+                    for (uint32_t k = 0; k < 8 && stride; k++) {
+                        uint32_t at = va + (start + k) * stride;
+                        float f[6];
+                        for (int j = 0; j < 6; j++) {
+                            uint32_t w = kernel::R32(at + uint32_t(j) * 4);
+                            std::memcpy(&f[j], &w, 4);
+                        }
+                        LOGI("dump:   vertex %u: %g %g %g | %g %g %g", start + k, f[0], f[1], f[2], f[3], f[4], f[5]);
+                    }
+                }
+            }
+            if (dumping && vi < 6) {
                 if (vi == 0)
                     for (int c = 0; c < 192; c++) {
                         const auto& k = s.vsc[size_t(c)];
@@ -1270,6 +1302,13 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
         if (!s.rs[kRsSpecularEnable]) o.attr[kD1] = o.attr[kB1] = V(0, 0, 0, 1);
     }
 
+    // multisample mode 2X or 4X: screen space in the title's pixels, a few samples each
+    if (s.aa_x != 1 || s.aa_y != 1)
+        for (Shaded& o : verts) {
+            o.pos[0] *= float(s.aa_x);
+            o.pos[1] *= float(s.aa_y);
+        }
+
     // raster and output state
     bool blend = simple(kMBlendEnable) != 0;
     uint32_t src_factor = simple(kMSrcBlend), dst_factor = simple(kMDestBlend), blend_op = simple(kMBlendOp);
@@ -1294,6 +1333,7 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
         right = std::min(right, int(s.scissors[2]));
         bottom = std::min(bottom, int(s.scissors[3]));
     }
+    left *= int(s.aa_x), right *= int(s.aa_x), top *= int(s.aa_y), bottom *= int(s.aa_y);
     left = std::max(left, 0);
     top = std::max(top, 0);
     right = std::min(right, int(gw));
@@ -1301,6 +1341,27 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
     const Probes& probes = Watch();
     bool watched = probes.Watched(rt);
 
+    // DUMPTRIS=draw: that draw's triangles as the vertex stage left them, to dump_tris_<draw>.txt; DUMPTRIS=stencil:
+    // every draw's with the stencil test on
+    static const char* dump_tris_e = std::getenv("DUMPTRIS");
+    static const long dump_tris = dump_tris_e ? std::atol(dump_tris_e) : -1;
+    static const bool dump_stencil = dump_tris_e && !std::strcmp(dump_tris_e, "stencil");
+    if (long(draw) == dump_tris || (dump_stencil && stencil)) {
+        char name[64];
+        std::snprintf(name, sizeof name, "dump_tris_%u.txt", draw);
+        if (FILE* f = std::fopen(name, "w")) {
+            std::fprintf(f, "cull %X zscale %g zfail %X pass %X c2 %g %g c3 %g %g ms %X %X\n", cull, s.zscale, op_zfail, op_pass,
+                         s.vsc[2][0], s.vsc[2][1], s.vsc[3][0], s.vsc[3][1], s.rs[kRsMultiSampleMode], s.rs[kRsMultiSampleRenderTargetMode]);
+            for (size_t ti = 0; ti + 2 < as.indices.size(); ti += 3) {
+                for (int i = 0; i < 3; i++) {
+                    const Shaded& v = verts[as.indices[ti + size_t(i)]];
+                    std::fprintf(f, "%.9g %.9g %.9g %.9g ", v.pos[0], v.pos[1], v.pos[2], v.pos[3]);
+                }
+                std::fprintf(f, "\n");
+            }
+            std::fclose(f);
+        }
+    }
     const float near_w = 1e-6f;
     static const bool near_clip = !std::getenv("REF_NO_NEAR_CLIP");  // for comparing with the old clipping
     for (size_t ti = 0; ti + 2 < as.indices.size(); ti += 3) {
@@ -1347,6 +1408,21 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
                 continue;
             }
             bool clockwise = area > 0;  // y down
+            if (watched && probes.trace.x >= 0) {  // TRACE: every triangle over the pixel, drawn or not
+                float px = float(probes.trace.x) + 0.5f, py = float(probes.trace.y) + 0.5f;
+                auto edge = [&](const Screen& a, const Screen& b) { return (b.x - a.x) * (py - a.y) - (px - a.x) * (b.y - a.y); };
+                float e0 = edge(p0, p1), e1 = edge(p1, p2), e2 = edge(p2, p0);
+                if ((e0 >= 0 && e1 >= 0 && e2 >= 0) || (e0 <= 0 && e1 <= 0 && e2 <= 0))
+                    LOGI("trace: draw %u triangle %zu (%d corners, piece %d) over the pixel, %s%s, w %g %g %g", draw, ti / 3, corners, fan,
+                         clockwise ? "clockwise" : "counter clockwise",
+                         (cull == 0x900 && clockwise) || (cull == 0x901 && !clockwise) ? ", culled" : "", tri[0].h[3], tri[1].h[3],
+                         tri[2].h[3]);
+                if ((e0 >= 0 && e1 >= 0 && e2 >= 0) || (e0 <= 0 && e1 <= 0 && e2 <= 0))
+                    for (int i = 0; i < 3; i++) {
+                        const Shaded& v = verts[as.indices[ti + size_t(i)]];
+                        LOGI("trace:   v%u screen %g %g %g w %g", as.indices[ti + size_t(i)], v.pos[0], v.pos[1], v.pos[2], v.pos[3]);
+                    }
+            }
             // GL_CW 0x900, GL_CCW 0x901
             if ((cull == 0x900 && clockwise) || (cull == 0x901 && !clockwise)) {
                 g_stats.culled++;
@@ -1395,10 +1471,14 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
                     Vec col;
                     bool keep = mat.key.programmable ? Combiners{mat, frag}.Shade(col) : ShadeStages(mat, frag, col);
                     if (!keep) {
+                        if (g_trace.on) LOGI("trace %d,%d draw %u: killed (texkill)", x, y, draw);
                         g_stats.killed++;
                         continue;
                     }
                     if (atest && !Passes(afunc, uint32_t(int(std::lround(Sat(col[3]) * 255))), aref)) {
+                        if (g_trace.on)
+                            LOGI("trace %d,%d draw %u: alpha test failed, %.3f %.3f %.3f %.3f func %X ref %u", x, y, draw, col[0], col[1],
+                                 col[2], col[3], afunc, aref);
                         g_stats.alpha_failed++;
                         continue;
                     }
@@ -1407,15 +1487,23 @@ void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const u
                     auto stencil_op = [&](uint32_t op) { return (os & ~swmask) | (StencilResult(op, os, sref) & swmask); };
                     if (stencil && !Passes(sfunc, sref & smask, os & smask)) {
                         zs.StoreDepth(uint32_t(x), uint32_t(y), oz, stencil_op(op_fail));
+                        if (g_trace.on)
+                            LOGI("trace %d,%d draw %u: stencil test failed, %X against ref %X mask %X func %X", x, y, draw, os, sref, smask, sfunc);
                         g_stats.stencil_failed++;
                         continue;
                     }
                     if (ztest && !Passes(zfunc, zi, oz)) {
+                        if (g_trace.on)
+                            LOGI("trace %d,%d draw %u: depth test failed, %X against %X func %X%s, stencil %X -> %X (op %X)", x, y, draw, zi, oz,
+                                 zfunc, front ? "" : " back", os, stencil ? stencil_op(op_zfail) : os, op_zfail);
                         if (stencil) zs.StoreDepth(uint32_t(x), uint32_t(y), oz, stencil_op(op_zfail));
                         g_stats.z_failed++;
                         continue;
                     }
                     if (zs.ok && (zwrite || stencil)) zs.StoreDepth(uint32_t(x), uint32_t(y), zwrite ? zi : oz, stencil ? stencil_op(op_pass) : os);
+                    if (g_trace.on && stencil)
+                        LOGI("trace %d,%d draw %u: passed%s, stencil %X -> %X (op %X)", x, y, draw, front ? "" : " back", os, stencil_op(op_pass),
+                             op_pass);
                     if (counting) g_counted++;
                     if (!rt.ok || !cmask) continue;
                     for (int j = 0; j < 4; j++) col[j] = Sat(col[j]);

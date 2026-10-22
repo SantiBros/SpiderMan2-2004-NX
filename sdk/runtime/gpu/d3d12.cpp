@@ -2017,8 +2017,9 @@ void FillFogConstants(const State& s, bool vertex_program, DrawConstants& c) {
 }
 
 void FillSurfaceConstants(const State& s, GuestExtent size, DrawConstants& c) {
-    c.surf[0] = float(size.w);
-    c.surf[1] = float(size.h);
+    // screen space: the target in the title's pixels, a sample each in multisample mode 1X
+    c.surf[0] = float(size.w) / float(s.aa_x);
+    c.surf[1] = float(size.h) / float(s.aa_y);
     c.surf[2] = 1.0f / s.zscale;
     Color(s.rs[kRsFogColor], c.fog_color);
     c.misc[0] = float(SimpleState(s, kMAlphaRef) & 0xFF);
@@ -2331,16 +2332,16 @@ void D3D12Backend::SetViewportScissor(const State& s, uint32_t gw) {
     float H = float(bound_rt_ ? bound_rt_->h : bound_ds_->h);
     D3D12_VIEWPORT vp{0, 0, W, H, 0, 1};
     cl_->RSSetViewports(1, &vp);
-    float sc = W / gw;
-    LONG x0 = LONG(s.viewport.x * sc);
-    LONG y0 = LONG(s.viewport.y * sc);
-    LONG x1 = LONG((s.viewport.x + s.viewport.w) * sc);
-    LONG y1 = LONG((s.viewport.y + s.viewport.h) * sc);
+    float sx = W / gw * float(s.aa_x), sy = W / gw * float(s.aa_y);  // the title's pixels, samples in 2X and 4X
+    LONG x0 = LONG(s.viewport.x * sx);
+    LONG y0 = LONG(s.viewport.y * sy);
+    LONG x1 = LONG((s.viewport.x + s.viewport.w) * sx);
+    LONG y1 = LONG((s.viewport.y + s.viewport.h) * sy);
     if (s.scissor_count) {
-        x0 = std::max(x0, LONG(s.scissors[0] * sc));
-        y0 = std::max(y0, LONG(s.scissors[1] * sc));
-        x1 = std::min(x1, LONG(s.scissors[2] * sc));
-        y1 = std::min(y1, LONG(s.scissors[3] * sc));
+        x0 = std::max(x0, LONG(s.scissors[0] * sx));
+        y0 = std::max(y0, LONG(s.scissors[1] * sy));
+        x1 = std::min(x1, LONG(s.scissors[2] * sx));
+        y1 = std::min(y1, LONG(s.scissors[3] * sy));
     }
     D3D12_RECT rect{std::clamp<LONG>(x0, 0, LONG(W)), std::clamp<LONG>(y0, 0, LONG(H)),
                     std::clamp<LONG>(x1, 0, LONG(W)), std::clamp<LONG>(y1, 0, LONG(H))};

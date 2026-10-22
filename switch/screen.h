@@ -38,6 +38,8 @@ void GlRelease();
 // a frame went onto the window, before GlSwap: the status text over it while the game has drawn nothing
 void GlPresented(uint32_t draws);
 void GlSwap();
+// a frame every `blanks` vertical blanks, 0 at once (the game's presentation interval)
+void GlSwapInterval(uint32_t blanks);
 // the renderer could not start on GL: the window goes back to the framebuffer, for the CPU renderer
 void GlFallBack();
 

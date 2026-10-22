@@ -185,6 +185,10 @@ struct State {
     uint32_t light_enable = 0;                         // bit per light
     float ss_offset_x = 0, ss_offset_y = 0;
     float zscale = 16777215.0f;  // depth buffer units per 1.0
+    // D3DRS_MULTISAMPLEMODE (D3DRS_MULTISAMPLERENDERTARGETMODE for other targets) 2X or 4X: the GPU takes the target
+    // as that many samples a pixel, the title's screen space (positions, viewport, scissors, clear rects) being this
+    // much smaller than the surface; a title draws a pass at half the pixels with every sample tested that way
+    uint32_t aa_x = 1, aa_y = 1;
 };
 
 }  // namespace gpu

@@ -209,9 +209,23 @@ void UpdateViewportConstants() {
     }
 }
 
+// the render target's samples per pixel, from the multisample mode for the back buffer or for other targets
+// (D3DMULTISAMPLEMODE_1X 0, 2X 1, 4X 2)
+void UpdateAntiAlias() {
+    bool back = g_state.rt.header && g_state.rt.header == Dev(kDevBackBuffer);
+    uint32_t mode = g_state.rs[back ? gpu::kRsMultiSampleMode : gpu::kRsMultiSampleRenderTargetMode];
+    uint32_t x = mode == 1 || mode == 2 ? 2 : 1, y = mode == 2 ? 2 : 1;
+    if (x != g_state.aa_x || y != g_state.aa_y)
+        LOG_FIRST(8, "d3d: %s drawn with %ux%u samples a pixel (multisample mode %u)", back ? "the back buffer" : "a render target",
+                  x, y, mode);
+    g_state.aa_x = x;
+    g_state.aa_y = y;
+}
+
 void SetComplex(uint32_t rs, uint32_t v) {
     g_state.rs[rs] = v;
     W32(kRenderState + rs * 4, v);
+    if (rs == gpu::kRsMultiSampleMode || rs == gpu::kRsMultiSampleRenderTargetMode) UpdateAntiAlias();
 }
 
 // The library's default render and texture stage states; its pushes land in the scratch buffer
@@ -281,8 +295,8 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     uint32_t auto_depth = R32(pp + 0x20), depth_fmt = R32(pp + 0x24), interval = R32(pp + 0x30);
     if (!w) w = 640;
     if (!h) h = 480;
-    LOGI("d3d: CreateDevice %ux%u format %X buffers %u depth %u format %X interval %X flags %X", w, h, fmt, count,
-         auto_depth, depth_fmt, interval, R32(pp + 0x28));
+    LOGI("d3d: CreateDevice %ux%u format %X buffers %u depth %u format %X interval %X flags %X multisample %X", w, h, fmt,
+         count, auto_depth, depth_fmt, interval, R32(pp + 0x28), R32(pp + 0x10));
     std::memset(HostPtr(kDevice), 0, XDK_CDevice_Size);
     W32(kDevicePtr, kDevice);
     ScratchPush();
@@ -334,6 +348,7 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     }
     g_state.rt = SurfaceOf(g_buffers[1]);
     g_state.zs = SurfaceOf(g_depth);
+    UpdateAntiAlias();
     UpdateViewportConstants();
     ApplyDefaultStates(ctx);
     if (a[5]) W32(a[5], kDevice);
@@ -432,7 +447,7 @@ HLE_STDCALL(D3D_MakeRequestedSpace, 2) {
 }
 
 HLE_STDCALL(D3DDevice_BlockUntilVerticalBlank, 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    std::this_thread::sleep_for(std::chrono::nanoseconds(kernel::HostNsFor(16666667)));
     return 0;
 }
 HLE_STDCALL(D3DDevice_SetFlickerFilter, 1) { return 0; }
@@ -473,6 +488,7 @@ HLE_STDCALL(D3DDevice_SetRenderTarget, 2) {
     Release(ctx, old_zs);
     g_state.rt = SurfaceOf(rt);
     g_state.zs = SurfaceOf(zs);
+    UpdateAntiAlias();
     // SetRenderTarget resets the viewport to the whole target
     uint32_t w, h;
     gpu::SurfaceSize(g_state.rt, w, h);
@@ -528,6 +544,19 @@ HLE_STDCALL(D3DDevice_Swap, 1) {
         }
     }
     Walk(Dev(kDevPush));  // reports asked for at the end of the frame
+    // D3DPRESENT_INTERVAL in the render state table: ONE 1, TWO 2, THREE 4, FOUR 8, the _OR_IMMEDIATE ones 0x10 to
+    // 0x80, IMMEDIATE 0x80000000; DEFAULT (0) is ONE. This game sets TWO: 30 frames a second, which its movies count on
+    {
+        static uint32_t last_interval = ~0u;
+        uint32_t interval = R32(kRenderState + gpu::kRsPresentationInterval * 4);
+        if (interval != last_interval) {
+            uint32_t v = interval & 0x80000000 ? 0 : (interval & 0xFF) >= 0x10 ? (interval & 0xFF) >> 4 : interval & 0xF;
+            uint32_t blanks = interval & 0x80000000 ? 0 : v & 8 ? 4 : v & 4 ? 3 : v & 2 ? 2 : 1;
+            LOGI("d3d: presentation interval %X: a frame every %u vertical blanks", interval, blanks);
+            if (g_backend) g_backend->SetSwapInterval(blanks);
+            last_interval = interval;
+        }
+    }
     if (g_backend) g_backend->Present(SurfaceOf(g_buffers[1]));
     app::Pace();
     // like the XDK, the surfaces stay put and their memory rotates: titles keep back buffer pointers and copy its data
@@ -539,6 +568,7 @@ HLE_STDCALL(D3DDevice_Swap, 1) {
     W32(g_buffers[0] + 4, data);
     W32(g_buffers[0] + 8, lk);
     g_state.rt = SurfaceOf(Dev(kDevRenderTarget));
+    UpdateAntiAlias();
     uint32_t n = Dev(kDevSwapCount) + 1;
     SetDev(kDevSwapCount, n);
     return n;

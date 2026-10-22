@@ -77,6 +77,20 @@ Two backends take the draws:
   mapped buffers fenced in quarters, and a draw changes only the GL state that differs from the last one. It runs
   on a render thread of its own beside the game's (the SDK's `gpu/render_thread.cpp`), and logs a `perf:` line
   every 5 seconds with where a frame's time goes.
+
+  Frames are shown at the pace the game asks for with `D3DRS_PRESENTATIONINTERVAL`: a frame every two vertical
+  blanks, 30 a second, which is also what its movies are timed for. Every GLSL program the game needed is kept in
+  `shaders.cache` beside the `.nro` and built again at the next start, a little each frame, so a scene played once
+  doesn't stall the next time on shaders it already had (the Switch's Mesa keeps no shader cache of its own). A
+  depth buffer the game reads as a colour texture (its shadow pass looks up `LIN_A8R8G8B8` texels over the depth
+  target) is copied into a colour view of its 24-bit words first.
+
+  Two hardware rules the game's shadows depend on: with `D3DRS_MULTISAMPLEMODE` at 2X or 4X the GPU takes the target
+  as two or four samples a pixel, so the game's screen space (positions, viewport, scissors, clear rects) is half as
+  wide (and high), and the game uses that to fill its stencil shadow volumes at half the pixels with every sample
+  depth tested: `gpu::State::aa_x`, `aa_y` scale it back. And an element offset of a whole number of vertices (a
+  shadow volume placed further into a shared buffer) moves into the buffer's start, since GL takes element offsets up
+  to 2047 bytes only.
 - The CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
   which draws into guest memory in software, register combiners and vertex programs included. It is exact enough
   to compare against and slow (seconds per city frame). The test build uses it, and the Switch falls back to it
@@ -166,7 +180,11 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
   stack in 64 KB steps); `NtUserIoApcDispatcher` for ReadFileEx/WriteFileEx completions, with
   `RtlNtStatusToDosError`'s table shared as `StatusToDosError`.
 - `runtime/gpu/vertex.{h,cpp}`: raw vertices a per-call choice (`Assemble(..., raw)`), so the GPU renderer reads the
-  game's vertices as they are while the reference renderer has them converted.
+  game's vertices as they are while the reference renderer has them converted; whole vertices of an element's offset
+  go into the buffer's start (a buffer per stream and offset).
+- `runtime/gpu/state.h`, `xdk/d3d8.cpp`, `gpu/d3d12.cpp`: the multisample mode's samples a pixel (`aa_x`, `aa_y`)
+  for the back buffer and other targets, which every renderer scales the game's screen space by; the presentation
+  interval passed on with `Backend::SetSwapInterval`.
 - `runtime/gpu/backend.h`, `render_thread.cpp`: the render thread a runtime choice (`gpu::g_render_thread`), started
   with an 8 MB stack outside Windows (drivers compile shaders on it; `std::thread` gets 128 KB on the Switch).
 - `runtime/kernel/objects.cpp`, `xboxkrnl.cpp`, `cpu/dispatch.cpp`, `xdk/d3d8.cpp`, `xdk/dsound.cpp`: every clock the
@@ -180,7 +198,7 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 - `harness/`: `SWITCH`, `PULSE` and `CAP` for the test build, the GPU renderer on headless EGL (`gl_harness.cpp`:
   `GL`, `RT`, `GLCAP`, `REFAT`, `GLDUMP`, `GLREC`), `TIMESCALE`, ARM builds (`ARCH`, `DEFS`, `GEN_OPT`, `LDFLAGS`),
   a game folder or disc image as the argument; the reference renderer clips at the near plane and converts floats
-  as x86 does.
+  as x86 does, and traces a pixel through every triangle over it (`TRACE`, `DUMPTEX`, `DUMPTRIS`, `IDMAP`).
 
 Added to `config/game.toml` by hand (located with [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase)
 and by reading the XDK code that uses them): `D3D_Streams`, `D3DDevice_BeginPush`, `D3DDevice_EndPush`,

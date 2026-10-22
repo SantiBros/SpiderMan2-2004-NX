@@ -60,8 +60,8 @@ public:
             if (shown_++ < 20 || shown_ % 50 == 0)
                 LOGI("renderer: frame %llu drawn in %lld ms, %llu draws so far", frames_, (long long)took, draws_);
         } else {
-            // 60 frames a second while nothing is drawn: the game's own pace, and the CPU left to its threads
-            auto due = last_present_ + std::chrono::microseconds(16667);
+            // the game's own pace while nothing is drawn (30 frames a second for this game), the CPU left to its threads
+            auto due = last_present_ + std::chrono::microseconds(16667 * std::max<uint32_t>(blanks_, 1));
             if (now < due) std::this_thread::sleep_until(due);
         }
         last_present_ = Clock::now();
@@ -79,8 +79,10 @@ public:
     void SyncLate(uint32_t) override {}
     void Flush() override {}
     void SetGamma(const uint8_t*) override {}
+    void SetSwapInterval(uint32_t blanks) override { blanks_ = blanks; }
 
 private:
+    uint32_t blanks_ = 1;
     unsigned long long frames_ = 0, draws_ = 0, shown_ = 0, draws_at_draw_ = 0;
     bool drawing_ = false;
     Clock::time_point next_draw_, draw_start_, last_present_;
@@ -97,6 +99,9 @@ public:
         h = 720;
     }
     void Presented(uint32_t draws) override { sw::GlPresented(draws); }
+    void SetSwapInterval(uint32_t blanks) override { sw::GlSwapInterval(blanks); }
+    // beside the .nro (the working folder): the programs built, built again ahead at the next start
+    std::string CachePath() override { return "shaders.cache"; }
     void Swap() override { sw::GlSwap(); }
 };
 
@@ -127,6 +132,7 @@ public:
     void SyncLate(uint32_t data) override { inner_->SyncLate(data); }
     void Flush() override { inner_->Flush(); }
     void SetGamma(const uint8_t* ramp) override { inner_->SetGamma(ramp); }
+    void SetSwapInterval(uint32_t blanks) override { inner_->SetSwapInterval(blanks); }
     void ClearReport() override { inner_->ClearReport(); }
     void GetReport(uint32_t r) override { inner_->GetReport(r); }
 

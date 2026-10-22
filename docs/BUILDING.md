@@ -84,13 +84,26 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 
 | Variable | What it does |
 |---|---|
-| `GL=1` | The GPU renderer, every frame, paced to 60 a second. Every 5 seconds a `perf:` line says where a frame's time goes. |
+| `GL=1` | The GPU renderer, every frame, paced as the game asks (a frame every two vertical blanks: 30 a second). Every 5 seconds a `perf:` line says where a frame's time goes, and a `hitch:` line names a frame that took far longer than the others. |
 | `RT=1` | The renderer on a thread of its own, as on the Switch. |
 | `GLCAP=N`, `GLCAP_AT="f f ..."` | Every Nth frame, or those frames, saved as `cap/gl_<frame>.tga` (the 4:3 picture). |
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
 | `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`, and guest memory under each. |
 | `GLREC="from to"` | Those frames into `cap/rec.mp4` at 60 frames a second, through `ffmpeg`. |
 | `TIMESCALE=0.15` | The game's clock at that fraction of real time (also without `GL`): with `GL=1` every frame then covers a 60th of a second of the game however long it takes to draw, so a recording plays smoothly at the game's speed. |
+
+To find out why a pixel differs between the two renderers (frame numbers: the GPU renderer counts from 0, so its
+frame `f - 1` is `REFAT`'s frame `f`; draws count from 1 there and from 0 in the CPU renderer):
+
+| Variable | What it does |
+|---|---|
+| `GLPROBE="frame x y"` | Every draw of that frame that changes the pixel (x, y), with its colour, depth, stencil, textures and vertex layout. `GLPROBE_ALL=1`: every draw, changed or not. |
+| `GLPROBE_RAW=draw` | That draw again without blending, depth, stencil or alpha tests: how many samples it covers and where, its GLSL (`probe_vs.glsl`, `probe_fs.glsl`) and every vertex's position (`probe_pos.txt`). `v<count>` picks the draw by its vertex count, steadier from run to run than its number. |
+| `GLTRACECLEAR=frame` | That frame's clears. |
+| `TRACE="x,y"`, `PROBES="x,y ..."` | In `REFAT`'s frames: every triangle over the pixel, why it was or wasn't drawn (culled, depth, stencil, alpha test) and the stencil before and after; `PROBES` the colour each draw leaves there. |
+| `IDMAP=1` | `cap/ids_<frame>.bin`: for each pixel, the last four CPU renderer draws that wrote it. |
+| `DUMPDRAW=n`, `DUMPTEX=address` | That draw, or every draw reading that texture (physical address, hex): its vertices in and out, each vertex program instruction, the constants. |
+| `DUMPTRIS=n`, `DUMPTRIS=stencil` | That draw's triangles, or every stencil draw's, as the vertex stage left them, to `dump_tris_<draw>.txt`. |
 
 A recording for clips: `RT=1 GL=1 TIMESCALE=0.15 GLREC="from to"` with a `SCRIPT`, then
 [`tools/art/make_clip.sh`](../tools/art/make_clip.sh) for an animated WebP and

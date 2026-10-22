@@ -6,6 +6,7 @@
 // their bytes stay the same.
 #include <cstdint>
 #include <memory>
+#include <string>
 
 #include "gpu/backend.h"
 
@@ -27,6 +28,10 @@ public:
     // picture of its own yet)
     virtual void Presented(uint32_t /*draws*/) {}
     virtual void Swap() = 0;
+    // frames shown every `blanks` vertical blanks from now on (gpu::Backend::SetSwapInterval)
+    virtual void SetSwapInterval(uint32_t /*blanks*/) {}
+    // where the list of the programs built is kept between runs, empty for nowhere
+    virtual std::string CachePath() { return {}; }
 };
 
 // null when GL can't be set up (no context, missing functions, GL older than 4.3)

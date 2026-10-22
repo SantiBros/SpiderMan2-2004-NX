@@ -113,6 +113,9 @@ struct Target {
     bool drawn = false;           // the GPU wrote it since the last read-back
     std::vector<uint8_t> read;    // what Sync left in guest memory, BGRA rows packed
     GLuint fb = 0;                // copy read by draws that sample the target they render to
+    uint64_t writes = 0;          // depth: draws and clears on it, to know when its colour view is old
+    GLuint zcolour = 0, zcolour_fbo = 0;  // depth: its words as A8R8G8B8, for draws that read them as colour
+    uint64_t zcolour_writes = ~0ull;
 };
 
 // MemSig samples a big surface and misses small writes (XFONT text): after a Sync every byte is compared
@@ -237,8 +240,9 @@ void FillFogConstants(const State& s, bool vertex_program, DrawConstants& c) {
 }
 
 void FillSurfaceConstants(const State& s, uint32_t gw, uint32_t gh, DrawConstants& c) {
-    c.surf[0] = float(gw);
-    c.surf[1] = float(gh);
+    // screen space: the target in the title's pixels, a sample each in multisample mode 1X
+    c.surf[0] = float(gw) / float(s.aa_x);
+    c.surf[1] = float(gh) / float(s.aa_y);
     c.surf[2] = 1.0f / s.zscale;
     Color(s.rs[kRsFogColor], c.fog_color);
     c.misc[0] = float(SimpleState(s, kMAlphaRef) & 0xFF);
@@ -502,7 +506,9 @@ double Ms(Clock::time_point t) { return std::chrono::duration<double, std::milli
 // where a frame's time goes, logged every few seconds: what the Switch's renderer costs
 struct Perf {
     double draw = 0, assemble = 0, textures = 0, shaders = 0, upload = 0, submit = 0, present = 0, sync = 0, clear = 0, report = 0;
+    double swap = 0, warm = 0;
     uint64_t draws = 0, verts = 0, texups = 0, texup_bytes = 0, newtex = 0, programs = 0, syncs = 0, targets = 0, reports = 0;
+    uint64_t hitches = 0, warmed = 0, zcolours = 0;
 };
 
 GLuint Compile(GLenum type, const std::string& src) {
@@ -542,6 +548,88 @@ GLuint Link(GLuint vs, GLuint fs) {
     return p;
 }
 
+// The programs built in earlier runs, as their GLSL, in one file beside the game's saves: built again from the start,
+// a few each frame while little is drawn, so a program is ready before the game first draws with it. The Switch's
+// Mesa has no binary shader cache, and a program built in the middle of play is a stutter.
+class ShaderList {
+public:
+    void Open(const std::string& path, const std::string& driver) {
+        if (path.empty()) return;
+        path_ = path;
+        const std::string head = "sm2nx glsl list 1 " + driver + "\n";
+        std::string all;
+        if (FILE* f = std::fopen(path.c_str(), "rb")) {
+            char buf[65536];
+            size_t n;
+            while ((n = std::fread(buf, 1, sizeof buf, f)) > 0) all.append(buf, n);
+            std::fclose(f);
+        }
+        bool same = all.compare(0, head.size(), head) == 0;
+        if (same) {
+            size_t at = head.size();
+            for (;;) {
+                size_t vl = 0, fl = 0;
+                int used = 0;
+                if (at >= all.size() || std::sscanf(all.c_str() + at, "@program %zu %zu\n%n", &vl, &fl, &used) != 2 || !used) break;
+                at += size_t(used);
+                if (at + vl + fl > all.size()) break;  // cut short by a crash or a full card: the rest is dropped
+                pending_.emplace_back(all.substr(at, vl), all.substr(at + vl, fl));
+                known_.insert({Hash(all.data() + at, vl), Hash(all.data() + at + vl, fl)});
+                at += vl + fl;
+            }
+            valid_ = at;
+        }
+        // a list from another driver or version, or one cut short, starts over from what reads whole
+        if (!same || valid_ < all.size()) {
+            if (FILE* f = std::fopen(path.c_str(), "wb")) {
+                if (same) std::fwrite(all.data(), 1, valid_, f);
+                else std::fwrite(head.data(), 1, head.size(), f);
+                std::fclose(f);
+            }
+            if (!same) pending_.clear(), known_.clear();
+        }
+        LOGI("gl: shader list %s: %zu programs to build ahead", path.c_str(), pending_.size());
+    }
+    bool Next(std::string& vs, std::string& fs) {
+        if (next_ >= pending_.size()) {
+            if (!pending_.empty()) pending_.clear(), pending_.shrink_to_fit();
+            return false;
+        }
+        vs = std::move(pending_[next_].first);
+        fs = std::move(pending_[next_].second);
+        next_++;
+        return true;
+    }
+    size_t Left() const { return pending_.size() - std::min(next_, pending_.size()); }
+    void Add(uint64_t vh, const std::string& vs, uint64_t fh, const std::string& fs) {
+        if (path_.empty() || !known_.insert({vh, fh}).second) return;
+        char head[64];
+        std::snprintf(head, sizeof head, "@program %zu %zu\n", vs.size(), fs.size());
+        out_ += head;
+        out_ += vs;
+        out_ += fs;
+    }
+    // written at most once a second, from the end of a frame
+    void Flush(bool now = false) {
+        if (out_.empty() || path_.empty()) return;
+        auto t = Clock::now();
+        if (!now && t - last_flush_ < std::chrono::seconds(1)) return;
+        last_flush_ = t;
+        if (FILE* f = std::fopen(path_.c_str(), "ab")) {
+            std::fwrite(out_.data(), 1, out_.size(), f);
+            std::fclose(f);
+        }
+        out_.clear();
+    }
+
+private:
+    std::string path_, out_;
+    std::vector<std::pair<std::string, std::string>> pending_;
+    size_t next_ = 0, valid_ = 0;
+    std::set<std::pair<uint64_t, uint64_t>> known_;
+    Clock::time_point last_flush_ = Clock::now();
+};
+
 // the full screen passes: an image to the screen through the gamma ramp, a depth copy
 const char* kBlitFragment = R"(#version 430 core
 in vec2 uv;
@@ -558,6 +646,16 @@ void main() {
         c.rgb = vec3(texelFetch(lut, ivec2(i.r, 0), 0).r, texelFetch(lut, ivec2(i.g, 0), 0).g, texelFetch(lut, ivec2(i.b, 0), 0).b);
     }
     o = vec4(c.rgb, opts.y > 0.0 ? c.a : 1.0);
+}
+)";
+// a depth buffer read as A8R8G8B8, as the console reads its D24S8 words: A Z[23:16], R Z[15:8], G Z[7:0], B the
+// stencil (left 0: no effect here reads it). The city's depth effects look the depth up through a dependent read.
+const char* kDepthColourFragment = R"(#version 430 core
+layout(binding = 0) uniform sampler2D depth;
+layout(location = 0) out vec4 o;
+void main() {
+    uint z = uint(clamp(texelFetch(depth, ivec2(gl_FragCoord.xy), 0).r, 0.0, 1.0) * 16777215.0 + 0.5);
+    o = vec4(float((z >> 8) & 255u), float(z & 255u), 0.0, float(z >> 16)) / 255.0;
 }
 )";
 const char* kDepthFragment = R"(#version 430 core
@@ -585,6 +683,11 @@ public:
         ramp_dirty_ = true;
     }
     void ClearReport() override { counted_.clear(); }
+    void SetSwapInterval(uint32_t blanks) override {
+        Own();
+        blanks_ = blanks;
+        host_->SetSwapInterval(blanks);
+    }
     void GetReport(uint32_t report) override;
 
 private:
@@ -622,11 +725,14 @@ private:
             if (const char* e = std::getenv("GLPROBE")) std::sscanf(e, "%ld %ld %ld", &pf, &px, &py);
         }
         if (long(frame_) != pf || !bound_rt_ || bound_rt_->gw != 640) return;
-        static uint32_t last = 0;
-        uint32_t v = 0;
+        static uint32_t last = 0, last_ds = 0;
+        uint32_t v = 0, ds = 0;
         glReadPixels(GLint(px), GLint(py), 1, 1, GL_BGRA, GL_UNSIGNED_BYTE, &v);
-        if (v == last) return;
+        if (bound_ds_) glReadPixels(GLint(px), GLint(py), 1, 1, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, &ds);
+        static const bool all = std::getenv("GLPROBE_ALL") != nullptr;  // every draw, changed or not
+        if (v == last && ds == last_ds && !all) return;
         last = v;
+        last_ds = ds;
         std::string tex;
         for (int i = 0; i < 4; i++) {
             TextureDesc d;
@@ -635,8 +741,20 @@ private:
             std::snprintf(b, sizeof b, " t%d=%08X:%ux%u/%X%s", i, d.data, d.width, d.height, d.format, st.rt[i] ? "(target)" : "");
             tex += b;
         }
-        LOGI("probe: draw %llu rt %08X pixel %08X | vs %X prog %d ps %u modes %X combiners %u%s", (unsigned long long)frame_draws_,
-             bound_rt_->data, v, s.vs_handle, (s.vs_handle & 1) && s.vs && !s.vs->program.empty(), pk.programmable, pk.tex_modes,
+        const Assembled& a = asm_;
+        std::string el;
+        for (int r = 0; r < 16; r++)
+            if ((a.regs >> r) & 1) {
+                char b[64];
+                std::snprintf(b, sizeof b, " v%d:%u@%u/b%u/d%u", r, a.elements[size_t(r)].format, a.elements[size_t(r)].offset,
+                              a.elements[size_t(r)].buffer, unsigned(a.decode >> (r * 4)) & 15);
+                el += b;
+            }
+        LOGI("probe:   vertices%s, %u buffers (stride %u, %u bytes), %u indices%s, %u drawn, base %d, %u vertices", el.c_str(),
+             a.buffer_count, a.buffer_count ? a.buffers[0].stride : 0, a.buffer_count ? a.buffers[0].bytes : 0, a.index_count,
+             a.index_src == a.indices.data() ? " (rebuilt)" : "", a.draw_count, a.base_vertex, a.vertex_count);
+        LOGI("probe: draw %llu rt %08X pixel %08X z %06X stencil %02X | vs %X prog %d ps %u modes %X combiners %u%s",
+             (unsigned long long)frame_draws_, bound_rt_->data, v, ds >> 8, ds & 0xFF, s.vs_handle, (s.vs_handle & 1) && s.vs && !s.vs->program.empty(), pk.programmable, pk.tex_modes,
              pk.count, tex.c_str());
     }
     // the context on the calling thread
@@ -649,18 +767,31 @@ private:
 
     Host* host_;
     std::thread::id owner_;
+    bool raw_probe_ = false;  // GLPROBE_RAW's draw
     uint32_t guest_w_ = 640, guest_h_ = 480;
     std::unordered_map<uint64_t, Target> targets_;
     std::unordered_map<uint32_t, uint64_t> target_used_;
     std::map<std::pair<GLuint, GLuint>, GLuint> fbos_;
     std::unordered_map<uint64_t, Tex> textures_;
     std::unordered_map<uint64_t, GLuint> samplers_;
+    // shaders by their source's hash, programs by both hashes, and the draw keys that led to them
     std::unordered_map<uint64_t, GLuint> vshaders_, fshaders_;
+    std::map<std::pair<uint64_t, uint64_t>, GLuint> by_source_;
     std::map<std::pair<uint64_t, uint64_t>, GLuint> programs_;
+    ShaderList shader_list_;
+    uint32_t blanks_ = 1;
+    // the frame before: when it ended, and the counters then, for the hitch lines
+    Clock::time_point frame_end_ = Clock::now();
+    Perf frame_perf_;
+    uint64_t hitches_logged_ = 0, total_warmed_ = 0;
+    double frame_avg_ = 33.0;  // recent frames, ms
+    void Warm(double budget_ms);
+    void LogHitch(double frame_ms);
     Target* bound_rt_ = nullptr;
     Target* bound_ds_ = nullptr;
     GLuint vao_ = 0, white_ = 0, white_cube_ = 0, white_3d_ = 0, shadow_white_ = 0, lut_ = 0;
-    GLuint blit_ = 0, depth_copy_ = 0;
+    GLuint blit_ = 0, depth_copy_ = 0, depth_colour_ = 0;
+    GLuint DepthAsColour(Target& t);
     GLint blit_opts_ = -1;
     Ring vertices_, indices_, uniforms_;
     GLint ubo_align_ = 256;
@@ -739,10 +870,13 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     GLuint fsv = Compile(GL_VERTEX_SHADER, glsl::kFullScreenVertex);
     blit_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kBlitFragment));
     depth_copy_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kDepthFragment));
+    depth_colour_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kDepthColourFragment));
     if (!blit_) return false;
     blit_opts_ = glGetUniformLocation(blit_, "opts");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    shader_list_.Open(host_->CachePath(), std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + ", " +
+                                             reinterpret_cast<const char*>(glGetString(GL_VERSION)));
     // the first call from whichever thread draws takes the context
     glFinish();
     host_->Release();
@@ -886,7 +1020,10 @@ bool GlBackend::BindTargets(const State& s) {
         if (LatchCpuWrite(*rt) | CpuOverwrote(*rt, frame_)) UploadTarget(*rt, s.rt);
         rt->drawn = true;
     }
-    if (ds) ds->drawn = true;
+    if (ds) {
+        ds->drawn = true;
+        ds->writes++;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer(rt, ds));
     bound_rt_ = rt;
     bound_ds_ = ds;
@@ -921,6 +1058,7 @@ bool GlBackend::DepthCopy(const State& s) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     FullScreen(depth_copy_);
     dst.drawn = true;
+    dst.writes++;
     bound_rt_ = bound_ds_ = nullptr;
     LOG_FIRST(4, "gl: depth copy %08X to %08X", src.data, dst.data);
     return true;
@@ -1057,7 +1195,56 @@ void GlBackend::BindTexture(const State& s, int stage, DrawTextures& st) {
         target_used_[t.data] = frame_;
         return;
     }
+    // a depth buffer read as colour: its words as the console has them in memory, which the GPU's depth isn't
+    if (!fi.depth && !fi.compressed && !d.cube && d.depth == 1 && Format(d.format).bits == 32) {
+        auto zit = targets_.find(SizedTargetKey(d.data, true, d.width, d.height));
+        if (zit != targets_.end() && zit->second.gw == d.width && zit->second.gh == d.height && zit->second.writes) {
+            if (GLuint tex = DepthAsColour(zit->second)) {
+                st.rt[stage] = true;
+                info.flags |= kTexTarget;
+                info.kind = kTex2D;
+                st.tex[stage] = tex;
+                st.kind[stage] = GL_TEXTURE_2D;
+                return;
+            }
+        }
+    }
     BindGuestTexture(s, stage, d, fi, st);
+}
+
+GLuint GlBackend::DepthAsColour(Target& t) {
+    if (!depth_colour_) return 0;
+    if (!t.zcolour) {
+        glGenTextures(1, &t.zcolour);
+        glBindTexture(GL_TEXTURE_2D, t.zcolour);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(t.gw), GLsizei(t.gh), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+        glGenFramebuffers(1, &t.zcolour_fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, t.zcolour_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t.zcolour, 0);
+        LOGI("gl: depth buffer %08X (%ux%u) read as colour", t.data, t.gw, t.gh);
+    }
+    if (t.zcolour_writes != t.writes) {
+        t.zcolour_writes = t.writes;
+        cache_.Forget();
+        glBindFramebuffer(GL_FRAMEBUFFER, t.zcolour_fbo);
+        glViewport(0, 0, GLsizei(t.gw), GLsizei(t.gh));
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_CULL_FACE);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, t.tex);
+        glBindSampler(0, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        FullScreen(depth_colour_);
+        perf_.zcolours++;
+    }
+    return t.zcolour;
 }
 
 GLuint GlBackend::Sampler(const State& s, int i, const DrawTextures& st) {
@@ -1105,17 +1292,26 @@ GLuint GlBackend::Program(const State& s, const Assembled& a, const DrawShaders&
     auto it = programs_.find(key);
     if (it != programs_.end()) return it->second;
     auto t0 = Clock::now();
-    GLuint& vs = vshaders_[sh.vkey];
-    if (!vs) {
-        std::string src = sh.prog ? glsl::VertexProgram(s.vs->program, a.regs, a.decode, sh.quad)
-                                  : glsl::FixedVertex(a.regs, a.decode, a.pretransformed, sh.fk, sh.quad);
-        vs = Compile(GL_VERTEX_SHADER, src);
+    // by the sources' text: a program built ahead from the shader list, or one another key already made
+    std::string vsrc = sh.prog ? glsl::VertexProgram(s.vs->program, a.regs, a.decode, sh.quad)
+                               : glsl::FixedVertex(a.regs, a.decode, a.pretransformed, sh.fk, sh.quad);
+    std::string fsrc = glsl::Pixel(pk);
+    uint64_t vh = Hash(vsrc.data(), vsrc.size()), fh = Hash(fsrc.data(), fsrc.size());
+    auto built = by_source_.find({vh, fh});
+    GLuint p = 0;
+    if (built != by_source_.end()) {
+        p = built->second;
+    } else {
+        GLuint& vs = vshaders_[vh];
+        if (!vs) vs = Compile(GL_VERTEX_SHADER, vsrc);
+        GLuint& fs = fshaders_[fh];
+        if (!fs) fs = Compile(GL_FRAGMENT_SHADER, fsrc);
+        p = Link(vs, fs);
+        by_source_[{vh, fh}] = p;
+        if (p) shader_list_.Add(vh, vsrc, fh, fsrc);
+        perf_.programs++;
     }
-    GLuint& fs = fshaders_[sh.pkey];
-    if (!fs) fs = Compile(GL_FRAGMENT_SHADER, glsl::Pixel(pk));
-    GLuint p = Link(vs, fs);
     programs_[key] = p;
-    perf_.programs++;
     perf_.shaders += Ms(t0);
     return p;
 }
@@ -1136,6 +1332,7 @@ void GlBackend::ApplyState(const State& s, const Assembled& a) {
         x1 = std::min(x1, int(s.scissors[2]));
         y1 = std::min(y1, int(s.scissors[3]));
     }
+    x0 *= int(s.aa_x), x1 *= int(s.aa_x), y0 *= int(s.aa_y), y1 *= int(s.aa_y);  // samples
     x0 = std::clamp(x0, 0, int(w));
     x1 = std::clamp(x1, 0, int(w));
     y0 = std::clamp(y0, 0, int(h));
@@ -1245,6 +1442,7 @@ void GlBackend::UploadConstants(const State& s, const DrawShaders& sh, const Dra
         FillTransformConstants(s, gw, gh, c);
         FillLightConstants(s, sh.fk, c);
     }
+    if (raw_probe_) c.misc[1] = 7.0f;  // GLPROBE_RAW: no alpha test
     // the same constants as the last draw's are drawn from where they are
     if (!uniforms_.Live(vsc_at_, vsc_lap_) || std::memcmp(last_vsc_.data(), s.vsc.data(), sizeof(s.vsc))) {
         vsc_at_ = uniforms_.Put(s.vsc.data(), sizeof(s.vsc), size_t(ubo_align_));
@@ -1361,6 +1559,13 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     ApplyState(s, a);
     uint32_t gw, gh;
     SurfaceSize(bound_rt_ ? s.rt : s.zs, gw, gh);
+    // GLPROBE_RAW=draw: in GLPROBE's frame, that draw without blending, depth, stencil or alpha tests, to see what it
+    // shades; GLPROBE_RAW=v<count>: the draws of that many vertices
+    static const char* raw_e = std::getenv("GLPROBE_RAW");
+    static const long raw_draw = raw_e && raw_e[0] != 'v' ? std::atol(raw_e) : -1;
+    static const long raw_verts = raw_e && raw_e[0] == 'v' ? std::atol(raw_e + 1) : -1;
+    raw_probe_ = raw_e && (long(frame_draws_) == raw_draw || long(a.vertex_count) == raw_verts) && std::getenv("GLPROBE") &&
+                 long(frame_) == std::atol(std::getenv("GLPROBE"));
     UploadConstants(s, sh, st, gw, gh);
     for (int i = 0; i < 4; i++) {
         const TexInfo& info = st.info[i];
@@ -1388,7 +1593,108 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         glBeginQuery(GL_SAMPLES_PASSED, query);
     }
     auto tg = Clock::now();
+    bool raw_probe = raw_probe_;
+    if (raw_probe) {
+        std::string vsrc = sh.prog ? glsl::VertexProgram(s.vs->program, a.regs, a.decode, sh.quad)
+                                   : glsl::FixedVertex(a.regs, a.decode, a.pretransformed, sh.fk, sh.quad);
+        if (FILE* f = std::fopen("probe_vs.glsl", "w")) std::fputs(vsrc.c_str(), f), std::fclose(f);
+        if (FILE* f = std::fopen("probe_fs.glsl", "w")) std::fputs(glsl::Pixel(pk).c_str(), f), std::fclose(f);
+        for (int r : {8, 9, 10, 11, 12, 13})
+            LOGI("probe: raw c[%d] %g %g %g %g", r, s.vsc[size_t(r)][0], s.vsc[size_t(r)][1], s.vsc[size_t(r)][2], s.vsc[size_t(r)][3]);
+        if (a.buffer_count) {
+            const float* v = reinterpret_cast<const float*>(a.buffers[0].src);
+            LOGI("probe: raw first vertex %g %g %g, stride %u, %u vertices from %u", v[0], v[1], v[2], a.buffers[0].stride,
+                 a.vertex_count, a.base_vertex);
+        }
+        LOGI("probe: raw draw %llu: fill %X back %X two sided %X aa %ux%u alpha test %u func %X ref %u, viewport %u %u %u %u, scissors %u", (unsigned long long)frame_draws_, s.rs[kRsFillMode], s.rs[kRsBackFillMode], s.rs[kRsTwoSidedLighting], s.aa_x, s.aa_y,
+             SimpleState(s, kMAlphaTestEnable), SimpleState(s, kMAlphaFunc), SimpleState(s, kMAlphaRef), s.viewport.x, s.viewport.y,
+             s.viewport.w, s.viewport.h, s.scissor_count);
+        glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_CULL_FACE);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        if (std::getenv("GLPROBE_CLAMP")) glEnable(0x864F);  // GL_DEPTH_CLAMP
+    }
+    GLuint raw_query = 0;
+    std::vector<uint32_t> raw_before;
+    if (raw_probe && bound_rt_) {
+        raw_before.resize(size_t(bound_rt_->gw) * bound_rt_->gh);
+        glReadPixels(0, 0, GLsizei(bound_rt_->gw), GLsizei(bound_rt_->gh), GL_BGRA, GL_UNSIGNED_BYTE, raw_before.data());
+    }
+    GLuint raw_prog = 0;
+    if (raw_probe && std::getenv("GLPROBE_FRESH")) {  // the draw with its program built again from the sources
+        std::string vsrc = sh.prog ? glsl::VertexProgram(s.vs->program, a.regs, a.decode, sh.quad)
+                                   : glsl::FixedVertex(a.regs, a.decode, a.pretransformed, sh.fk, sh.quad);
+        raw_prog = Link(Compile(GL_VERTEX_SHADER, vsrc), Compile(GL_FRAGMENT_SHADER, glsl::Pixel(pk)));
+        glUseProgram(raw_prog);
+        LOGI("probe: raw draw %llu: fresh program %u (cached %u)", (unsigned long long)frame_draws_, raw_prog, program);
+    }
+    if (raw_probe && !query) {
+        glGenQueries(1, &raw_query);
+        glBeginQuery(GL_SAMPLES_PASSED, raw_query);
+    }
     DrawGeometry(a);
+    if (raw_probe) {
+        if (raw_query) {
+            glEndQuery(GL_SAMPLES_PASSED);
+            GLuint n = 0;
+            glGetQueryObjectuiv(raw_query, GL_QUERY_RESULT, &n);
+            LOGI("probe: raw draw %llu: %u samples", (unsigned long long)frame_draws_, n);
+            if (!raw_before.empty()) {
+                std::vector<uint32_t> after(raw_before.size());
+                glReadPixels(0, 0, GLsizei(bound_rt_->gw), GLsizei(bound_rt_->gh), GL_BGRA, GL_UNSIGNED_BYTE, after.data());
+                uint32_t changed = 0, x0 = ~0u, y0 = ~0u, x1 = 0, y1 = 0;
+                for (uint32_t y = 0; y < bound_rt_->gh; y++)
+                    for (uint32_t x = 0; x < bound_rt_->gw; x++)
+                        if (after[size_t(y) * bound_rt_->gw + x] != raw_before[size_t(y) * bound_rt_->gw + x]) {
+                            changed++;
+                            x0 = std::min(x0, x), y0 = std::min(y0, y), x1 = std::max(x1, x), y1 = std::max(y1, y);
+                        }
+                LOGI("probe: raw draw %llu: %u pixels changed, in %u %u to %u %u", (unsigned long long)frame_draws_, changed, x0, y0,
+                     x1, y1);
+            }
+            glDeleteQueries(1, &raw_query);
+        }
+        // every vertex's gl_Position by transform feedback, to probe_pos.txt as console screen x y, depth units, w
+        if (glTransformFeedbackVaryings && glBeginTransformFeedback && glEndTransformFeedback && glBindBufferBase &&
+            glGetBufferSubData && sh.prog) {
+            std::string vsrc = glsl::VertexProgram(s.vs->program, a.regs, a.decode, sh.quad);
+            GLuint vs = Compile(GL_VERTEX_SHADER, vsrc), tf = glCreateProgram();
+            glAttachShader(tf, vs);
+            const char* names[] = {"gl_Position"};
+            glTransformFeedbackVaryings(tf, 1, names, 0x8C8C);  // GL_INTERLEAVED_ATTRIBS
+            glLinkProgram(tf);
+            GLuint buf = 0;
+            glGenBuffers(1, &buf);
+            glBindBuffer(0x8C8E, buf);  // GL_TRANSFORM_FEEDBACK_BUFFER
+            glBufferData(0x8C8E, GLsizeiptr(a.vertex_count) * 16, nullptr, 0x88E1);  // GL_STREAM_READ
+            glBindBufferBase(0x8C8E, 0, buf);
+            glUseProgram(tf);
+            glEnable(0x8C89);  // GL_RASTERIZER_DISCARD
+            glBeginTransformFeedback(GL_POINTS);
+            glDrawArrays(GL_POINTS, 0, GLsizei(a.vertex_count));
+            glEndTransformFeedback();
+            glDisable(0x8C89);
+            std::vector<float> pos(size_t(a.vertex_count) * 4);
+            glGetBufferSubData(0x8C8E, 0, GLsizeiptr(pos.size() * 4), pos.data());
+            if (FILE* f = std::fopen("probe_pos.txt", "w")) {
+                for (uint32_t i = 0; i < a.vertex_count; i++) {
+                    const float* g = &pos[size_t(i) * 4];
+                    float w = g[3];
+                    std::fprintf(f, "%u %.9g %.9g %.9g %.9g\n", i, (g[0] / w + 1) * 0.5f * float(guest_w_), (1 + g[1] / w) * 0.5f * float(guest_h_),
+                                 (g[2] / w + 1) * 0.5f * s.zscale, w);
+                }
+                std::fclose(f);
+            }
+            glUseProgram(program);
+            glDeleteBuffers(1, &buf);
+            glDeleteProgram(tf);
+            glDeleteShader(vs);
+        }
+        glDisable(0x864F);
+        cache_.Forget();
+    }
     perf_.submit += Ms(tg);
     Probe(s, st, pk);
     if (query) {
@@ -1420,6 +1726,13 @@ void GlBackend::GetReport(uint32_t va) {
 void GlBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint32_t flags, uint32_t color, float z, uint32_t stencil) {
     Own();
     auto t0 = Clock::now();
+    // GLTRACECLEAR=frame: that frame's clears logged
+    static const long trace = std::getenv("GLTRACECLEAR") ? std::atol(std::getenv("GLTRACECLEAR")) : -1;
+    if (long(frame_) == trace)
+        LOGI("gl: frame %llu draw %llu clear flags %X rects %u z %g stencil %u rt %08X zs %08X viewport %u %u %u %u",
+             (unsigned long long)frame_, (unsigned long long)frame_draws_, flags, count, z, stencil,
+             mem::VirtualFromPhysical(s.rt.data), mem::VirtualFromPhysical(s.zs.data), s.viewport.x, s.viewport.y, s.viewport.w,
+             s.viewport.h);
     Target* rt = (flags & kClearTarget) ? EnsureTarget(s.rt, false) : nullptr;
     Target* ds = (flags & (kClearZ | kClearStencil)) ? EnsureTarget(s.zs, true) : nullptr;
     // pixels the CPU wrote before this clear go in first, a later upload would paint over the clear
@@ -1462,13 +1775,15 @@ void GlBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint
             bits = GL_COLOR_BUFFER_BIT;
         }
         for (auto& r : area) {
-            int x0 = std::clamp(r[0], 0, int(t->gw)), y0 = std::clamp(r[1], 0, int(t->gh));
-            int x1 = std::clamp(r[2], 0, int(t->gw)), y1 = std::clamp(r[3], 0, int(t->gh));
+            int ax = int(s.aa_x), ay = int(s.aa_y);  // the title's pixels to samples
+            int x0 = std::clamp(r[0] * ax, 0, int(t->gw)), y0 = std::clamp(r[1] * ay, 0, int(t->gh));
+            int x1 = std::clamp(r[2] * ax, 0, int(t->gw)), y1 = std::clamp(r[3] * ay, 0, int(t->gh));
             if (x1 <= x0 || y1 <= y0) continue;
             glScissor(x0, y0, x1 - x0, y1 - y0);
             glClear(bits);
         }
         t->drawn = true;
+        t->writes++;
     }
     bound_rt_ = bound_ds_ = nullptr;
     perf_.clear += Ms(t0);
@@ -1590,6 +1905,43 @@ void GlBackend::ReleaseOldTextures() {
     }
 }
 
+// programs from the shader list, for up to budget_ms
+void GlBackend::Warm(double budget_ms) {
+    if (!shader_list_.Left()) return;
+    auto t0 = Clock::now();
+    std::string vsrc, fsrc;
+    while (Ms(t0) < budget_ms && shader_list_.Next(vsrc, fsrc)) {
+        uint64_t vh = Hash(vsrc.data(), vsrc.size()), fh = Hash(fsrc.data(), fsrc.size());
+        if (by_source_.count({vh, fh})) continue;
+        GLuint& vs = vshaders_[vh];
+        if (!vs) vs = Compile(GL_VERTEX_SHADER, vsrc);
+        GLuint& fs = fshaders_[fh];
+        if (!fs) fs = Compile(GL_FRAGMENT_SHADER, fsrc);
+        by_source_[{vh, fh}] = Link(vs, fs);
+        perf_.warmed++;
+        total_warmed_++;
+    }
+    perf_.warm += Ms(t0);
+    if (!shader_list_.Left()) LOGI("gl: %llu programs built ahead from the shader list", (unsigned long long)total_warmed_);
+}
+
+// a frame that took much longer than the game's pace, and what it was spent on
+void GlBackend::LogHitch(double frame_ms) {
+    const Perf& a = frame_perf_;
+    const Perf& b = perf_;
+    double work = (b.draw - a.draw) + (b.clear - a.clear) + (b.sync - a.sync) + (b.report - a.report) + (b.present - a.present) +
+                  (b.warm - a.warm);
+    double swap = b.swap - a.swap;
+    perf_.hitches++;
+    if (hitches_logged_++ >= 300) return;
+    LOGI("hitch: frame %llu took %.0f ms: GL %.0f ms (shaders %.0f for %llu new, textures %.0f for %llu uploads %.2f MB, "
+         "read-backs %.0f, reports %.0f, warm-up %.0f), swap %.0f ms, the rest %.0f ms waiting for the game | %llu draws",
+         (unsigned long long)frame_, frame_ms, work, b.shaders - a.shaders, (unsigned long long)(b.programs - a.programs),
+         b.textures - a.textures, (unsigned long long)(b.texups - a.texups), double(b.texup_bytes - a.texup_bytes) / 1048576.0,
+         b.sync - a.sync, b.report - a.report, b.warm - a.warm, swap, std::max(0.0, frame_ms - work - swap),
+         (unsigned long long)(b.draws - a.draws));
+}
+
 void GlBackend::LogPerf() {
     perf_frames_++;
     double el = Ms(perf_t_);
@@ -1597,12 +1949,25 @@ void GlBackend::LogPerf() {
     double n = double(perf_frames_);
     const Perf& p = perf_;
     LOGI("perf: %.1f fps, %.1f ms/frame: draws %.1f (assemble %.1f, textures %.1f, shaders %.1f, submit %.1f), clear %.1f, "
-         "sync %.1f, reports %.1f, present %.1f | per frame %.0f draws %.0fk verts %.1f tex uploads %.2f MB %.1f reports | "
-         "%llu new textures %llu programs %llu targets %llu read-backs in %.0f s",
+         "sync %.1f, reports %.1f, present %.1f, swap %.1f, warm-up %.1f | per frame %.0f draws %.0fk verts %.1f tex uploads "
+         "%.2f MB %.1f reports | %llu new textures %llu programs (%llu built ahead) %llu targets %llu read-backs %llu hitches "
+         "in %.0f s",
          n * 1000 / el, el / n, p.draw / n, p.assemble / n, p.textures / n, p.shaders / n, p.submit / n, p.clear / n, p.sync / n,
-         p.report / n, p.present / n, p.draws / n, p.verts / n / 1000, p.texups / n, p.texup_bytes / n / 1048576.0, p.reports / n,
-         (unsigned long long)p.newtex, (unsigned long long)p.programs, (unsigned long long)p.targets, (unsigned long long)p.syncs,
+         p.report / n, p.present / n, p.swap / n, p.warm / n, p.draws / n, p.verts / n / 1000, p.texups / n,
+         p.texup_bytes / n / 1048576.0, p.reports / n, (unsigned long long)p.newtex, (unsigned long long)p.programs,
+         (unsigned long long)p.warmed, (unsigned long long)p.targets, (unsigned long long)p.syncs, (unsigned long long)p.hitches,
          el / 1000);
+    // with the render thread: the title's thread, recording the draws, waiting for the render thread, and the rest:
+    // the game's own work
+    if (g_render_thread) {
+        double rec = double(g_perf_capture_ns.exchange(0)) / n / 1e6, wait = double(g_perf_wait_ns.exchange(0)) / n / 1e6;
+        double kinds[6];
+        for (int i = 0; i < 6; i++) kinds[i] = double(g_perf_wait_kind_ns[i].exchange(0)) / n / 1e6;
+        LOGI("perf: game thread per frame: the game %.1f ms, recording %.1f, waiting %.1f (read-backs %.1f, resources %.1f, "
+             "fences %.1f, flushes %.1f, copies %.1f, the frame before %.1f), %.1f waits",
+             std::max(0.0, el / n - rec - wait), rec, wait, kinds[0], kinds[1], kinds[2], kinds[3], kinds[4], kinds[5],
+             double(g_perf_waits.exchange(0)) / n);
+    }
     perf_ = Perf{};
     perf_t_ = Clock::now();
     perf_frames_ = 0;
@@ -1611,7 +1976,34 @@ void GlBackend::LogPerf() {
 // GLDUMP=n: every colour target as frame n leaves them, as gltarget_<frame>_<address>_<w>x<h>.tga beside the log
 void DumpTargets(std::unordered_map<uint64_t, Target>& targets, uint64_t frame, GLuint (*fbo)(void*, const Target*), void* self) {
     for (auto& [key, t] : targets) {
-        if (t.depth) continue;
+        if (t.depth) {
+            // its colour view, and guest memory under it read as A8R8G8B8 (what the CPU renderer left there)
+            uint8_t head[18] = {0, 0, 2};
+            head[12] = uint8_t(t.gw), head[13] = uint8_t(t.gw >> 8), head[14] = uint8_t(t.gh), head[15] = uint8_t(t.gh >> 8);
+            head[16] = 32;
+            head[17] = 0x28;
+            char name[96];
+            std::vector<uint8_t> px(size_t(t.gw) * t.gh * 4);
+            if (t.zcolour) {
+                glBindFramebuffer(GL_FRAMEBUFFER, t.zcolour_fbo);
+                glReadPixels(0, 0, GLsizei(t.gw), GLsizei(t.gh), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+                std::snprintf(name, sizeof name, "cap/gldepth_%05llu_%08X_%ux%u.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
+                if (FILE* f = std::fopen(name, "wb")) {
+                    std::fwrite(head, 1, 18, f);
+                    std::fwrite(px.data(), 1, px.size(), f);
+                    std::fclose(f);
+                }
+            }
+            const uint8_t* g = static_cast<const uint8_t*>(kernel::HostPtr(t.data));
+            for (uint32_t y = 0; y < t.gh; y++) std::memcpy(&px[size_t(y) * t.gw * 4], g + size_t(y) * t.pitch, t.gw * 4);
+            std::snprintf(name, sizeof name, "cap/gldepth_%05llu_%08X_%ux%u_mem.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
+            if (FILE* f = std::fopen(name, "wb")) {
+                std::fwrite(head, 1, 18, f);
+                std::fwrite(px.data(), 1, px.size(), f);
+                std::fclose(f);
+            }
+            continue;
+        }
         std::vector<uint8_t> px(size_t(t.gw) * t.gh * 4);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo(self, &t));
         glReadPixels(0, 0, GLsizei(t.gw), GLsizei(t.gh), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
@@ -1694,11 +2086,23 @@ void GlBackend::Present(const Surface& front) {
     host_->Presented(uint32_t(frame_draws_));
     cache_.Forget();  // the host may have drawn too
     perf_.present += Ms(t0);
+    auto ts = Clock::now();
     host_->Swap();
+    perf_.swap += Ms(ts);
+    // a stutter: a frame much longer than the game's pace (blanks_ 60ths of a second) and than the frames around it
+    double frame_ms = Ms(frame_end_);
+    double pace = 16.667 * std::max<uint32_t>(blanks_, 1);
+    if (frame_ > 2 && frame_ms > std::max(pace * 1.5 + 10.0, frame_avg_ * 1.8)) LogHitch(frame_ms);
+    frame_avg_ += (std::min(frame_ms, 250.0) - frame_avg_) * 0.1;
+    // the shader list: more while the game draws little (logos, menus, loading)
+    Warm(frame_draws_ < 64 ? 12.0 : 2.0);
+    shader_list_.Flush();
     frame_++;
     frame_draws_ = 0;
     ReleaseOldTextures();
     LogPerf();
+    frame_perf_ = perf_;
+    frame_end_ = Clock::now();
 }
 
 }  // namespace

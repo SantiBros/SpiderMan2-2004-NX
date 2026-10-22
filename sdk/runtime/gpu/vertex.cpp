@@ -273,7 +273,8 @@ bool RawReadable(const State& s, const Inputs& inputs) {
         const auto& in = inputs.layout.inputs[size_t(inputs.regs[k])];
         HostElement he = HostFormat(in.type);
         uint32_t stride = StrideOf(s, inputs.layout, in);
-        bool readable = he.format && stride && stride % kStrideAlign == 0 && in.offset < kElementOffsetEnd &&
+        // whole vertices of the offset go into the buffer's start (AssembleRaw), the rest is under the stride
+        bool readable = he.format && stride && stride % kStrideAlign == 0 && in.offset % stride < kElementOffsetEnd &&
                         in.offset % std::min<uint32_t>(he.bytes, 4) == 0;
         if (!readable) {
             LOG_FIRST(32, "vertex: converted on the CPU: v%d type %02X offset %u stride %u", inputs.regs[k], in.type,
@@ -293,13 +294,13 @@ void GatherVertices(const State& s, const DrawRange& d, const uint8_t* data, uin
     }
 }
 
-// returns the buffer slot the stream got
+// returns the buffer slot the stream got; skip: whole vertices of the element's offset, moved to the buffer's start
 int AddRawBuffer(const State& s, const VertexShader& layout, const VertexShader::Input& in, const DrawRange& d,
-                 bool dense, Assembled& out) {
+                 bool dense, uint32_t skip, Assembled& out) {
     using namespace kernel;
     const auto& st = s.streams[size_t(in.stream)];
     uint32_t stride = StrideOf(s, layout, in);
-    const uint8_t* data = static_cast<const uint8_t*>(HostPtr(mem::VirtualFromPhysical(R32(st.vb + kResData))));
+    const uint8_t* data = static_cast<const uint8_t*>(HostPtr(mem::VirtualFromPhysical(R32(st.vb + kResData)))) + skip;
     int slot = int(out.buffer_count);
     if (dense) {
         out.buffers[out.buffer_count++] = {data + size_t(d.first_vertex) * stride, d.span * stride, stride};
@@ -354,16 +355,30 @@ constexpr uint64_t kDenseSpanSlack = 1024;
 
 bool AssembleRaw(const State& s, const Inputs& inputs, const DrawRange& d, Assembled& out) {
     bool dense = uint64_t(d.span) <= uint64_t(d.count) * kDenseSpanPerVertex + kDenseSpanSlack;
-    int slot[16];
-    std::fill(std::begin(slot), std::end(slot), -1);
+    // a buffer per stream and whole vertices skipped: an element offset past the stride (a title placing a mesh in
+    // a shared buffer that way, as the shadow volumes do) goes into the buffer's start, since the host's input
+    // assembler takes element offsets up to 2047 bytes only (GL_MAX_VERTEX_ATTRIB_RELATIVE_OFFSET)
+    struct Slot {
+        int stream;
+        uint32_t skip;
+        int slot;
+    };
+    Slot slots[16];
+    int nslots = 0;
     for (int k = 0; k < inputs.nregs; k++) {
         int reg = inputs.regs[k];
         const auto& in = inputs.layout.inputs[size_t(reg)];
-        if (slot[in.stream] < 0) {
-            slot[in.stream] = AddRawBuffer(s, inputs.layout, in, d, dense, out);
+        uint32_t stride = StrideOf(s, inputs.layout, in);
+        uint32_t skip = in.offset / stride * stride;
+        int slot = -1;
+        for (int i = 0; i < nslots; i++)
+            if (slots[i].stream == in.stream && slots[i].skip == skip) slot = slots[i].slot;
+        if (slot < 0) {
+            slot = AddRawBuffer(s, inputs.layout, in, d, dense, skip, out);
+            slots[nslots++] = {in.stream, skip, slot};
         }
         HostElement he = HostFormat(in.type);
-        out.elements[size_t(reg)] = {he.format, uint8_t(slot[in.stream]), uint16_t(in.offset)};
+        out.elements[size_t(reg)] = {he.format, uint8_t(slot), uint16_t(in.offset - skip)};
         out.decode |= uint64_t(he.decode) << (reg * 4);
     }
     out.vertex_count = dense ? d.span : d.count;

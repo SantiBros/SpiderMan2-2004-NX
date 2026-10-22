@@ -117,8 +117,14 @@
     X(void, glViewport, (GLint, GLint, GLsizei, GLsizei))
 
 // newer than 4.3: used when the version or an extension says the driver has them
-#define GL_OPTIONAL_FUNCTIONS(X) \
-    X(void, glBufferStorage, (GLenum, GLsizeiptr, const void*, GLbitfield))
+#define GL_OPTIONAL_FUNCTIONS(X)                                                    \
+    X(void, glBufferStorage, (GLenum, GLsizeiptr, const void*, GLbitfield))        \
+    /* diagnostics: GLPROBE_RAW's vertex positions */                              \
+    X(void, glTransformFeedbackVaryings, (GLuint, GLsizei, const char* const*, GLenum)) \
+    X(void, glBeginTransformFeedback, (GLenum))                                     \
+    X(void, glEndTransformFeedback, ())                                             \
+    X(void, glBindBufferBase, (GLenum, GLuint, GLuint))                             \
+    X(void, glGetBufferSubData, (GLenum, GLintptr, GLsizeiptr, void*))
 
 namespace glapi {
 

@@ -126,8 +126,10 @@ void CloseGl() {
 
 // an OpenGL 4.3 core context on the window (Mesa's nouveau driver), current on the main thread
 bool InitGl(std::string& why) {
-    // GL errors are not looked at in play: Mesa skips its checks
+    // GL errors are not looked at in play: Mesa skips its checks. A program's machine code is made when it is linked,
+    // not at its first draw, so the shader list's programs built ahead are really ready
     setenv("MESA_NO_ERROR", "1", 1);
+    setenv("ST_DEBUG", "precompile", 1);
     char buf[160];
     auto fail = [&](const char* what) {
         std::snprintf(buf, sizeof buf, "%s (EGL error %X)", what, unsigned(eglGetError()));
@@ -365,6 +367,14 @@ void GlPresented(uint32_t draws) {
 }
 
 void GlSwap() { eglSwapBuffers(g_dpy, g_surface); }
+
+void GlSwapInterval(uint32_t blanks) {
+    if (g_mode != Mode::Gl) return;
+    if (!eglSwapInterval(g_dpy, EGLint(blanks)))
+        LOGW("screen: swap interval %u refused (EGL error %X)", blanks, unsigned(eglGetError()));
+    else
+        LOGI("screen: a frame every %u vertical blanks", blanks);
+}
 
 void GlFallBack() {
     if (g_mode != Mode::Gl) return;

@@ -3,6 +3,31 @@
 All notable changes to the port. Versions before 0.1.0 are early test builds: they have not yet been played
 through on a Switch.
 
+## [0.0.9]
+
+### Fixed
+- **The opening videos ran twice too fast** (the Activision and Treyarch logos, the intro, every cutscene video).
+  The game shows a frame every two vertical blanks, 30 a second, and its videos are timed for that; the port showed
+  one every blank. It now keeps to the pace the game asks for, in the videos and in play.
+- **Building shadows were in the wrong place, and half the screen went dark.** The game fills its shadow volumes in
+  the GPU's 2X multisample mode, where the screen counts half as many pixels across, and then darkens what they
+  cover; the port drew the volumes squeezed into the left half and darkened the left half of the screen. Shadows of
+  buildings now fall where they should, on the roofs and streets.
+- **Shadow volumes drawn with another mesh's vertices.** A mesh placed far into a shared vertex buffer (more than
+  2047 bytes in) was drawn from the start of the buffer.
+- **The shadow's fade with distance** read the depth buffer as colour from an old copy; it reads the depth the frame
+  drew.
+
+### Changed
+- **Fewer stutters the second time.** Every shader the game needed is kept in `shaders.cache` beside the `.nro`
+  and built again at the next start, a little each frame (the Switch's graphics driver keeps no shader cache of its
+  own), so a scene doesn't stall on shaders it already had. The first time through a new place still builds them.
+- Mesa runs without its error checks and compiles each shader's variants when it is built rather than at its first
+  draw.
+- The log names stutters: a `hitch:` line for a frame that took far longer than the ones around it, with where the
+  time went (drawing, waiting for the GPU, shader building, the game itself); the `perf:` line also says how long
+  the game's own thread took.
+
 ## [0.0.8]
 
 The first public release.

@@ -37,6 +37,9 @@ public:
     virtual void RecordLate(uint32_t) {}
     virtual void Flush() = 0;
     virtual void SetGamma(const uint8_t* ramp /*3 x 256*/) = 0;
+    // D3DRS_PRESENTATIONINTERVAL: the title shows a frame every `blanks` vertical blanks (2: 30 frames a second, the
+    // game's own pace and what its movies are timed for), 0 for at once; a backend that shows frames keeps to it
+    virtual void SetSwapInterval(uint32_t /*blanks*/) {}
     // visibility tests: draws count passing pixels while simple[kMCountEnable / 4] is set, ClearReport zeroes the
     // count, GetReport writes it to a 16 byte report once the GPU is past those draws; without them it stays pending
     virtual void ClearReport() {}
