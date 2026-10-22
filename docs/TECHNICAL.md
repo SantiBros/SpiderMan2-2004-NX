@@ -273,6 +273,7 @@ tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)
 tools/make_release.sh  the release zip
+tools/art/           the README's banner, social preview and install steps (make_art.py), and clips
 sdk/                 Xbox XBE Recomp with the changes above (MIT, TGP482)
 docs/                this documentation
 assets/ generated/ build-switch/ build-tools/ out/   your copy and what is made from it (ignored by git)

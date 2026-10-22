@@ -115,6 +115,11 @@ A recording for clips: `RT=1 GL=1 TIMESCALE=0.15 GLREC="from to"` with a `SCRIPT
 demos are the game's own video files (`data/movies/xbox/attract*.xmv`), not the engine drawing: clips meant to show
 the port must come from play.
 
+The README's banner, the social preview and the install steps come from
+[`tools/art/make_art.py`](../tools/art/make_art.py): `python3 tools/art/make_art.py <fonts> <frame.tga> <frame.tga> docs/images`,
+with frames from `GLCAP` (the banner uses the title screen, `CROP_TOP=0.17 CROP_BOTTOM=0.15` to leave out its logo
+and its prompt) and the Barlow Condensed font, which isn't included.
+
 ## The ARM test build
 
 The same test build compiled for the Switch's processor (AArch64) and run under `qemu-aarch64`, with the Switch

@@ -1,7 +1,7 @@
 <div align="center">
 
-[![English](https://img.shields.io/badge/lang-English-c8202f?style=for-the-badge)](README.md)
-[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-1b2a4a?style=for-the-badge)](README.es.md)
+[![English](https://img.shields.io/badge/lang-English-dc1e2e?style=for-the-badge)](README.md)
+[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-1c2233?style=for-the-badge)](README.es.md)
 
 <img src="docs/images/banner.jpg" alt="Spider-Man 2 (original Xbox, 2004) for Nintendo Switch, an unofficial homebrew port" width="100%">
 
@@ -11,13 +11,13 @@
 The game's own code, recompiled ahead of time for the Switch's processor, with the Xbox's system rebuilt
 around it. Bring your own copy of the game, build the port from it once, and swing through New York.
 
-[![Latest release](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=release&color=c8202f&logo=github&logoColor=white)](../../releases)
-[![Downloads](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=downloads&color=1b2a4a)](../../releases)
+[![Latest release](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=download&color=dc1e2e&logo=github&logoColor=white)](../../releases)
+[![Downloads](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=downloads&color=1c2233)](../../releases)
 ![Status: test build](https://img.shields.io/badge/status-test%20build-e0a020?style=for-the-badge)
-![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
-![Original Xbox, 2004](https://img.shields.io/badge/original%20Xbox-2004-1b2a4a?style=for-the-badge)
-![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
-[![License: MIT](https://img.shields.io/badge/license-MIT-1b2a4a?style=for-the-badge)](LICENSE)
+![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1c2233?style=for-the-badge)
+![Original Xbox, 2004](https://img.shields.io/badge/original%20Xbox-2004-1c2233?style=for-the-badge)
+![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1c2233?style=for-the-badge)](LICENSE)
 
 [Install](#how-to-install) · [Controls](#controls) · [Debug menu](#debug-menu) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
 
@@ -55,26 +55,26 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="The title screen, PRESS START TO BEGIN"></td>
-    <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="The swing control menu"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>The title screen</sub></td>
-    <td align="center"><sub>Choosing the swing controls</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man on a rooftop at dusk, with the HUD" width="70%"></td>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man on a rooftop at dusk, with the HUD" width="100%"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>The first rooftop, at dusk</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/debug-menu.jpg" alt="The port's debug menu over the game, with the frame-rate counter"></td>
+    <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="The title screen, PRESS START TO BEGIN"></td>
     <td width="50%"><img src="docs/images/screenshots/title-es.jpg" alt="The title screen in Spanish, PRESIONAR START PARA EMPEZAR"></td>
   </tr>
   <tr>
+    <td align="center"><sub>The title screen</sub></td>
+    <td align="center"><sub>The same on a console set to Spanish</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="The swing control menu"></td>
+    <td width="50%"><img src="docs/images/screenshots/debug-menu.jpg" alt="The port's debug menu over the game, with the frame-rate counter"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Choosing the swing controls</sub></td>
     <td align="center"><sub>The debug menu (ZL + ZR + −) and the frame-rate counter; the numbers are an example</sub></td>
-    <td align="center"><sub>On a console set to Spanish, the game is in Spanish</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/start.jpg" alt="The port's start screen, Loading"></td>
@@ -139,6 +139,8 @@ by the Switch build's screen code, run on the PC.</sub></p>
 > **New to Switch homebrew?** First set up your console with custom firmware (Atmosphère) and the
 > Homebrew Menu: the community guide [switch.hacks.guide](https://switch.hacks.guide/) explains it step by
 > step. Unsure what XBE, XISO, CCI or WSL mean? See the [glossary](docs/INSTALL.md#glossary).
+
+<img src="docs/images/install-steps.png" alt="Install in 4 steps: download the zip from Releases, build it with your game, copy the SD card folder and your game, start with R + any game" width="100%">
 
 1. **Get your game as files.** A disc image of your own disc, or the files from it. PC DVD drives can't
    read original Xbox discs: [how to get them](docs/INSTALL.md#getting-your-game).

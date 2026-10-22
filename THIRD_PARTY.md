@@ -36,5 +36,14 @@ Built on your computer by `build.sh` to make the `.nro`; not part of it. CMake d
 | [Repackinator / XboxToolkit](https://github.com/Team-Resurgent/Repackinator) by Team Resurgent | The CCI format |
 | [ciso](https://github.com/antangelo/ciso) by antangelo | The CSO format, and CSO files to test with |
 
+## Artwork in this repository
+
+- The banner, the social preview and the install steps (`docs/images/`, drawn by
+  [`tools/art/make_art.py`](tools/art/make_art.py)) use the font [Barlow Condensed](https://github.com/jpt/barlow) by
+  Jeremy Tribby, under the SIL Open Font License 1.1. The font itself is not included.
+- The screenshots in `docs/images/` show the game running in the port's PC test build, to illustrate it; the banner's
+  and the social preview's picture is the game's title screen as the port draws it. The icon (`switch/icon.jpg`) is the game's cover art. The game, its art and its characters belong to
+  their owners (Marvel, Sony Pictures, Activision and Treyarch).
+
 The SDK's Windows PC build also uses Dear ImGui and SDL ([`sdk/THIRD_PARTY.txt`](sdk/THIRD_PARTY.txt)); the
 Switch port doesn't.

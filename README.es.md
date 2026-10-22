@@ -1,7 +1,7 @@
 <div align="center">
 
-[![English](https://img.shields.io/badge/lang-English-1b2a4a?style=for-the-badge)](README.md)
-[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-c8202f?style=for-the-badge)](README.es.md)
+[![English](https://img.shields.io/badge/lang-English-1c2233?style=for-the-badge)](README.md)
+[![Español](https://img.shields.io/badge/idioma-Espa%C3%B1ol-dc1e2e?style=for-the-badge)](README.es.md)
 
 <img src="docs/images/banner.jpg" alt="Spider-Man 2 (Xbox original, 2004) para Nintendo Switch, un port homebrew no oficial" width="100%">
 
@@ -12,13 +12,13 @@ El código del propio juego, recompilado de antemano para el procesador de la Sw
 reconstruido a su alrededor. Trae tu propia copia del juego, compila el port a partir de ella una vez y
 balancéate por Nueva York.
 
-[![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=c8202f&logo=github&logoColor=white)](../../releases)
-[![Descargas](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=descargas&color=1b2a4a)](../../releases)
+[![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=dc1e2e&logo=github&logoColor=white)](../../releases)
+[![Descargas](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=descargas&color=1c2233)](../../releases)
 ![Estado: versión de prueba](https://img.shields.io/badge/estado-versi%C3%B3n%20de%20prueba-e0a020?style=for-the-badge)
-![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1b2a4a?style=for-the-badge)
-![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1b2a4a?style=for-the-badge)
-![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
-[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1b2a4a?style=for-the-badge)](LICENSE)
+![Nintendo Switch homebrew](https://img.shields.io/badge/Nintendo%20Switch-homebrew-1c2233?style=for-the-badge)
+![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1c2233?style=for-the-badge)
+![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1c2233?style=for-the-badge)](LICENSE)
 
 [Instalar](#cómo-instalar) · [Controles](#controles) · [Menú de depuración](#menú-de-depuración) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
 
@@ -59,26 +59,26 @@ balancéate por Nueva York.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
-    <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="El menú del control del balanceo"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>La pantalla de título</sub></td>
-    <td align="center"><sub>Eligiendo el control del balanceo</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man en una azotea al atardecer, con el HUD" width="70%"></td>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man en una azotea al atardecer, con el HUD" width="100%"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>La primera azotea, al atardecer</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/debug-menu.jpg" alt="El menú de depuración del port sobre el juego, con el contador de imágenes por segundo"></td>
+    <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
     <td width="50%"><img src="docs/images/screenshots/title-es.jpg" alt="La pantalla de título en español, PRESIONAR START PARA EMPEZAR"></td>
   </tr>
   <tr>
+    <td align="center"><sub>La pantalla de título</sub></td>
+    <td align="center"><sub>La misma con la consola en español</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="El menú del control del balanceo"></td>
+    <td width="50%"><img src="docs/images/screenshots/debug-menu.jpg" alt="El menú de depuración del port sobre el juego, con el contador de imágenes por segundo"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Eligiendo el control del balanceo</sub></td>
     <td align="center"><sub>El menú de depuración (ZL + ZR + −) y el contador; los números son un ejemplo</sub></td>
-    <td align="center"><sub>Con la consola en español, el juego está en español</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/start.jpg" alt="La pantalla de arranque del port, Loading"></td>
@@ -146,6 +146,8 @@ ejecutado en el PC.</sub></p>
 > **¿Nuevo en el homebrew de Switch?** Primero prepara tu consola con firmware personalizado (Atmosphère)
 > y el Homebrew Menu: la guía de la comunidad [switch.hacks.guide](https://switch.hacks.guide/) lo explica
 > paso a paso (en inglés). ¿No sabes qué significan XBE, XISO, CCI o WSL? Mira el [glosario](docs/INSTALL.es.md#glosario).
+
+<img src="docs/images/install-steps.es.png" alt="La instalación en 4 pasos: descarga el zip de Releases, compílalo con tu juego, copia la carpeta de la SD y tu juego, abre con R + cualquier juego" width="100%">
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
