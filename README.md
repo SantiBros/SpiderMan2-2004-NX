@@ -53,7 +53,7 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 <p align="center">
   <img src="docs/images/clips/swinging.webp" alt="Spider-Man swinging over the streets of Greenwich Village and above a park, in the game's demo" width="720">
 </p>
-<p align="center"><sub>Swinging over Greenwich Village, in the game's own demo. <b><a href="docs/images/clips/gameplay.mp4">▶ Watch a one-minute video</a></b> (MP4): the title screen, swinging through Midtown, a street fight and a trick race.</sub></p>
+<p align="center"><sub>Swinging over Greenwich Village, in the game's own demo. <b><a href="docs/images/clips/gameplay.mp4?raw=true">▶ Download a one-minute video</a></b> (MP4, 9 MB): the title screen, swinging through Midtown, a street fight and a trick race.</sub></p>
 
 <table>
   <tr>

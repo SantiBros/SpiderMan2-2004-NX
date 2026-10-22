@@ -56,7 +56,7 @@ balancéate por Nueva York.
 <p align="center">
   <img src="docs/images/clips/swinging.webp" alt="Spider-Man balanceándose sobre las calles de Greenwich Village y por encima de un parque, en la demo del juego" width="720">
 </p>
-<p align="center"><sub>Balanceándose sobre Greenwich Village, en la demo del propio juego. <b><a href="docs/images/clips/gameplay.mp4">▶ Mira un video de un minuto</a></b> (MP4): la pantalla de título, balanceándose por Midtown, una pelea callejera y una carrera de trucos.</sub></p>
+<p align="center"><sub>Balanceándose sobre Greenwich Village, en la demo del propio juego. <b><a href="docs/images/clips/gameplay.mp4?raw=true">▶ Descarga un video de un minuto</a></b> (MP4, 9 MB): la pantalla de título, balanceándose por Midtown, una pelea callejera y una carrera de trucos.</sub></p>
 
 <table>
   <tr>
