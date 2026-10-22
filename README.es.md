@@ -20,7 +20,7 @@ balancéate por Nueva York.
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1b2a4a?style=for-the-badge)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1b2a4a?style=for-the-badge)](LICENSE)
 
-[Video](#capturas-y-video) · [Instalar](#cómo-instalar) · [Controles](#controles) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
+[Instalar](#cómo-instalar) · [Controles](#controles) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
 
 </div>
 
@@ -52,22 +52,9 @@ balancéate por Nueva York.
 > Para compilar ahora también hace falta `switch-mesa` de devkitPro. Todos los detalles están en la
 > [lista de cambios](CHANGELOG.md) (en inglés).
 
-## Capturas y video
-
-<p align="center">
-  <img src="docs/images/clips/swinging.webp" alt="Spider-Man balanceándose sobre las calles de Greenwich Village y por encima de un parque, en la demo del juego" width="720">
-</p>
-<p align="center"><sub>Balanceándose sobre Greenwich Village, en la demo del propio juego. <b><a href="docs/images/clips/gameplay.mp4?raw=true">▶ Descarga un video de un minuto</a></b> (MP4, 9 MB): la pantalla de título, balanceándose por Midtown, una pelea callejera y una carrera de trucos.</sub></p>
+## Capturas
 
 <table>
-  <tr>
-    <td width="50%"><img src="docs/images/clips/street-fight.webp" alt="Spider-Man peleando con matones en un paso de cebra"></td>
-    <td width="50%"><img src="docs/images/clips/trick-race.webp" alt="Spider-Man balanceándose entre rascacielos en una carrera de trucos con tiempo"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Una pelea callejera en un paso de cebra</sub></td>
-    <td align="center"><sub>Una carrera de trucos con tiempo entre los rascacielos</sub></td>
-  </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
     <td width="50%"><img src="docs/images/screenshots/menu.jpg" alt="El menú del control del balanceo"></td>
@@ -77,28 +64,10 @@ balancéate por Nueva York.
     <td align="center"><sub>Eligiendo el control del balanceo</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man en una azotea al atardecer, con el HUD"></td>
-    <td width="50%"><img src="docs/images/screenshots/web-attack.jpg" alt="Spider-Man envolviendo en telaraña a un matón en la calle"></td>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man en una azotea al atardecer, con el HUD" width="70%"></td>
   </tr>
   <tr>
-    <td align="center"><sub>La primera azotea, al atardecer</sub></td>
-    <td align="center"><sub>Envolviendo en telaraña a un matón</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/screenshots/flat-iron.jpg" alt="Balanceándose hacia el distrito Flat Iron bajo un cielo azul"></td>
-    <td width="50%"><img src="docs/images/screenshots/swinging.jpg" alt="Spider-Man en el aire entre edificios de ladrillo"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Entrando al distrito Flat Iron</sub></td>
-    <td align="center"><sub>Muy por encima de las azoteas</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/screenshots/trick-race.jpg" alt="El HUD de la carrera de trucos: el tiempo y el siguiente truco, ORBIT"></td>
-    <td width="50%"><img src="docs/images/screenshots/trick-jump.jpg" alt="Spider-Man saltando contra el cielo sobre el río durante una carrera de trucos"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Una carrera de trucos: el siguiente es una órbita</sub></td>
-    <td align="center"><sub>Un salto sobre el río, contra el reloj</sub></td>
+    <td colspan="2" align="center"><sub>La primera azotea, al atardecer</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/status.jpg" alt="La pantalla de arranque del port con las últimas líneas del registro"></td>
@@ -110,12 +79,10 @@ balancéate por Nueva York.
   </tr>
 </table>
 
-<p align="center"><sub>Todo esto viene de la versión de prueba para PC del port, que ejecuta el mismo código recompilado y el mismo
-renderizador por GPU que la versión de Switch (sobre el Mesa del PC en vez del de la Switch), con la disposición
-de pantalla de la versión de Switch: la imagen 4:3 del juego en la pantalla de 1280×720 de la Switch. Los clips son
-la demo del propio juego, grabada con el reloj del juego más lento mientras se dibujaba cada imagen y reproducida a
-la velocidad del juego: muestran lo que dibuja el port, no a qué velocidad lo mueve una Switch. Las dos pantallas
-del port se dibujan exactamente como las muestra la Switch.</sub></p>
+<p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo
+código recompilado y el mismo renderizador por GPU que la versión de Switch (sobre el Mesa del PC en vez del de la
+Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3 del juego en la pantalla de
+1280×720 de la Switch. Las dos pantallas del port se dibujan exactamente como las muestra la Switch.</sub></p>
 
 ## Características
 

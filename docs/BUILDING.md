@@ -90,18 +90,13 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
 | `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`, and guest memory under each. |
 | `GLREC="from to"` | Those frames into `cap/rec.mp4` at 60 frames a second, through `ffmpeg`. |
-| `TIMESCALE=0.15` | The game's clock at that fraction of real time (also without `GL`): with `GL=1` every frame then covers a 60th of a second of the game however long it takes to draw, so a recording plays smoothly at the game's speed. The README's clips are made this way. |
+| `TIMESCALE=0.15` | The game's clock at that fraction of real time (also without `GL`): with `GL=1` every frame then covers a 60th of a second of the game however long it takes to draw, so a recording plays smoothly at the game's speed. |
 
-The README's clips: a recording of the attract demos (`RT=1 GL=1 TIMESCALE=0.15 GLREC="1 15000"`, about 35 minutes),
-then [`tools/art/make_clip.sh`](../tools/art/make_clip.sh) for each animated WebP and
-[`tools/art/make_reel.sh`](../tools/art/make_reel.sh) for the one-minute MP4 (under 10 MB, so it can also be dropped
-into the README on GitHub to play inline).
-| `GL_CONVERTED=1` | Every vertex converted on the CPU, as the CPU renderer reads them, instead of drawn as the game made them. |
-| `GL_NOMIPS=1` | Textures with their top level only. |
-| `GLPROBE="f x y"` | In frame `f` (the renderer's count, one less than `GLCAP`'s), every draw that changes the pixel (x, y) of a 640×480 target, logged with its shaders and textures: which draw makes a wrong pixel. |
-| `GLSKIPTEX=address` | Draws reading the texture at that guest address (hex) left out. |
-| `GLVERIFY=1` | Every texture's bytes compared in full once a frame, to catch a change the sampled check misses. |
-| `GLTRACE=1` | Targets made, CPU pixels uploaded into them, and copies, logged. |
+A recording for clips: `RT=1 GL=1 TIMESCALE=0.15 GLREC="from to"` with a `SCRIPT`, then
+[`tools/art/make_clip.sh`](../tools/art/make_clip.sh) for an animated WebP and
+[`tools/art/make_reel.sh`](../tools/art/make_reel.sh) for an MP4 under 10 MB. Note that the title screen's attract
+demos are the game's own video files (`data/movies/xbox/attract*.xmv`), not the engine drawing: clips meant to show
+the port must come from play.
 
 ## The ARM test build
 
