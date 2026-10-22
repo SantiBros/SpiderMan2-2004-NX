@@ -3,11 +3,13 @@
 All notable changes to the port. Versions before 0.1.0 are early test builds: they have not yet been played
 through on a Switch.
 
-## [Unreleased]
+## [0.0.10]
 
 ### Fixed
 - **A system call the game uses had no implementation** (`IoQueryVolumeInformation`, for the free space and
   details of a drive): had the game called it, it would have stopped. It now answers like the other drive queries.
+  The PC test build doesn't reach a call to it in what was played, so no stop was seen; the Switch build now has the
+  answer ready when the game asks.
 
 ### Changed
 - The PC test build was played through the logos, menus, name entry, opening cinematic and the first tutorial on the

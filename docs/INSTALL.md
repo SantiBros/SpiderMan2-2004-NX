@@ -115,15 +115,15 @@ WSL runs a real Linux inside Windows 10 and 11, and the builder runs there.
 3. **Copy the port's folder into Linux** (building inside Linux is much faster than on `C:`). Your Windows
    drives are under `/mnt/`: `C:\Users\You\Downloads` is `/mnt/c/Users/You/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.0.9" ~/
-   cd ~/SpiderMan2-2004-NX-0.0.9
+   cp -r "/mnt/c/Users/You/Downloads/SpiderMan2-2004-NX-0.0.10" ~/
+   cd ~/SpiderMan2-2004-NX-0.0.10
    ```
 4. **Build**, pointing at your game on the Windows drive (it is only read):
    ```sh
    bash build.sh "/mnt/c/Users/You/Games/Spider-Man 2.iso"
    ```
 5. **Find the result in Windows**: in File Explorer, type `\\wsl$` in the address bar, then open
-   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.0.9\out\sd`.
+   `Ubuntu\home\<your user>\SpiderMan2-2004-NX-0.0.10\out\sd`.
 
 ### What the builder says
 

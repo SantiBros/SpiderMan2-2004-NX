@@ -115,15 +115,15 @@ WSL ejecuta un Linux de verdad dentro de Windows 10 y 11, y el compilador funcio
 3. **Copia la carpeta del port dentro de Linux** (compilar dentro de Linux es mucho más rápido que en `C:`).
    Tus unidades de Windows están en `/mnt/`: `C:\Users\Tu\Downloads` es `/mnt/c/Users/Tu/Downloads`.
    ```sh
-   cp -r "/mnt/c/Users/Tu/Downloads/SpiderMan2-2004-NX-0.0.9" ~/
-   cd ~/SpiderMan2-2004-NX-0.0.9
+   cp -r "/mnt/c/Users/Tu/Downloads/SpiderMan2-2004-NX-0.0.10" ~/
+   cd ~/SpiderMan2-2004-NX-0.0.10
    ```
 4. **Compila**, indicando dónde está tu juego en la unidad de Windows (solo se lee):
    ```sh
    bash build.sh "/mnt/c/Users/Tu/Juegos/Spider-Man 2.iso"
    ```
 5. **Encuentra el resultado en Windows**: en el Explorador de archivos, escribe `\\wsl$` en la barra de
-   direcciones y abre `Ubuntu\home\<tu usuario>\SpiderMan2-2004-NX-0.0.9\out\sd`.
+   direcciones y abre `Ubuntu\home\<tu usuario>\SpiderMan2-2004-NX-0.0.10\out\sd`.
 
 ### Lo que dice el compilador
 

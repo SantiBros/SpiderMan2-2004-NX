@@ -37,12 +37,16 @@ balancéate por Nueva York.
 > [!WARNING]
 > **Versión de prueba temprana: todavía no se puede jugar.** En la versión de prueba para PC del port, el
 > juego pasa por sus menús, cinemáticas y demos hasta llegar a la ciudad. En una Switch todavía no ha pasado
-> de su arranque en las pruebas, y la 0.0.8 y la 0.0.9 son las primeras versiones que dibujan con el chip
+> de su arranque en las pruebas, y de la 0.0.8 a la 0.0.10 son las primeras versiones que dibujan con el chip
 > gráfico de la Switch, así que todavía no se sabe a qué velocidad va ahí. Se buscan
 > [testers](#se-buscan-testers).
 
 > [!TIP]
-> **Novedades de la 0.0.9**
+> **Novedades de la 0.0.10**
+> - **Un cierre inesperado menos**: faltaba una función del sistema que el juego usa para consultar una unidad,
+>   y una llamada a ella habría detenido el juego.
+>
+> **Y de la 0.0.9**
 > - **Los vídeos van a su velocidad real**: el logo de Activision, la intro y las escenas iban el doble de
 >   rápido. El juego va ahora a su propio ritmo, 30 imágenes por segundo, como en la Xbox.
 > - **Las sombras de los edificios caen donde deben**, y la mitad de la pantalla ya no se oscurece.
@@ -125,7 +129,7 @@ Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
-2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.0.9.zip` de la página de [Releases](../../releases) y
+2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.0.10.zip` de la página de [Releases](../../releases) y
    descomprímelo en tu computador. Luego ejecuta un comando en su carpeta, indicando dónde está tu juego:
    ```sh
    bash build.sh "/ruta/a/Spider-Man 2.iso"
@@ -300,7 +304,7 @@ disco. O formatea la tarjeta en exFAT.
 <details>
 <summary><b>¿Va a velocidad completa?</b></summary>
 
-Todavía no se sabe. La 0.0.8 y la 0.0.9 son las primeras versiones que dibujan con la GPU de la Switch (las
+Todavía no se sabe. De la 0.0.8 a la 0.0.10 son las primeras versiones que dibujan con la GPU de la Switch (las
 anteriores dibujaban una imagen fija en la CPU cada pocos segundos), y todavía no se han probado en una consola. Cada 5 segundos el
 registro tiene una línea `perf:` con las imágenes por segundo y en qué se va el tiempo de cada una, así que una
 prueba dice qué hay que acelerar después.
