@@ -20,6 +20,7 @@ namespace fs = std::filesystem;
 namespace logx {
 
 static std::mutex g_mutex;
+static uint64_t g_written = 0, g_synced = 0;  // lines written to the file, and as of the last Sync
 static FILE* g_file = nullptr;
 static std::string g_path;
 static std::string g_last;  // the newest message, for a progress line
@@ -80,6 +81,7 @@ void Write(Level lv, const char* fmt, ...) {
     g_recent.emplace_back(brief);
     if (g_recent.size() > kRecent) g_recent.pop_front();
     if (g_file) {
+        g_written++;
         std::fwrite(line, 1, size_t(n), g_file);
 #ifdef __SWITCH__
         std::fflush(g_file);  // a crash leaves every line on the card
@@ -117,7 +119,9 @@ void Sync() {
     int fd = -1;
     {
         std::lock_guard<std::mutex> lock(g_mutex);
-        if (!g_file) return;
+        // nothing new since the last time: the card is left alone (a flush there costs the game's core time)
+        if (!g_file || g_written == g_synced) return;
+        g_synced = g_written;
         std::fflush(g_file);
         fd = fileno(g_file);
     }

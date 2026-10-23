@@ -200,6 +200,8 @@ struct Thread : Object {
 using ThreadRef = std::shared_ptr<Thread>;
 
 Thread* Current();
+// names the calling host thread; on the Switch "render" and "sound" also get a preferred core of their own
+void NameHostThread(const char* name);
 
 // marks the current thread as inside a kernel or library function until the end of the scope
 struct CallMark {

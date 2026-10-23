@@ -34,11 +34,16 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > newer *Spider-Man* games.
 
 > [!NOTE]
-> **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: the game runs smoothly,
-> at its own pace of 30 frames a second, with its music, sound effects and voices. Playing docked on a TV and
-> saving haven't been confirmed on a console yet, so [reports](#help-wanted-testers) are welcome.
+> **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: 0.1.0 ran smoothly at
+> 480p, at the game's own pace of 30 frames a second, with its music, sound effects and voices. 0.2.0 was reported
+> unplayable; 0.2.1 is faster, and [reports](#help-wanted-testers) on how it runs are welcome, as on playing docked
+> and saving, not confirmed on a console yet.
 
 > [!TIP]
+> **New in 0.2.1: faster.** The port now uses all three of the Switch's cores (the game, the renderer and the
+> sound used to share one), sets the clocks for the game by itself (**Auto**, the new default), keeps the HUD 4:3 in
+> 16:9 for next to nothing, and at 720p and 1080p enlarges only the main picture. 1080p is now for docked play.
+>
 > **New in 0.2.0**
 > - **Sharper picture**: draw the game, its movies included, at **720p** (pixel for pixel on the handheld screen)
 >   or **1080p**, from the debug menu, instead of the Xbox's 480p.
@@ -135,8 +140,9 @@ by the Switch build's screen code, run on the PC.</sub></p>
 - **In your language.** The game takes the console's language: English, Spanish, French, German or
   Italian menus and subtitles, from the texts on your disc.
 - **A debug menu** (**ZL + ZR + −**) with the resolution, the screen shape, the vibration, a frame-rate
-  counter, the Switch's CPU, GPU and memory clocks (only rates Nintendo's own profiles use, given back in the
-  HOME menu and when you quit), the language, the sound volume and the renderer. Saved in `settings.ini`.
+  counter, the Switch's CPU, GPU and memory clocks (Auto by default, and only rates Nintendo's own profiles use,
+  given back in the HOME menu and when you quit), the language, the sound volume and the renderer. Saved in
+  `settings.ini`.
 - **Says what's wrong.** Missing data folder, an archive that needs extracting, an Xbox 360 image, another
   release of the game: the screen explains it in plain words.
 - **Made for testing.** The log reaches the SD card several times a second, so it survives a frozen console,
@@ -244,25 +250,26 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 | Setting | Choices | What it does |
 |---|---|---|
 | Language | Auto, English, Español, Français, Deutsch, Italiano | The game's menus and subtitles. Auto follows the console; a language the game doesn't have is English. The voices are English in every language. From the next start. |
-| Resolution | 480p (the console's), 720p, 1080p | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p is drawn bigger and shrunk, with smoother edges. More work for the GPU: if the frame rate drops, raise the GPU clock. |
+| Resolution | 480p (the console's), 720p, 1080p (docked) | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p, docked, is drawn bigger and shrunk, with smoother edges (in handheld mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises. |
 | Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. |
 | Upscaling | Smooth, Sharp | How the movies and the picture are enlarged: Sharp keeps more detail (Catmull-Rom), Smooth is the softer look of a TV. |
 | Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. |
 | Vibration | Off, Low, Medium, High | The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its own). A rumble the game leaves on stops after 2 seconds, and none runs while the menu is open or in the HOME menu. |
-| CPU clock | Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | The game's translated code runs on the CPU: raise it if the counter stays under 30 in busy places. |
-| GPU clock | Stock, 307.2, 384, 460.8, 614.4, 768 MHz | The graphics chip. 460.8 MHz is the highest Nintendo uses in handheld mode. |
-| Memory clock | Stock, 1331.2, 1600 MHz | 1600 MHz is the docked memory clock. |
+| CPU clock | Auto (1785 MHz), Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | The game's translated code and the graphics driver run on the CPU. Auto keeps it at 1785 MHz while the game runs. |
+| GPU clock | Auto, Stock, 307.2, 384, 460.8, 614.4, 768 MHz | The graphics chip. Auto is 460.8 MHz (the highest Nintendo uses in handheld mode) at 480p in handheld mode, 768 MHz at 720p and docked. |
+| Memory clock | Auto (1600 MHz), Stock, 1331.2, 1600 MHz | 1600 MHz is the docked memory clock; Nintendo uses it in handheld mode too. |
 | Frame-rate counter | Off, FPS, Full | In the top left corner. Full adds the time of a frame, the draw calls, the clocks and the memory. |
 | Sound volume | 100% to 25%, Off | The game's sound, before the console's own volume. |
 | Renderer | GPU, CPU | CPU is many times slower: only to tell whether a fault in the picture comes from the GPU renderer. From the next start. |
-| Render thread | On, Off | The graphics work on a core of its own. From the next start. |
+| Render thread | On, Off | The graphics work on a core of their own (the sound has a third). From the next start. |
 | Start-up log | Off, On | The newest log lines on the start screen while the game loads, for a photo when it doesn't start. From the next start. |
 
 The clocks only offer rates Nintendo's own performance profiles use. The console's own clocks come back
 while the port is in the HOME menu and when it closes, and the port puts yours back after docking or sleep.
 "Restore recommended settings" puts everything back to the defaults (the console's language, 480p, 4:3 with
-black sides, smooth upscaling, standard filtering, medium vibration, stock clocks, no counter, full volume, the GPU
-renderer on its own thread). The picture settings and the vibration change at once, while you play.
+black sides, smooth upscaling, standard filtering, medium vibration, Auto clocks, no counter, full volume, the GPU
+renderer on its own thread). The picture settings, the clocks and the vibration change at once, while you play. The
+Auto clocks use more battery than the console's own: choose Stock for a longer battery life.
 
 ## Status
 
@@ -274,9 +281,9 @@ renderer on its own thread). The picture settings and the vibration change at on
 | The game's code on the Switch's processor | ✅ Recompiled and compiled; runs on a Switch Lite |
 | Reading your copy: disc images and files | ✅ All formats checked byte for byte against the extracted files, on PC and ARM |
 | Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
-| Speed | ✅ Smooth on a Switch Lite, at the game's own 30 frames a second |
+| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 was reported unplayable, and 0.2.1 is faster (the threads on three cores, Auto clocks, a lighter 16:9 and render scale): to be confirmed on a console |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
-| 720p, 1080p, 16:9 | 🧪 New in 0.2.0: checked on the PC test build; how fast they run on a console is to be measured |
+| 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1: checked on the PC test build; how fast they run on a console is to be measured |
 | Vibration | 🧪 New in 0.2.0: needs Joy-Con or a Pro Controller, not tried on a console yet |
 | Menus, cinematics, the city | ✅ On a Switch Lite and on the PC test build |
 | Sound | ✅ Music, sound effects and voices, on a Switch Lite |
@@ -411,9 +418,9 @@ black, the picture blurred, or a spider web.
 <details>
 <summary><b>Can it run at a higher resolution?</b></summary>
 
-Yes: the debug menu's **Resolution** draws the game at 720p (the handheld screen's own) or 1080p instead of the
-Xbox's 480p, movies included. It is more work for the Switch's graphics chip; if the frame rate drops, raise the
-GPU clock in the same menu or go back a step. The movies on the disc are 640×480, so they get smoother edges
+Yes: the debug menu's **Resolution** draws the game at 720p (the handheld screen's own) or, docked, 1080p instead
+of the Xbox's 480p, movies included (1080p in handheld mode draws 720p: the screen has no more pixels). It is more
+work for the Switch's graphics chip, which the Auto GPU clock raises; if the frame rate drops, go back a step. The movies on the disc are 640×480, so they get smoother edges
 rather than new detail; **Upscaling: Sharp** keeps them crisper.
 </details>
 

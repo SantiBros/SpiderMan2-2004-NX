@@ -212,16 +212,18 @@ speed). The bottom line shows the frame rate, the time of a frame and the draw c
 
 - **Language**: Auto (the console's), English, Español, Français, Deutsch or Italiano, from the next start.
 - **Resolution**: 480p (the Xbox's), 720p or 1080p: the whole game and its movies drawn with that many pixels.
-  720p fills the handheld screen pixel for pixel; 1080p is drawn bigger and shrunk. More work for the GPU: if the
-  frame rate drops, raise the GPU clock or go back a step.
+  720p fills the handheld screen pixel for pixel; 1080p, for docked play, is drawn bigger and shrunk (in handheld
+  mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises: if the frame rate
+  drops, go back a step.
 - **Screen**: 4:3 with black, blurred or spider-web sides, or **16:9 full screen**, the game's own hidden
   widescreen camera, with more of the city at the sides and the HUD, menus and movies kept 4:3 in the middle.
 - **Upscaling** (Smooth or Sharp) and **Texture filtering** (Standard or Anisotropic 4x to 16x).
 - **Vibration**: Off, Low, Medium or High, on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its
   own). A rumble the game leaves on stops after 2 seconds.
-- **CPU, GPU and memory clocks**: stock, or one of the rates Nintendo's own performance profiles use (up to
-  1785 MHz CPU, 768 MHz GPU, 1600 MHz memory). The console's own clocks come back while the port is in the
-  HOME menu and when it closes. If the counter stays under 30 in busy places, try a higher CPU clock first.
+- **CPU, GPU and memory clocks**: Auto (the default), stock, or one of the rates Nintendo's own performance
+  profiles use (up to 1785 MHz CPU, 768 MHz GPU, 1600 MHz memory). Auto is 1785 MHz CPU and 1600 MHz memory, and
+  for the GPU 460.8 MHz at 480p in handheld mode, 768 MHz at 720p and docked. The console's own clocks come back
+  while the port is in the HOME menu and when it closes. Stock uses less battery.
 - **Frame-rate counter**: off, FPS, or full (also the time of a frame, the draw calls, the clocks, the memory),
   in the top left corner.
 - **Sound volume**, **renderer** (GPU or CPU), **render thread**, and the **start-up log** (the newest log
@@ -264,7 +266,7 @@ places, the one in `hdd/` stays where it is and is used, and the log says so.
 | **The game did not start** | The newest file in `logs/` says why. |
 | **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound), once holding **ZR** (no render thread) and once holding **R** (the CPU renderer), and say which ones still freeze. If it freezes on "Loading...", turn on **Start-up log** in the [debug menu](#the-debug-menu) (or in `settings.ini`: `startup_log=on`), so the photo shows how far it got. |
 | **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
-| **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and try a higher CPU clock there. At 720p or 1080p, try a higher GPU clock, or a lower Resolution. Send the `logs` folder: every 5 seconds the log has a `perf:` line that says where the time goes. |
+| **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and check that the clocks are on Auto there. At 720p or 1080p, try a lower Resolution, or 4:3 instead of 16:9. Send the `logs` folder: every 5 seconds the log has `perf:` lines that say where the time goes. |
 | **It doesn't vibrate** | The Switch Lite has no rumble motor: use Joy-Con or a Pro Controller. Check that **Vibration** isn't Off in the [debug menu](#the-debug-menu), and that the controller's vibration is on in the console's System Settings. |
 | **The game is in the wrong language** | It follows the console's language, read at start. Set **Language** in the [debug menu](#the-debug-menu) and start the port again. The voices are always in English. |
 | **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `cache/shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |

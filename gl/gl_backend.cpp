@@ -19,6 +19,11 @@
 #include <vector>
 
 #include <dxgiformat.h>
+#if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
+#include <arm_acle.h>
+#elif defined(__x86_64__)
+#include <nmmintrin.h>
+#endif
 
 #include "core/log.h"
 #include "gl/gl_api.h"
@@ -37,6 +42,9 @@ using namespace gpu;
 namespace {
 
 constexpr uint64_t kStaleFrames = 8;  // frames a target may go unused and still be read back
+// the GLSL this renderer and gl/glsl.cpp make: a new name whenever any program's text changes (the shader list keeps
+// the programs of the last one); "2" is 0.2.0's
+constexpr const char* kShaderGenerator = "2";
 constexpr float kDepth24Max = 16777215.0f;
 constexpr float kUpscaledMin = 1.01f;   // host texels per console texel past rounding: the target is upscaled
 constexpr float kGlowBoxTexels = 3.0f;  // console texels across the box each wide tap averages, as d3d12.cpp's
@@ -101,13 +109,56 @@ GLint Address(uint32_t v) {
 constexpr uint32_t kFmtD16 = 0x2C, kFmtLinD16 = 0x30;
 uint8_t ShadowDepthKind(uint32_t format) { return format == kFmtD16 || format == kFmtLinD16 ? 2 : 1; }
 
+// A change check's hash of guest bytes: every texture a frame draws with is checked once a frame, megabytes, so it
+// runs on the processor's CRC32C instructions (8 bytes a cycle from four independent chains, on the Switch's
+// Cortex-A57; SSE 4.2 on a PC that has it), else Hash. Only ever compared with itself, never kept.
+#if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
+uint64_t SigHash(const uint8_t* p, size_t n, uint64_t seed) {
+    uint32_t a = uint32_t(seed), b = uint32_t(seed >> 32) ^ 0x9E3779B9u, c = ~a, d = ~b;
+    size_t i = 0;
+    for (; i + 32 <= n; i += 32) {
+        uint64_t w[4];
+        std::memcpy(w, p + i, 32);
+        a = __crc32cd(a, w[0]);
+        b = __crc32cd(b, w[1]);
+        c = __crc32cd(c, w[2]);
+        d = __crc32cd(d, w[3]);
+    }
+    for (; i < n; i++) a = __crc32cb(a, p[i]);
+    return (uint64_t(a ^ __crc32cw(c, d)) << 32 | (b ^ __crc32cw(d, c))) ^ (uint64_t(n) * 0x9E3779B97F4A7C15ull);
+}
+#elif defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+__attribute__((target("sse4.2"))) uint64_t SigHashCrc(const uint8_t* p, size_t n, uint64_t seed) {
+    uint64_t a = uint32_t(seed), b = uint32_t(seed >> 32) ^ 0x9E3779B9u, c = ~a & 0xFFFFFFFF, d = ~b & 0xFFFFFFFF;
+    size_t i = 0;
+    for (; i + 32 <= n; i += 32) {
+        uint64_t w[4];
+        std::memcpy(w, p + i, 32);
+        a = _mm_crc32_u64(a, w[0]);
+        b = _mm_crc32_u64(b, w[1]);
+        c = _mm_crc32_u64(c, w[2]);
+        d = _mm_crc32_u64(d, w[3]);
+    }
+    for (; i < n; i++) a = _mm_crc32_u8(uint32_t(a), p[i]);
+    return ((a ^ _mm_crc32_u32(uint32_t(c), uint32_t(d))) << 32 | (b ^ _mm_crc32_u32(uint32_t(d), uint32_t(c)))) ^
+           (uint64_t(n) * 0x9E3779B97F4A7C15ull);
+}
+uint64_t SigHash(const uint8_t* p, size_t n, uint64_t seed) {
+    static const bool crc = __builtin_cpu_supports("sse4.2");
+    return crc ? SigHashCrc(p, n, seed) : Hash(p, n, seed);
+}
+#else
+uint64_t SigHash(const uint8_t* p, size_t n, uint64_t seed) { return Hash(p, n, seed); }
+#endif
+
 // MemSig hashes a surface up to kSigWholeMax bytes whole, a bigger one as evenly spaced samples
 constexpr uint32_t kSigWholeMax = 65536, kSigSamples = 64, kSigSampleBytes = 64;
 uint64_t MemSig(uint32_t data, uint32_t total) {
     const uint8_t* p = static_cast<const uint8_t*>(kernel::HostPtr(data));
     uint64_t sig = Hash(&total, sizeof(total));
-    if (total <= kSigWholeMax) return Hash(p, total, sig);
-    for (uint32_t i = 0; i < kSigSamples; i++) sig = Hash(p + uint64_t(total - kSigSampleBytes) * i / (kSigSamples - 1), kSigSampleBytes, sig);
+    if (total <= kSigWholeMax) return SigHash(p, total, sig);
+    for (uint32_t i = 0; i < kSigSamples; i++)
+        sig = SigHash(p + uint64_t(total - kSigSampleBytes) * i / (kSigSamples - 1), kSigSampleBytes, sig);
     return sig;
 }
 
@@ -518,9 +569,14 @@ double Ms(Clock::time_point t) { return std::chrono::duration<double, std::milli
 // where a frame's time goes, logged every few seconds: what the Switch's renderer costs
 struct Perf {
     double draw = 0, assemble = 0, textures = 0, shaders = 0, upload = 0, submit = 0, present = 0, sync = 0, clear = 0, report = 0;
-    double swap = 0, warm = 0;
+    double swap = 0, warm = 0, squeeze = 0;
+    // a draw's parts: its targets and shaders' keys, its textures' checks, its program, the GL state, the constants,
+    // the texture and sampler bindings
+    double d_setup = 0, d_tex = 0, d_prog = 0, d_state = 0, d_consts = 0, d_bind = 0;
+    double t_feedback = 0, t_guest = 0;  // of the textures' checks: copies of the target drawn into, guest textures
+    uint64_t feedbacks = 0;
     uint64_t draws = 0, verts = 0, texups = 0, texup_bytes = 0, newtex = 0, programs = 0, syncs = 0, targets = 0, reports = 0;
-    uint64_t hitches = 0, warmed = 0, zcolours = 0;
+    uint64_t hitches = 0, warmed = 0, zcolours = 0, boxes = 0, box_hits = 0;
 };
 
 GLuint Compile(GLenum type, const std::string& src) {
@@ -565,10 +621,13 @@ GLuint Link(GLuint vs, GLuint fs) {
 // Mesa has no binary shader cache, and a program built in the middle of play is a stutter.
 class ShaderList {
 public:
-    void Open(const std::string& path, const std::string& driver) {
+    // driver: the GL renderer and version, and the shader generator's version; also: an older header whose
+    // programs are the same (a port version that made the same GLSL), whose list is kept under the new header
+    void Open(const std::string& path, const std::string& driver, const std::string& also = std::string()) {
         if (path.empty()) return;
         path_ = path;
         const std::string head = "sm2nx glsl list 1 " + driver + "\n";
+        const std::string old_head = also.empty() ? std::string() : "sm2nx glsl list 1 " + also + "\n";
         std::string all;
         if (FILE* f = std::fopen(path.c_str(), "rb")) {
             char buf[65536];
@@ -577,7 +636,12 @@ public:
             std::fclose(f);
         }
         bool same = all.compare(0, head.size(), head) == 0;
-        if (same) {
+        bool older = !same && !old_head.empty() && all.compare(0, old_head.size(), old_head) == 0;
+        if (older) {
+            all = head + all.substr(old_head.size());
+            LOGI("gl: the shader list of the previous version is kept: its programs are the same");
+        }
+        if (same || older) {
             size_t at = head.size();
             for (;;) {
                 size_t vl = 0, fl = 0;
@@ -591,14 +655,14 @@ public:
             }
             valid_ = at;
         }
-        // a list from another driver or version, or one cut short, starts over from what reads whole
+        // a list from another driver or shader generator, or one cut short, starts over from what reads whole
         if (!same || valid_ < all.size()) {
             if (FILE* f = std::fopen(path.c_str(), "wb")) {
-                if (same) std::fwrite(all.data(), 1, valid_, f);
+                if (same || older) std::fwrite(all.data(), 1, valid_, f);
                 else std::fwrite(head.data(), 1, head.size(), f);
                 std::fclose(f);
             }
-            if (!same) pending_.clear(), known_.clear();
+            if (!same && !older) pending_.clear(), known_.clear();
         }
         LOGI("gl: shader list %s: %zu programs to build ahead", path.c_str(), pending_.size());
     }
@@ -815,7 +879,8 @@ private:
     void ApplyState(const State& s, const Assembled& a);
     void UploadConstants(const State& s, const DrawShaders& sh, const DrawTextures& st, uint32_t gw, uint32_t gh);
     // the 16:9 picture's squeeze of the draw (squeeze_, squeeze_all_; ext.zw in the shaders)
-    void Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st);
+    void Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st,
+                 uint64_t vkey);
     void DrawGeometry(const Assembled& a);
     void FullScreen(GLuint program);
     void Blit(GLuint tex, float gamma, bool alpha, bool flip);
@@ -876,8 +941,18 @@ private:
     Host* host_;
     std::thread::id owner_;
     Picture pic_;
-    float sx_ = 1, sy_ = 1;  // host pixels per console pixel across and down, every target's
+    float sx_ = 1, sy_ = 1;  // host pixels per console pixel across and down, the frame's targets
+    // a target's host size: the render scale only for targets at least half the frame each way (the frame, its depth,
+    // copies of it); smaller ones (shadow maps, reflections, glow passes) stay at the console's size, as their
+    // pixels hardly show and their cost would grow with the scale
+    bool Upscaled(uint32_t gw, uint32_t gh) const { return gw * 2 >= guest_w_ && gh * 2 >= guest_h_; }
+    uint32_t HostW(uint32_t gw, uint32_t gh) const { return Upscaled(gw, gh) ? ScaledSize(gw, sx_) : gw; }
+    uint32_t HostH(uint32_t gw, uint32_t gh) const { return Upscaled(gw, gh) ? ScaledSize(gh, sy_) : gh; }
     float squeeze_ = 0, squeeze_all_ = 0;
+    // the 16:9 picture's small draws found in perspective (not flat), by the program, layout, buffers and range drawn,
+    // with the frame they last were: a 3D draw (sparks, debris, a sign) stays one, and is not transformed on the CPU
+    // again for a while
+    std::unordered_map<uint64_t, uint64_t> not_flat_;
     uint32_t max_aniso_ = 1;  // what the driver takes, 1 without anisotropic filtering  // the draw's: what is drawn flat narrowed this much, all of it or not at the edges
     GLuint scratch_tex_ = 0, scratch_fbo_ = 0;
     uint32_t scratch_w_ = 0, scratch_h_ = 0;
@@ -885,6 +960,8 @@ private:
     GLuint present_ = 0, sides_ = 0, sides_tex_ = 0;
     GLint present_opts_ = -1, present_step_ = -1, sides_opts_ = -1, sides_screen_ = -1;
     uint32_t sides_w_ = 0, sides_h_ = 0;
+    GLuint web_tex_ = 0, web_fbo_ = 0;  // the web sides, drawn once for the screen's size
+    uint32_t web_w_ = 0, web_h_ = 0;
     bool raw_probe_ = false;  // GLPROBE_RAW's draw
     uint32_t guest_w_ = 640, guest_h_ = 480;
     std::unordered_map<uint64_t, Target> targets_;
@@ -926,7 +1003,7 @@ private:
     uint64_t frame_ = 0;
     uint64_t frame_draws_ = 0;
     // visibility tests
-    std::vector<GLuint> counted_;
+    std::vector<std::pair<GLuint, float>> counted_;  // a query and the host pixels per console pixel it counted
     std::vector<GLuint> free_queries_;
     Perf perf_;
     Clock::time_point perf_t_ = Clock::now();
@@ -1011,14 +1088,11 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     ApplyPicture();
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    // the port's version too: another build's shaders differ, and would only be built for nothing
-#ifdef SM2NX_VERSION
-    const std::string port = ", port " SM2NX_VERSION;
-#else
-    const std::string port;
-#endif
-    shader_list_.Open(host_->CachePath(), std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + ", " +
-                                             reinterpret_cast<const char*>(glGetString(GL_VERSION)) + port);
+    // the shader generator's version too: another one's programs differ, and would only be built for nothing. It
+    // changes only when the GLSL does (kShaderGenerator), so a new port version keeps the list; 0.2.0 named itself
+    const std::string driver = std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + ", " +
+                               reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    shader_list_.Open(host_->CachePath(), driver + ", shaders " + kShaderGenerator, driver + ", port 0.2.0");
     // the first call from whichever thread draws takes the context
     glFinish();
     host_->Release();
@@ -1070,8 +1144,8 @@ Target* GlBackend::EnsureTarget(const Surface& s, bool depth) {
     t.depth = depth;
     t.gw = gw;
     t.gh = gh;
-    t.w = ScaledSize(gw, sx_);
-    t.h = ScaledSize(gh, sy_);
+    t.w = HostW(gw, gh);
+    t.h = HostH(gw, gh);
     t.data = data;
     if (std::getenv("GLTRACE")) LOGI("gl: frame %llu new %s target %08X %ux%u", (unsigned long long)frame_, depth ? "depth" : "colour", data, gw, gh);
     TextureDesc d;
@@ -1380,7 +1454,14 @@ void GlBackend::BindTexture(const State& s, int stage, DrawTextures& st) {
             st.wide[stage][1] = ky;
         }
         // the console reads the pixels it is about to overwrite: give the draw a copy
-        st.tex[stage] = &t == bound_rt_ ? Feedback(t) : t.tex;
+        if (&t == bound_rt_) {
+            auto tf = Clock::now();
+            st.tex[stage] = Feedback(t);
+            perf_.t_feedback += Ms(tf);
+            perf_.feedbacks++;
+        } else {
+            st.tex[stage] = t.tex;
+        }
         st.kind[stage] = GL_TEXTURE_2D;
         target_used_[t.data] = frame_;
         return;
@@ -1399,7 +1480,9 @@ void GlBackend::BindTexture(const State& s, int stage, DrawTextures& st) {
             }
         }
     }
+    auto tg = Clock::now();
     BindGuestTexture(s, stage, d, fi, st);
+    perf_.t_guest += Ms(tg);
 }
 
 GLuint GlBackend::DepthAsColour(Target& t) {
@@ -1619,7 +1702,8 @@ void GlBackend::ApplyState(const State& s, const Assembled& a) {
 // are narrowed.
 // A bigger draw is left to the vertex shader: every flat vertex narrowed but those on the left and right edges. Movie
 // frames are narrowed whole, to stay 4:3.
-void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st) {
+void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st,
+                        uint64_t vkey) {
     squeeze_ = squeeze_all_ = 0;
     if (!pic_.wide || !bound_rt_ || bound_rt_->gw != guest_w_ || bound_rt_->gh != guest_h_) return;
     squeeze_ = kWideSqueeze;
@@ -1628,8 +1712,36 @@ void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t 
     float box[4];
     bool flat = false;
     static const long trace0 = std::getenv("GLSQUEEZE") ? std::atol(std::getenv("GLSQUEEZE")) : -1;
-    float uv[4];
-    if (!reference::ScreenBox(s, prim, start, count, indices, kSmallDraw, box, flat, uv)) {
+    float uv[4] = {};
+    auto t0 = Clock::now();
+    bool boxed = false;
+    const Assembled& a = asm_;
+    constexpr uint64_t kNotFlatFrames = 30;  // then checked again
+    if (a.vertex_count <= kSmallDraw && count <= kSmallDraw * 3) {
+        // the game's own buffers (the guest's vertex buffers and indices), not the copies made of them for the draw
+        const uint64_t id[5] = {vkey, uint64_t(prim) << 32 | start, uint64_t(count) << 32 | a.vertex_count,
+                                uint64_t(s.base_vertex) << 32 | s.index_data, uint64_t(uintptr_t(indices))};
+        uint64_t key = Hash(s.streams.data(), sizeof(s.streams), Hash(id, sizeof id));
+        // and the first vertex's bytes: draws from the game's shared scratch buffer (its DrawPrimitiveUP) differ there
+        if (a.buffer_count && a.buffers[0].src) key = Hash(a.buffers[0].src, std::min<size_t>(a.buffers[0].bytes, 64), key);
+        auto known = not_flat_.find(key);
+        if (known != not_flat_.end() && frame_ - known->second < kNotFlatFrames) {
+            boxed = true;
+            flat = false;
+            perf_.box_hits++;
+        } else {
+            boxed = reference::ScreenBox(s, prim, start, count, indices, kSmallDraw, box, flat, uv);
+            if (boxed && !flat) {
+                if (not_flat_.size() > 16384) not_flat_.clear();
+                not_flat_[key] = frame_;
+            } else if (known != not_flat_.end()) {
+                not_flat_.erase(known);
+            }
+        }
+    }
+    perf_.squeeze += Ms(t0);
+    perf_.boxes += boxed;
+    if (!boxed) {
         if (long(frame_) == trace0) LOGI("gl: squeeze draw %llu: %u vertices, left to the shader", (unsigned long long)frame_draws_, count);
         return;
     }
@@ -1793,11 +1905,15 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     if (a.topology == Topology::Points)  // drawn a pixel a point: sprites and sizes are not drawn yet
         LOG_FIRST(8, "gl: %u points, size %g, sprites %u, scale %u", a.draw_count ? a.draw_count : a.index_count,
                   Bits(s.rs[kRsPointSize]), s.rs[kRsPointSpriteEnable], s.rs[kRsPointScaleEnable]);
+    auto tq0 = Clock::now();
     if (!BindTargets(s)) return;
     DrawShaders sh = ClassifyShaders(s, a, count);
     sh.vkey = VertexKey(s, a, sh);
+    auto tq1 = Clock::now();
+    perf_.d_setup += Ms(tq0);
     DrawTextures st;
     for (int i = 0; i < 4; i++) BindTexture(s, i, st);
+    perf_.d_tex += Ms(tq1);
     // GLSKIPTEX=address: draws reading that texture left out, to see which they are
     static const uint32_t skip_tex = std::getenv("GLSKIPTEX") ? uint32_t(std::strtoul(std::getenv("GLSKIPTEX"), nullptr, 16)) : 0;
     if (skip_tex)
@@ -1811,13 +1927,17 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         }
     // a texture's copy may have moved the framebuffer binding
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer(bound_rt_, bound_ds_));
+    auto tq2 = Clock::now();
     PixelKey pk = MakePixelKey(s, st.info);
     pk.quad = sh.quad;
     sh.pkey = Hash(&pk, sizeof(pk));
     GLuint program = Program(s, a, sh, pk);
     if (!program) return;
     if (Changed(cache_.program, program)) glUseProgram(program);
+    auto tq3 = Clock::now();
+    perf_.d_prog += Ms(tq2);
     ApplyState(s, a);
+    perf_.d_state += Ms(tq3);
     uint32_t gw, gh;
     SurfaceSize(bound_rt_ ? s.rt : s.zs, gw, gh);
     // GLPROBE_RAW=draw: in GLPROBE's frame, that draw without blending, depth, stencil or alpha tests, to see what it
@@ -1827,8 +1947,11 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     static const long raw_verts = raw_e && raw_e[0] == 'v' ? std::atol(raw_e + 1) : -1;
     raw_probe_ = raw_e && (long(frame_draws_) == raw_draw || long(a.vertex_count) == raw_verts) && std::getenv("GLPROBE") &&
                  long(frame_) == std::atol(std::getenv("GLPROBE"));
-    Squeeze(s, prim, start, count, indices, st);
+    Squeeze(s, prim, start, count, indices, st, sh.vkey);
+    auto tq4 = Clock::now();
     UploadConstants(s, sh, st, gw, gh);
+    auto tq5 = Clock::now();
+    perf_.d_consts += Ms(tq4);
     for (int i = 0; i < 4; i++) {
         const TexInfo& info = st.info[i];
         int k = info.kind == kTexCube ? 1 : info.kind == kTex3D ? 2 : 0;
@@ -1843,6 +1966,7 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         GLuint smp = Sampler(s, i, st);
         if (Changed(cache_.sampler[i], smp)) glBindSampler(GLuint(i), smp);
     }
+    perf_.d_bind += Ms(tq5);
     // geometry, counted while the title runs a visibility test
     GLuint query = 0;
     if (s.simple[kMCountEnable >> 2]) {
@@ -1961,7 +2085,8 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     Probe(s, st, pk);
     if (query) {
         glEndQuery(GL_SAMPLES_PASSED);
-        counted_.push_back(query);
+        const Target* qt = bound_rt_ ? bound_rt_ : bound_ds_;
+        counted_.push_back({query, qt ? float(qt->w) * float(qt->h) / (float(qt->gw) * float(qt->gh)) : 1.0f});
     }
     perf_.draw += Ms(t0);
 }
@@ -1970,16 +2095,15 @@ void GlBackend::GetReport(uint32_t va) {
     Own();
     auto t0 = Clock::now();
     perf_.reports++;
-    uint64_t pixels = 0;
-    for (GLuint q : counted_) {
+    double counted = 0;
+    for (auto [q, k] : counted_) {
         GLuint n = 0;
         glGetQueryObjectuiv(q, GL_QUERY_RESULT, &n);
-        pixels += n;
+        counted += double(n) / double(k);  // the console counts its own pixels: an upscaled target's come back to them
         free_queries_.push_back(q);
     }
     counted_.clear();
-    // the console counts its own pixels: an upscaled target's come back to them
-    pixels = uint64_t(std::llround(double(pixels) / (double(sx_) * double(sy_))));
+    uint64_t pixels = uint64_t(std::llround(counted));
     kernel::W32(va, uint32_t(frame_));
     kernel::W32(va + 4, 0);
     kernel::W32(va + 8, uint32_t(std::min<uint64_t>(pixels, 0xFFFFFFFF)));
@@ -2232,6 +2356,13 @@ void GlBackend::LogPerf() {
     if (el < 5000) return;
     double n = double(perf_frames_);
     const Perf& p = perf_;
+    LOGI("perf: draws' parts per frame: targets and keys %.1f ms, textures' checks %.1f, programs %.1f, GL state %.1f, "
+         "constants %.1f, texture bindings %.1f (guest textures %.1f, %.1f copies of the target drawn into %.1f, %.1f depth "
+         "views)", p.d_setup / n, p.d_tex / n, p.d_prog / n, p.d_state / n, p.d_consts / n, p.d_bind / n, p.t_guest / n,
+         double(p.feedbacks) / n, p.t_feedback / n, double(p.zcolours) / n);
+    if (p.boxes)
+        LOGI("perf: 16:9 picture: %.2f ms a frame for %.0f small draws' boxes (%.0f known in perspective)", p.squeeze / n,
+             double(p.boxes) / n, double(p.box_hits) / n);
     LOGI("perf: %.1f fps, %.1f ms/frame: draws %.1f (assemble %.1f, textures %.1f, shaders %.1f, submit %.1f), clear %.1f, "
          "sync %.1f, reports %.1f, present %.1f, swap %.1f, warm-up %.1f | per frame %.0f draws %.0fk verts %.1f tex uploads "
          "%.2f MB %.1f reports | %llu new textures %llu programs (%llu built ahead) %llu targets %llu read-backs %llu hitches "
@@ -2408,11 +2539,41 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
             glGenerateMipmap(GL_TEXTURE_2D);
             lod = std::max(0.0f, std::log2(float(t.h) / 22.0f));
         }
-        glViewport(0, 0, GLsizei(sw), GLsizei(sh));
-        glUseProgram(sides_);
-        glUniform4f(sides_opts_, blur ? 1.0f : 2.0f, lod, (float(sw) / float(sh)) / aspect, gamma_ ? 1.0f : 0.0f);
-        glUniform4f(sides_screen_, float(sw), float(sh), 0.0f, 0.0f);
-        FullScreen(sides_);
+        // only the bars beside the picture are drawn; the web, the same every frame, is drawn once and copied
+        GLint bar = GLint((float(sw) - vw) / 2) + 1;
+        auto sides = [&]() {
+            glViewport(0, 0, GLsizei(sw), GLsizei(sh));
+            glUseProgram(sides_);
+            glUniform4f(sides_opts_, blur ? 1.0f : 2.0f, lod, (float(sw) / float(sh)) / aspect, gamma_ ? 1.0f : 0.0f);
+            glUniform4f(sides_screen_, float(sw), float(sh), 0.0f, 0.0f);
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(0, 0, bar, GLsizei(sh));
+            FullScreen(sides_);
+            glScissor(GLint(sw) - bar, 0, bar, GLsizei(sh));
+            FullScreen(sides_);
+            glDisable(GL_SCISSOR_TEST);
+        };
+        if (blur) {
+            sides();
+        } else {
+            if (!web_tex_ || web_w_ != sw || web_h_ != sh) {
+                if (!web_tex_) glGenTextures(1, &web_tex_);
+                if (!web_fbo_) glGenFramebuffers(1, &web_fbo_);
+                glBindTexture(GL_TEXTURE_2D, web_tex_);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(sw), GLsizei(sh), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+                glBindFramebuffer(GL_FRAMEBUFFER, web_fbo_);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, web_tex_, 0);
+                sides();
+                web_w_ = sw;
+                web_h_ = sh;
+            }
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, web_fbo_);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glBlitFramebuffer(0, 0, bar, GLint(sh), 0, 0, bar, GLint(sh), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            glBlitFramebuffer(GLint(sw) - bar, 0, GLint(sw), GLint(sh), GLint(sw) - bar, 0, GLint(sw), GLint(sh), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
     }
     // the filter: a box when the frame is drawn smaller, Catmull-Rom when bigger and sharp, else bilinear
     float ratio = float(t.h) / vh;
@@ -2454,7 +2615,7 @@ void GlBackend::ApplyPicture() {
 
 // a target made again at the render scale, its pixels (or depth and stencil) drawn over from the old one
 void GlBackend::Rescale(Target& t) {
-    uint32_t w = ScaledSize(t.gw, sx_), h = ScaledSize(t.gh, sy_);
+    uint32_t w = HostW(t.gw, t.gh), h = HostH(t.gw, t.gh);
     if (w == t.w && h == t.h) return;
     GLuint old = t.tex;
     glGenTextures(1, &t.tex);

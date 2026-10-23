@@ -81,7 +81,9 @@ Two backends take the draws:
   Frames are shown at the pace the game asks for with `D3DRS_PRESENTATIONINTERVAL`: a frame every two vertical
   blanks, 30 a second, which is also what its movies are timed for. Every GLSL program the game needed is kept in
   `cache/shaders.cache` beside the `.nro` and built again at the next start, a little each frame, so a scene played once
-  doesn't stall the next time on shaders it already had (the Switch's Mesa keeps no shader cache of its own). A
+  doesn't stall the next time on shaders it already had (the Switch's Mesa keeps no shader cache of its own). The
+  list is headed by the GL driver and the shader generator's version (`kShaderGenerator`, changed whenever any
+  program's text does), so a new port version that makes the same GLSL keeps it. A
   depth buffer the game reads as a colour texture (its shadow pass looks up `LIN_A8R8G8B8` texels over the depth
   target) is copied into a colour view of its 24-bit words first.
 
@@ -91,15 +93,20 @@ Two backends take the draws:
   depth tested: `gpu::State::aa_x`, `aa_y` scale it back. And an element offset of a whole number of vertices (a
   shadow volume placed further into a shared buffer) moves into the buffer's start, since GL takes element offsets up
   to 2047 bytes only.
-  **Render scale.** With the debug menu's Resolution at 720p or 1080p every target is made that much bigger alike
-  (the guest size times one scale across and one down: 1.5 for 720p, 2.25 for 1080p, more across for the 16:9
-  picture), and what is in guest pixels is scaled with it: viewports, scissors, clear rects, copies, the slope of
+  **Render scale.** With the debug menu's Resolution at 720p or 1080p every target at least half the frame's size
+  each way (the frame, its depth buffer, copies of it) is made that much bigger alike (the guest size times one
+  scale across and one down: 1.5 for 720p, 2.25 for 1080p, more across for the 16:9 picture); smaller ones (the
+  game's 256×256 shadows and glow passes) stay at the console's size, their pixels hardly showing and their cost
+  growing with the scale. 1080p is drawn in handheld mode as 720p, the screen's own. What is in guest pixels is
+  scaled with the target: viewports, scissors, clear rects, copies, the slope of
   the depth bias, point sizes, the half pixel render target reads move back by (`ext.xy` in the shaders), and the
-  pixels a visibility test counts (divided back to the console's). The game's own screen space stays 640×480 in the
+  pixels a visibility test counts (divided back to the console's, by each query's own target). The game's own screen space stays 640×480 in the
   shaders' `surf` constant. CPU writes into a target go in at the console's size and are drawn bigger; read-backs
   are brought down first. A pass shrinking an upscaled target (the glow chain: the frame into 256×256 targets)
   averages each tap over a box of console texels, as the D3D12 renderer does, or its taps skip texels and flicker.
-  A change in play makes every target again at the new size, its contents drawn over.
+  A change in play makes every target again at the new size, its contents drawn over. A texture's change check, once
+  a frame for every texture drawn with, hashes its bytes with the processor's CRC32C instructions (four chains, eight
+  bytes a cycle on the Cortex-A57).
 
   **Presenting.** The frame goes to the 1280×720 screen through the gamma ramp: bilinear, a box of bilinear taps
   when it is drawn smaller (1080p), Catmull-Rom when it is enlarged and Upscaling is Sharp (movie frames, the YUY2
@@ -115,7 +122,9 @@ Two backends take the draws:
   640×480 frame is then shown across the 16:9 screen (and drawn 1280×720 or 1920×1080 when scaled). What the game
   draws flat, every vertex at w exactly 1 (the HUD, menus, text), is narrowed to 4:3 in the middle in the vertex
   shader. Which draws: a small draw's box on screen is worked out on the CPU through the reference renderer's vertex
-  stage (`reference::ScreenBox`), and one from the top to the bottom, or across the width and touching the top or
+  stage (`reference::ScreenBox`, which stops at the first vertex in perspective; a draw found in perspective is
+  remembered by its program, buffers and range for 30 frames, as most small draws are 3D: about 0.3 ms a frame on the
+  PC test build instead of 11), and one from the top to the bottom, or across the width and touching the top or
   the bottom, stays across (full screen passes, the shadows' darkening drawn in halves, fades, bars) unless it shows
   a picture (a menu's layers, the logo); a bigger draw is narrowed vertex by vertex but for those on the left and
   right edges; movie frames are always narrowed.
@@ -196,8 +205,13 @@ Things the PC test build couldn't show, found on the console or by reading libnx
   file), where Windows and Linux allow it, and the game opens its packs more than once. Existing files open
   read-only unless the game asks to write (never on the disc), renames close the file around them, and resizes go
   through the open file. Conflicting opens are logged.
-- **Cached writes are lost on a reset.** The log is `fsync`ed every 250 ms from its own thread, so a frozen
-  console still leaves the log behind.
+- **Cached writes are lost on a reset.** The log is `fsync`ed every 250 ms from its own thread when lines were
+  written since, so a frozen console still leaves the log behind and an idle one leaves the card alone.
+- **A thread starts on one core only.** A libnx thread (and so a pthread) starts with the process's default core,
+  core 0, as its only one: before 0.2.1 the game, the renderer and the sound all took turns there.
+  `kernel::NameHostThread` now gives the renderer core 1, the sound and the port's main and watch threads core 2,
+  the game's threads core 0, each as its preferred core with the process's whole mask (cores 0 to 2), so the
+  scheduler can move one to an idle core.
 - **The scheduler only time-slices priority 59 (0x3B) on cores 0 to 2,** libnx's default for threads; the game's
   threads stay there, and the port's watch threads sit above them.
 - **Float to integer conversion** out of range gives `INT_MIN` on x86 and saturates on ARM. The recompiled code

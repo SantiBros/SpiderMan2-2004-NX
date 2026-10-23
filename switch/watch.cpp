@@ -28,6 +28,7 @@ void Start(void* (*fn)(void*)) {
 }
 
 void* SyncLoop(void*) {
+    kernel::NameHostThread("watch");  // off the game's core: it is above the game's priority
     svcSetThreadPriority(CUR_THREAD_HANDLE, kWatchPriority);
     for (;;) {
         svcSleepThread(250'000'000);
@@ -43,6 +44,7 @@ struct Seen {
 };
 
 void* PulseLoop(void*) {
+    kernel::NameHostThread("watch");
     svcSetThreadPriority(CUR_THREAD_HANDLE, kWatchPriority);
     std::map<uint32_t, Seen> seen;
     uint64_t start = armGetSystemTick();

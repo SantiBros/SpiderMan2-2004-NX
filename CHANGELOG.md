@@ -3,6 +3,39 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.2.1]
+
+**Faster**, for the report that 0.2.0 was unplayable on a Switch Lite. The changes below are checked on the PC test
+build; the Switch's own frame rate is still to be measured on a console.
+
+### Fixed
+- **The port's threads shared one of the Switch's cores.** A thread a Switch program starts may only run on the core
+  it starts on, the first one: the game, the renderer and the sound all took turns on it, and the render thread
+  gained nothing. Now the renderer prefers the second core, the sound and the port's menu and log threads the third,
+  the game's own threads the first, each free to move to an idle one.
+- **The 16:9 picture cost the renderer about 11 ms a frame** on the PC test build (several times that on a Switch):
+  to keep the HUD 4:3, every small draw went through its vertex program on the CPU. Now a draw's first vertex in
+  perspective ends that (most small draws are 3D: sparks, debris, signs), and the 3D ones are remembered for a second:
+  about 0.3 ms a frame.
+
+### Changed
+- **Auto clocks, the new default** in the debug menu: 1785 MHz CPU, 1600 MHz memory, and a GPU clock for the
+  picture: 460.8 MHz at 480p in handheld mode, 768 MHz at 720p and docked. All are clocks Nintendo uses. A
+  `settings.ini` from an older version with stock clocks (the old default) changes to Auto; a clock you chose stays.
+  Stock is still in the menu.
+- **720p and 1080p enlarge only the main picture** and its copies: the game's smaller images (its 256x256 shadows and
+  glow passes) stay at the console's size, so the extra work grows with the main picture only. They looked the same.
+- **1080p is for docked play**: in handheld mode it draws 720p, the screen's own.
+- **The web sides are drawn once**, and the blurred sides only in the bars beside the picture.
+- **No new stutter after the update**: the list of shaders 0.2.0 built is kept, as the shaders did not change. The
+  list now follows the shaders' version, not the port's.
+- **Texture checks on the processor's CRC32 instructions**: every texture a frame draws with is checked for changes
+  once a frame, megabytes of it.
+- **The log writes less to the SD card**: put on the card only when something new was written, and the swing logged
+  in one line per swing (the set it played, the poses it went through).
+- **The performance log** has a line more: where each draw's time goes (its textures, program, state, constants),
+  and with 16:9 what keeping the HUD 4:3 costs. A log from a console says what to make faster next.
+
 ## [0.2.0]
 
 **A sharper, fuller picture, and vibration.** The new picture settings and the vibration are checked on the PC test

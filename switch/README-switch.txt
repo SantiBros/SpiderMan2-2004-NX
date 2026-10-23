@@ -102,8 +102,9 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
 
   Language            Auto (the console's), English, Espanol, Francais,
                       Deutsch, Italiano - from the next start
-  Resolution          480p (the Xbox's), 720p, 1080p - the whole picture and
-                      the movies; more work for the GPU
+  Resolution          480p (the Xbox's), 720p, 1080p (docked; 720p in
+                      handheld mode) - the whole picture and the movies;
+                      more work for the GPU
   Screen              4:3 with black, blurred or web sides, or 16:9 full
                       screen (the game's own wide camera; the HUD, menus and
                       movies stay 4:3)
@@ -111,9 +112,11 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
   Texture filtering   standard, anisotropic 4x, 8x, 16x
   Vibration           off, low, medium, high (Joy-Con or a Pro Controller;
                       the Switch Lite has none of its own)
-  CPU / GPU / memory  stock, or rates Nintendo's own profiles use (up to
-  clock               1785 / 768 / 1600 MHz); the console's own clocks come
-                      back in the HOME menu and when you quit
+  CPU / GPU / memory  auto (the default: 1785 MHz CPU, 1600 MHz memory,
+  clock               the GPU by the picture), stock, or rates Nintendo's
+                      own profiles use (up to 1785 / 768 / 1600 MHz); the
+                      console's own clocks come back in the HOME menu and
+                      when you quit
   Frame-rate counter  off, FPS, full (top left)
   Sound volume        100% to 25%, off
   Renderer            GPU or CPU - from the next start
@@ -122,7 +125,7 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
 
 The settings are kept in settings.ini beside the .nro: delete it to go back
 to the recommended ones. If the game runs under 30 frames a second in busy
-places, try a higher CPU clock first.
+places, check that the clocks are on Auto, then try a lower resolution.
 
 
 

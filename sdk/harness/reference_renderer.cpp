@@ -1133,7 +1133,7 @@ void Copy(const Surface& src, const Surface& dst, uint32_t count, uint32_t rects
 bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, uint32_t max_vertices,
                float box[4], bool& flat, float* uv) {
     if (count > max_vertices * 3) return false;
-    Assembled as;
+    static thread_local Assembled as;  // its buffers kept from draw to draw (Assemble resets the rest)
     if (!Assemble(s, prim, start, count, indices, as) || as.topology != Topology::Triangles || !as.vertex_count ||
         as.vertex_count > max_vertices)
         return false;
@@ -1175,6 +1175,7 @@ bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, co
             y = v.y + (1 - cp[1] / cw) * 0.5f * v.h;
         }
         flat &= w == 1.0f;
+        if (!flat) break;  // one vertex in perspective: the draw is not flat, its box does not matter
         if (uv) {
             const Vec& t = program ? vp.out[9] : vp.in[9];
             uv[0] = std::min(uv[0], t[0]), uv[1] = std::min(uv[1], t[1]);

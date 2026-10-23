@@ -107,6 +107,8 @@ public:
     glr::Picture GetPicture() override {
         glr::Picture p;
         p.height = sw::g_resolution.load(std::memory_order_relaxed);
+        // the handheld screen has 720 rows: 1080p there would only be drawn to be shrunk, for half the frame rate
+        if (p.height > 720 && appletGetOperationMode() != AppletOperationMode_Console) p.height = 720;
         int screen = sw::g_screen.load(std::memory_order_relaxed);
         p.wide = screen == int(sw::Screen::Wide);
         p.sides = screen == int(sw::Screen::Blur) ? glr::Picture::Sides::Blur

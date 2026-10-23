@@ -47,6 +47,7 @@ struct Item {
     std::vector<Choice> choices;
     bool next_start = false;  // takes effect when the game starts again
     bool clock = false;       // the Switch's clocks: only where they can be set
+    int module = -1;          // a clock's: 0 CPU, 1 GPU, 2 memory (what its Auto is now)
     std::string help;
 };
 
@@ -144,10 +145,10 @@ void Build() {
     res.set = [](Settings& s, uint32_t v) { s.resolution = v; };
     res.choices = {{480, "480p (the console's)", ""},
                    {720, "720p", "More work for the graphics chip: if the frame rate drops, raise the GPU clock."},
-                   {1080, "1080p", "Much more work for the graphics chip and more memory: if the frame rate drops, raise "
-                                   "the GPU clock or go back to 720p."}};
+                   {1080, "1080p (docked)", "Docked, for smoother edges on a TV: much more work for the GPU. In "
+                                            "handheld mode it draws 720p."}};
     res.help = "How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for "
-               "pixel; 1080p is drawn bigger and shrunk to it, with smoother edges.";
+               "pixel; 1080p, docked, is drawn bigger and shrunk, with smoother edges.";
     g_items.push_back(res);
 
     Item screen;
@@ -203,13 +204,15 @@ void Build() {
     cpu.get = [](const Settings& s) { return s.cpu_hz; };
     cpu.set = [](Settings& s, uint32_t v) { s.cpu_hz = v; };
     cpu.clock = true;
-    cpu.choices = {{0, "Stock (1020 MHz)", ""},
+    cpu.module = 0;
+    cpu.choices = {{kClockAuto, "Auto", "The recommended clock for the game: its translated code needs the CPU's speed."},
+                   {0, "Stock (1020 MHz)", "The console's normal clock: busy places can drop under 30 FPS."},
                    {1224000000, "1224 MHz", "A clock some Switch games use: a little more battery use."},
                    {1428000000, "1428 MHz", above},
                    {1581000000, "1581 MHz", above},
                    {1785000000, "1785 MHz", above}};
-    cpu.help = "The game's translated code runs on the CPU. Raise it when the counter stays under 30 FPS in "
-               "busy places.";
+    cpu.help = "The game's translated code and the graphics driver run on the CPU. Auto keeps it at 1785 MHz, "
+               "a clock Nintendo uses too, while the game runs.";
     g_items.push_back(cpu);
 
     Item gpu;
@@ -217,16 +220,19 @@ void Build() {
     gpu.get = [](const Settings& s) { return s.gpu_hz; };
     gpu.set = [](Settings& s, uint32_t v) { s.gpu_hz = v; };
     gpu.clock = true;
+    gpu.module = 1;
     const char* hot = docked ? "" : "Above Nintendo's handheld limit: more heat and battery drain.";
     const char* more = docked ? "" : "Above the normal handheld clock: more battery use.";
     const char* low = docked ? "Below the normal docked clock: slower graphics." : "";
-    gpu.choices = {{0, docked ? "Stock (768 MHz)" : "Stock (307.2 MHz)", ""},
+    gpu.choices = {{kClockAuto, "Auto", "460.8 MHz at 480p in handheld mode; 768 MHz at 720p and 1080p, and docked."},
+                   {0, docked ? "Stock (768 MHz)" : "Stock (307.2 MHz)", ""},
                    {307200000, "307.2 MHz", low},
                    {384000000, "384 MHz", docked ? low : more},
                    {460800000, "460.8 MHz", docked ? low : more},
                    {614400000, "614.4 MHz", docked ? low : hot},
                    {768000000, "768 MHz", hot}};
-    gpu.help = "The Switch's graphics chip. 460.8 MHz is the highest clock Nintendo uses in handheld mode.";
+    gpu.help = "The Switch's graphics chip. Auto raises it with the resolution; 460.8 MHz is the highest clock "
+               "Nintendo uses in handheld mode.";
     g_items.push_back(gpu);
 
     Item mem;
@@ -234,7 +240,9 @@ void Build() {
     mem.get = [](const Settings& s) { return s.mem_hz; };
     mem.set = [](Settings& s, uint32_t v) { s.mem_hz = v; };
     mem.clock = true;
-    mem.choices = {{0, docked ? "Stock (1600 MHz)" : "Stock (1331.2 MHz)", ""},
+    mem.module = 2;
+    mem.choices = {{kClockAuto, "Auto", ""},
+                   {0, docked ? "Stock (1600 MHz)" : "Stock (1331.2 MHz)", ""},
                    {1331200000, "1331.2 MHz", docked ? "Slower memory: a lower frame rate in busy places." : ""},
                    {1600000000, "1600 MHz", docked ? "" : "Above the normal handheld clock: more battery use."}};
     mem.help = "1600 MHz is the docked memory clock; Nintendo uses it in handheld mode too.";
@@ -294,7 +302,7 @@ void Build() {
     restore.kind = Kind::Restore;
     restore.label = "Restore recommended settings";
     restore.help = "The console's language, 480p, 4:3 with black sides, smooth upscaling, standard texture "
-                   "filtering, medium vibration, stock clocks, no counter, full volume, the GPU renderer on its own "
+                   "filtering, medium vibration, Auto clocks, no counter, full volume, the GPU renderer on its own "
                    "thread, no start-up log.";
     g_items.push_back(restore);
 
@@ -313,10 +321,15 @@ int Index(const Item& it) {
 }
 
 // the settings that act at once
+void ApplyClocks() {
+    uint32_t cpu, gpu, mem;
+    ClocksFor(CurrentSettings(), clocks::Docked(), cpu, gpu, mem);
+    clocks::Set(cpu, gpu, mem);
+}
+
 void ApplyLive() {
-    const Settings& s = CurrentSettings();
-    clocks::Set(s.cpu_hz, s.gpu_hz, s.mem_hz);
-    ApplyPicture(s);
+    ApplyClocks();
+    ApplyPicture(CurrentSettings());
 }
 
 void SetIndex(Item& it, int i) {
@@ -443,6 +456,11 @@ void Draw() {
             std::string v = idx >= 0 ? it.choices[idx].text
                             : it.clock ? MhzText(it.get(CurrentSettings()))
                                        : std::to_string(it.get(CurrentSettings()));
+            if (it.module >= 0 && it.get(CurrentSettings()) == kClockAuto) {
+                uint32_t hz[3];
+                ClocksFor(CurrentSettings(), clocks::Docked(), hz[0], hz[1], hz[2]);
+                v = "Auto (" + MhzText(hz[it.module]) + ")";
+            }
             c.Text(value_mid - TextWidth(v) / 2, ty, v, it.clock && !clocks_ok ? kGray : kWhite);
             if (sel) {
                 c.Text(value_mid - value_half - 8, ty, "<", idx != 0 ? kAmber : kGray);
@@ -600,6 +618,12 @@ void Update() {
                             HidNpadButton_StickLDown | HidNpadButton_StickRLeft | HidNpadButton_StickRUp |
                             HidNpadButton_StickRRight | HidNpadButton_StickRDown;
     if (g_block && !(held & ~sticks)) g_block = false;
+    // docking changes what Auto asks of the GPU
+    static bool docked = clocks::Docked();
+    if (clocks::Docked() != docked) {
+        docked = !docked;
+        ApplyClocks();
+    }
     clocks::Tick();
     UpdateLive(now);
     rumble::Update(g_open || g_block || appletGetFocusState() != AppletFocusState_InFocus);

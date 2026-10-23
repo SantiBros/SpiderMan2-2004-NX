@@ -5,6 +5,11 @@
 #include <memory>
 
 #include "kernel/kernel.h"
+#ifdef __SWITCH__
+#include <switch.h>
+
+#include <cstring>
+#endif
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -81,21 +86,6 @@ void MarkExited(Thread& t, uint32_t code) {
     SignalChanged();
 }
 
-void NameHostThread(const char* name) {
-#ifdef _WIN32
-    wchar_t w[64];
-    size_t i = 0;
-    for (; name[i] && i < 63; i++) w[i] = wchar_t(name[i]);
-    w[i] = 0;
-    using Fn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
-    static Fn set = reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription")));
-    if (set) set(GetCurrentThread(), w);
-#elif defined(__SWITCH__)
-    (void)name;  // libnx threads are not named through pthreads
-#else
-    pthread_setname_np(pthread_self(), name);
-#endif
-}
 
 // recompiled code nests host frames as deep as the guest's calls, give it room
 void Spawn(std::function<void()> fn) {
@@ -134,6 +124,39 @@ void Spawn(std::function<void()> fn) {
 }
 
 }  // namespace
+
+// a host thread's name, for debuggers; on the Switch the port's own busy threads also get a core of their own
+void NameHostThread(const char* name) {
+#ifdef _WIN32
+    wchar_t w[64];
+    size_t i = 0;
+    for (; name[i] && i < 63; i++) w[i] = wchar_t(name[i]);
+    w[i] = 0;
+    using Fn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
+    static Fn set = reinterpret_cast<Fn>(reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription")));
+    if (set) set(GetCurrentThread(), w);
+#elif defined(__SWITCH__)
+    // libnx threads are not named through pthreads. The port's own busy threads get a preferred core of their own:
+    // the renderer core 1, the sound, the port's main and watch threads core 2, the game's threads the process's own
+    // (core 0). A new thread may only run on its first core; each now may move to an idle one, the affinity being
+    // every core the process has, so the game's second threads (streaming, sound) leave its main one alone.
+    int core = !std::strcmp(name, "render")                                   ? 1
+               : !std::strcmp(name, "sound") || !std::strcmp(name, "watch") || !std::strcmp(name, "main") ? 2
+               : !std::strncmp(name, "guest ", 6)                           ? 0
+                                                                              : -1;
+    if (core >= 0) {
+        u64 mask = 0;
+        svcGetInfo(&mask, InfoType_CoreMask, CUR_PROCESS_HANDLE, 0);
+        if (mask & (1ull << core)) {
+            Result rc = svcSetThreadCoreMask(CUR_THREAD_HANDLE, core, uint32_t(mask));
+            LOG_FIRST(12, "threads: the %s thread prefers core %d of mask %llX%s", name, core, (unsigned long long)mask,
+                      R_FAILED(rc) ? " (refused)" : "");
+        }
+    }
+#else
+    pthread_setname_np(pthread_self(), name);
+#endif
+}
 
 Thread* Current() { return t_current.get(); }
 ThreadRef CurrentRef() { return t_current; }

@@ -27,13 +27,15 @@ struct Lang {
 };
 const Lang kLanguages[] = {{0, "auto"}, {1, "en"}, {3, "de"}, {4, "fr"}, {5, "es"}, {6, "it"}};
 
-// "stock" or MHz ("1785", "307.2")
+// "auto", "stock" or MHz ("1785", "307.2")
 uint32_t Hz(const std::string& v) {
-    if (v.empty() || v == "stock") return 0;
+    if (v.empty() || v == "auto") return kClockAuto;
+    if (v == "stock") return 0;
     double mhz = std::atof(v.c_str());
     return mhz > 0 && mhz < 5000 ? uint32_t(mhz * 1e6 + 0.5) : 0;
 }
 std::string Mhz(uint32_t hz) {
+    if (hz == kClockAuto) return "auto";
     if (!hz) return "stock";
     char b[24];
     if (hz % 1000000)
@@ -67,6 +69,12 @@ bool On(const std::string& v, bool def) {
 }  // namespace
 
 Settings DefaultSettings() { return Settings{}; }
+
+void ClocksFor(const Settings& s, bool docked, uint32_t& cpu, uint32_t& gpu, uint32_t& mem) {
+    cpu = s.cpu_hz == kClockAuto ? 1785000000u : s.cpu_hz;
+    gpu = s.gpu_hz == kClockAuto ? (docked || s.resolution > 480 ? 768000000u : 460800000u) : s.gpu_hz;
+    mem = s.mem_hz == kClockAuto ? 1600000000u : s.mem_hz;
+}
 Settings& CurrentSettings() { return g_now; }
 const Settings& StartSettings() { return g_start; }
 
@@ -74,6 +82,8 @@ void LoadSettings() {
     std::ifstream f(kFile);
     Settings s;
     std::string line;
+    uint32_t version = 0;  // settings=N; before 0.2.1 there was none, and stock clocks were the default
+    bool stock_clock[3] = {};
     while (f && std::getline(f, line)) {
         size_t hash = line.find_first_of("#;");
         if (hash != std::string::npos) line.resize(hash);
@@ -97,12 +107,17 @@ void LoadSettings() {
             else if (v == "off") s.anisotropy = 1;
         } else if (k == "rumble") {
             s.rumble = v == "off" ? Rumble::Off : v == "low" ? Rumble::Low : v == "high" ? Rumble::High : Rumble::Medium;
+        } else if (k == "settings") {
+            version = uint32_t(std::atoi(v.c_str()));
         } else if (k == "cpu_clock") {
             s.cpu_hz = Hz(v);
+            stock_clock[0] = v == "stock";
         } else if (k == "gpu_clock") {
             s.gpu_hz = Hz(v);
+            stock_clock[1] = v == "stock";
         } else if (k == "memory_clock") {
             s.mem_hz = Hz(v);
+            stock_clock[2] = v == "stock";
         } else if (k == "counter") {
             s.counter = v == "full" ? Counter::Full : v == "fps" ? Counter::Fps : Counter::Off;
         } else if (k == "volume") {
@@ -116,6 +131,13 @@ void LoadSettings() {
             s.startup_log = On(v, false);
         }
     }
+    if (version < 2 && (stock_clock[0] || stock_clock[1] || stock_clock[2])) {
+        // the stock clocks an older version wrote as its default: the automatic ones now
+        if (stock_clock[0]) s.cpu_hz = kClockAuto;
+        if (stock_clock[1]) s.gpu_hz = kClockAuto;
+        if (stock_clock[2]) s.mem_hz = kClockAuto;
+        LOGI("settings: the stock clocks of an older settings.ini are now Auto");
+    }
     g_now = g_start = s;
 }
 
@@ -127,6 +149,7 @@ void SaveSettings() {
     std::ostringstream o;
     o << "# Spider-Man 2 (Xbox) for Switch: the port's settings, changed in its debug menu (hold ZL + ZR, press -).\n"
          "# Delete this file to go back to the recommended settings.\n"
+      << "settings=2\n"
       << "language=" << lang << "        # auto (the console's), en, es, fr, de, it\n"
       << "resolution=" << s.resolution << "p" << (s.resolution < 1000 ? "      " : "     ")
       << "# 480p (the console's), 720p, 1080p\n"
@@ -135,7 +158,7 @@ void SaveSettings() {
       << "anisotropic=" << (s.anisotropy > 1 ? std::to_string(s.anisotropy) + "x" : std::string("off"))
       << "   # texture filtering: off, 2x, 4x, 8x, 16x\n"
       << "rumble=" << RumbleKey(s.rumble) << "      # off, low, medium, high\n"
-      << "cpu_clock=" << Mhz(s.cpu_hz) << "      # stock, or MHz\n"
+      << "cpu_clock=" << Mhz(s.cpu_hz) << "      # auto, stock, or MHz\n"
       << "gpu_clock=" << Mhz(s.gpu_hz) << "\n"
       << "memory_clock=" << Mhz(s.mem_hz) << "\n"
       << "counter=" << (s.counter == Counter::Full ? "full" : s.counter == Counter::Fps ? "fps" : "off")

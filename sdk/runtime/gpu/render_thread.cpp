@@ -11,6 +11,9 @@
 #include <windows.h>
 #ifndef _WIN32
 #include <pthread.h>
+namespace kernel {
+void NameHostThread(const char* name);
+}
 #endif
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
 #include <smmintrin.h>
@@ -430,10 +433,14 @@ private:
     }
 
     void Run() {
+#ifdef _WIN32
         using SetDescription = HRESULT(WINAPI*)(HANDLE, PCWSTR);
         if (auto set = reinterpret_cast<SetDescription>(
                 reinterpret_cast<void*>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription"))))
             set(GetCurrentThread(), L"render");
+#else
+        kernel::NameHostThread("render");  // and on the Switch a core of its own
+#endif
         for (;;) {
             Batch* b;
             {

@@ -33,9 +33,16 @@ void Fill(const std::function<void(float*, uint32_t)>& render, std::vector<float
 }
 }  // namespace
 
+}  // namespace audio
+namespace kernel {
+void NameHostThread(const char* name);
+}
+namespace audio {
+
 void StartOutput(std::function<void(float*, uint32_t)> render) {
     // a pthread with room: std::thread gets 128 KB on the Switch, and the mixer decodes on its stack
     auto* fn = new std::function<void()>([render] {
+        kernel::NameHostThread("sound");  // a core of its own, away from the game's and the renderer's
         std::vector<float> mix(kFrames * 2);
         if (sw::g_no_sound) {
             LOGI("audio: sound off (L held at start), the mixer runs without output");
