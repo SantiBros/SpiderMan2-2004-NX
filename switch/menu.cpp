@@ -11,6 +11,7 @@
 
 #include "core/log.h"
 #include "switch/clocks.h"
+#include "switch/rumble.h"
 #include "switch/screen.h"
 #include "switch/settings.h"
 #include "switch/state.h"
@@ -137,6 +138,65 @@ void Build() {
                 "is English.";
     g_items.push_back(lang);
 
+    Item res;
+    res.label = "Resolution";
+    res.get = [](const Settings& s) { return s.resolution; };
+    res.set = [](Settings& s, uint32_t v) { s.resolution = v; };
+    res.choices = {{480, "480p (the console's)", ""},
+                   {720, "720p", "More work for the graphics chip: if the frame rate drops, raise the GPU clock."},
+                   {1080, "1080p", "Much more work for the graphics chip and more memory: if the frame rate drops, raise "
+                                   "the GPU clock or go back to 720p."}};
+    res.help = "How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for "
+               "pixel; 1080p is drawn bigger and shrunk to it, with smoother edges.";
+    g_items.push_back(res);
+
+    Item screen;
+    screen.label = "Screen";
+    screen.get = [](const Settings& s) { return uint32_t(s.screen); };
+    screen.set = [](Settings& s, uint32_t v) { s.screen = Screen(v); };
+    screen.choices = {{uint32_t(Screen::Black), "4:3, black sides", ""},
+                      {uint32_t(Screen::Blur), "4:3, blurred sides", ""},
+                      {uint32_t(Screen::Web), "4:3, web sides", ""},
+                      {uint32_t(Screen::Wide), "16:9 full screen",
+                       "The game's own wide camera: more of the city at the sides, nothing stretched. The HUD, menus "
+                       "and movies stay 4:3 in the middle."}};
+    screen.help = "The picture keeps its shape: 4:3 with something at the sides, or the game's hidden 16:9 mode "
+                  "across the whole screen.";
+    g_items.push_back(screen);
+
+    Item up;
+    up.label = "Upscaling";
+    up.get = [](const Settings& s) { return uint32_t(s.sharp); };
+    up.set = [](Settings& s, uint32_t v) { s.sharp = v != 0; };
+    up.choices = {{0, "Smooth", ""}, {1, "Sharp", ""}};
+    up.help = "How the movies and the picture are enlarged to the screen: Sharp keeps more detail (Catmull-Rom), "
+              "Smooth is softer, as on a TV.";
+    g_items.push_back(up);
+
+    Item af;
+    af.label = "Texture filtering";
+    af.get = [](const Settings& s) { return s.anisotropy; };
+    af.set = [](Settings& s, uint32_t v) { s.anisotropy = v; };
+    af.choices = {{1, "Standard", ""},
+                  {4, "Anisotropic 4x", ""},
+                  {8, "Anisotropic 8x", "A little more work for the graphics chip."},
+                  {16, "Anisotropic 16x", "A little more work for the graphics chip."}};
+    af.help = "Streets, rooftops and building fronts seen at a slant stay sharp in the distance instead of "
+              "blurring.";
+    g_items.push_back(af);
+
+    Item rum;
+    rum.label = "Vibration";
+    rum.get = [](const Settings& s) { return uint32_t(s.rumble); };
+    rum.set = [](Settings& s, uint32_t v) { s.rumble = Rumble(v); };
+    rum.choices = {{uint32_t(Rumble::Off), "Off", ""},
+                   {uint32_t(Rumble::Low), "Low", ""},
+                   {uint32_t(Rumble::Medium), "Medium", ""},
+                   {uint32_t(Rumble::High), "High", ""}};
+    rum.help = "The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has none of its own). One the game "
+               "leaves on stops after 2 seconds.";
+    g_items.push_back(rum);
+
     const char* above = "Above the console's own clock: more heat and battery use.";
     Item cpu;
     cpu.label = "CPU clock";
@@ -233,7 +293,8 @@ void Build() {
     Item restore;
     restore.kind = Kind::Restore;
     restore.label = "Restore recommended settings";
-    restore.help = "The console's language, stock clocks, no counter, full volume, the GPU renderer on its own "
+    restore.help = "The console's language, 480p, 4:3 with black sides, smooth upscaling, standard texture "
+                   "filtering, medium vibration, stock clocks, no counter, full volume, the GPU renderer on its own "
                    "thread, no start-up log.";
     g_items.push_back(restore);
 
@@ -255,7 +316,7 @@ int Index(const Item& it) {
 void ApplyLive() {
     const Settings& s = CurrentSettings();
     clocks::Set(s.cpu_hz, s.gpu_hz, s.mem_hz);
-    g_volume.store(s.volume / 100.0f, std::memory_order_relaxed);
+    ApplyPicture(s);
 }
 
 void SetIndex(Item& it, int i) {
@@ -337,12 +398,12 @@ std::string LiveLine() {
 
 void Draw() {
     const int n = int(g_items.size());
-    const int row_h = 30, top = 92;
+    const int row_h = 25, top = 88;
     int separators = 0;
     for (int i = 1; i < n; i++)
         if (g_items[i].kind != Kind::Setting && g_items[i - 1].kind == Kind::Setting) separators++;
     const int help_y0 = top + n * row_h + separators * 12 + 16;
-    const int h = help_y0 + 5 * 20 + 56;
+    const int h = help_y0 + 6 * 20 + 56;
     Canvas c;
     c.Reset(kPanelW, uint32_t(h), kPanel);
     c.Rect(0, 0, kPanelW, 4, kRed);
@@ -412,7 +473,7 @@ void Draw() {
         help.push_back({g_flash, kWhite});
     else if (RestartPending())
         help.push_back({"The \"next start\" settings apply when the port starts again.", kOrange});
-    for (size_t i = 0; i < help.size() && i < 5; i++)
+    for (size_t i = 0; i < help.size() && i < 6; i++)
         c.Text(label_x, help_y0 + int(i) * 20, help[i].first, help[i].second);
 
     c.Rect(20, h - 44, kPanelW - 20, h - 43, kLine);
@@ -506,6 +567,14 @@ void UpdateLive(uint64_t now) {
 
 void SetConsoleLanguage(uint32_t code) { g_console_language = code; }
 
+void ApplyPicture(const Settings& s) {
+    g_volume.store(s.volume / 100.0f, std::memory_order_relaxed);
+    g_resolution.store(s.resolution, std::memory_order_relaxed);
+    g_screen.store(int(s.screen), std::memory_order_relaxed);
+    g_sharp.store(s.sharp, std::memory_order_relaxed);
+    g_anisotropy.store(s.anisotropy, std::memory_order_relaxed);
+}
+
 bool IsOpen() { return g_open; }
 
 bool Blocking(bool& hide_back) {
@@ -533,6 +602,7 @@ void Update() {
     if (g_block && !(held & ~sticks)) g_block = false;
     clocks::Tick();
     UpdateLive(now);
+    rumble::Update(g_open || g_block || appletGetFocusState() != AppletFocusState_InFocus);
 
     bool combo_now = (held & combo) == combo && (down & combo);
     if (!g_open) {

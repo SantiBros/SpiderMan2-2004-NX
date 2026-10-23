@@ -248,7 +248,10 @@ std::string VsEpilogue(bool quad) {
     if (surf.w == 0.0 && abs(p.y - (surf.y - 0.5)) < 1e-3) p.y = surf.y;
 )";
     if (quad) s += "    o.e.zw = p.xy;\n";
-    s += R"(    q.x = p.x * 2.0 / surf.x - 1.0;
+    s += R"(    // the game's 16:9 picture: what it draws flat (w exactly 1: HUD, menus, text) kept 4:3 in the middle (ext.z),
+    // but for points on the left and right edges (full screen passes, fades) unless ext.w (movie frames)
+    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || (p.x > 1.0 && p.x < surf.x - 1.0))) p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
+    q.x = p.x * 2.0 / surf.x - 1.0;
     q.y = 1.0 - p.y * 2.0 / surf.y;
     q.z = p.z * surf.z;
     q.xyz *= p.w;
@@ -399,10 +402,18 @@ std::string TexUv(const TexInfo& t, int i, const std::string& uv) {
     if (t.rect) n += F(" / texsize[%d].xy", i);
     n = "(" + n + F(" + texsize[%d].zw)", i);
     if (!(t.flags & kTexTarget)) return n;
-    return "(" + n + F(" + rtshift[%d] * (dFdx(%s) + dFdy(%s)))", i, n.c_str(), n.c_str());
+    // rtshift in console pixels; ext.xy host pixels per console pixel
+    return "(" + n + F(" + rtshift[%d] * (ext.x * dFdx(%s) + ext.y * dFdy(%s)))", i, n.c_str(), n.c_str());
 }
 
 std::string Sample(int i, const std::string& coord) { return F("texture(tex%d, %s)", i, coord.c_str()); }
+
+// a 2D stage's read at uv (over 0..1): spread taps for an upscaled target shrunk, Catmull-Rom for a movie frame
+std::string Sample2D(const TexInfo& t, int i, const std::string& uv) {
+    if (t.flags & kTexWide) return F("spreadtap(tex%d, %s, spread[%d])", i, uv.c_str(), i);
+    if (t.flags & kTexSharp) return F("bicubic(tex%d, %s)", i, uv.c_str());
+    return Sample(i, uv);
+}
 
 // texture shader stage i, per its mode
 std::string TexFetch(const PixelKey& k, int i, bool quad) {
@@ -419,13 +430,13 @@ std::string TexFetch(const PixelKey& k, int i, bool quad) {
         return F("float dp%d%s = dot(tc%d.xyz, %s);\n", n, coord == n ? "" : "n", coord, DotInput(map, src).c_str());
     };
     auto sample2 = [&](const std::string& uv) {
-        if (t.kind == kTex2D) return Sample(i, TexUv(t, i, uv));
+        if (t.kind == kTex2D) return Sample2D(t, i, TexUv(t, i, uv));
         if (t.kind == kTexCube) return Sample(i, "vec3(" + uv + ", 1.0)");
         if (t.kind == kTex3D) return Sample(i, "vec3(" + uv + ", 0.0)");
         return std::string("vec4(0.0, 0.0, 0.0, 1.0)");
     };
     auto sample3 = [&](const std::string& uvw) {
-        if (t.kind == kTex2D) return Sample(i, TexUv(t, i, "(" + uvw + ").xy"));
+        if (t.kind == kTex2D) return Sample2D(t, i, TexUv(t, i, "(" + uvw + ").xy"));
         if (t.kind == kTexCube || t.kind == kTex3D) return Sample(i, uvw);
         return std::string("vec4(0.0, 0.0, 0.0, 1.0)");
     };
@@ -480,6 +491,25 @@ vec3 sbyte(vec3 u, float lo, float hi, float d) { vec3 b = u * 255.0; return (b 
 vec4 shadow(sampler2DShadow t, vec2 uv, float z, int fmt) {
     float mx = fmt == 2 ? 65535.0 : 16777215.0;
     return vec4(textureLod(t, vec3(uv, clamp(z, 0.0, mx) / mx), 0.0));
+}
+// an upscaled target shrunk: n x n taps (w.z) w.xy apart over the box the console's taps cover
+vec4 spreadtap(sampler2D t, vec2 uv, vec4 w) {
+    vec4 c = vec4(0.0);
+    int n = int(w.z);
+    for (int y = 0; y < n; y++)
+        for (int x = 0; x < n; x++) c += textureLod(t, uv + w.xy * (vec2(x, y) - float(n - 1) * 0.5), 0.0);
+    return c / float(n * n);
+}
+// Catmull-Rom from nine bilinear taps: a movie frame magnified sharper than bilinear, the same at its own size
+vec4 bicubic(sampler2D t, vec2 uv) {
+    vec2 size = vec2(textureSize(t, 0)), p = uv * size - 0.5, f = fract(p), c = floor(p) + 0.5;
+    vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f)), w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f)), w3 = f * f * (-0.5 + 0.5 * f), w12 = w1 + w2;
+    vec2 a = (c - 1.0) / size, b = (c + w2 / w12) / size, d = (c + 2.0) / size;
+    vec4 r = (textureLod(t, vec2(a.x, a.y), 0.0) * w0.x + textureLod(t, vec2(b.x, a.y), 0.0) * w12.x + textureLod(t, vec2(d.x, a.y), 0.0) * w3.x) * w0.y;
+    r += (textureLod(t, vec2(a.x, b.y), 0.0) * w0.x + textureLod(t, vec2(b.x, b.y), 0.0) * w12.x + textureLod(t, vec2(d.x, b.y), 0.0) * w3.x) * w12.y;
+    r += (textureLod(t, vec2(a.x, d.y), 0.0) * w0.x + textureLod(t, vec2(b.x, d.y), 0.0) * w12.x + textureLod(t, vec2(d.x, d.y), 0.0) * w3.x) * w3.y;
+    return clamp(r, 0.0, 1.0);
 }
 void alphatest(float a) {
     int f = int(misc.y);
@@ -691,7 +721,9 @@ std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, con
     if (surf.w == 0.0 && abs(sp.y - (surf.y - 0.5)) < 1e-3) cp.y = -cp.w;
 )";
     if (quad) s += "    o.e = vec4(sp, (vec2(cp.x, -cp.y) / cp.w + 1.0) * 0.5 * surf.xy);\n";
-    s += R"(    gl_Position = vec4(cp.x, -cp.y, 2.0 * cp.z - cp.w, cp.w);
+    s += R"(    // the 16:9 picture's squeeze of what is drawn flat, as for screen space vertices
+    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || (sp.x > 1.0 && sp.x < surf.x - 1.0))) cp.x *= ext.z;
+    gl_Position = vec4(cp.x, -cp.y, 2.0 * cp.z - cp.w, cp.w);
     o.d0 = saturate(oD0);
     o.d1 = saturate(oD1);
     o.b0 = o.d0;
@@ -765,7 +797,7 @@ std::string Pixel(const PixelKey& k) {
             if (t.shadow)
                 body += F("vec4 t%d = shadow(tex%d, %s, tc%d.z / tc%d.w, %d);\n", i, i, TexUv(t, i, F("tc%d.xy / tc%d.w", i, i)).c_str(), i, i,
                           t.shadow);
-            else if (t.kind == kTex2D) body += F("vec4 t%d = texture(tex%d, %s);\n", i, i, uv.c_str());
+            else if (t.kind == kTex2D) body += F("vec4 t%d = %s;\n", i, Sample2D(t, i, uv).c_str());
             else if (t.kind) body += F("vec4 t%d = texture(tex%d, tc%d.xyz);\n", i, i, i);
             else body += F("vec4 t%d = vec4(1.0);\n", i);
             if ((k.alphakill >> i) & 1) body += F("if (t%d.a == 0.0) discard;\n", i);

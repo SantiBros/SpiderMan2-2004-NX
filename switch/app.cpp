@@ -6,6 +6,8 @@
 #include <thread>
 
 #include "app/app.h"
+#include "switch/settings.h"
+#include "switch/state.h"
 
 namespace app {
 
@@ -19,7 +21,8 @@ void ApplyDisplay() {}
 Mode Desktop() { return {1280, 720}; }
 Mode Output() { return Desktop(); }
 float RenderScale(uint32_t) { return 1.0f; }
-bool Widescreen() { return true; }  // as the headless harness the port was tested with
+// the game's own 16:9 picture (src/game/widescreen.cpp), from the debug menu's Screen
+bool Widescreen() { return sw::g_screen.load(std::memory_order_relaxed) == int(sw::Screen::Wide); }
 
 std::filesystem::path ExeDir() {
     static const std::filesystem::path dir = std::filesystem::current_path();

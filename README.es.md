@@ -35,26 +35,22 @@ balancéate por Nueva York.
 > juegos de *Spider-Man* más nuevos.
 
 > [!NOTE]
-> **Jugable en la Switch.** La 0.1.0 se ha jugado en una Switch Lite, en modo portátil: el juego va fluido, a su
+> **Jugable en la Switch.** El port se ha jugado en una Switch Lite, en modo portátil: el juego va fluido, a su
 > propio ritmo de 30 imágenes por segundo, con su música, efectos de sonido y voces. Jugar en el dock con la TV
 > y guardar partida todavía no se han comprobado en una consola, así que los [reportes](#se-buscan-testers) son
 > bienvenidos.
 
 > [!TIP]
-> **Novedades de la 0.1.0**
-> - **Jugable en una Switch de verdad**: probado en una Switch Lite, fluido y con sonido.
-> - **Un menú de depuración**: mantén **ZL + ZR** y pulsa **−** para los ajustes del port: un contador de
->   imágenes por segundo, los relojes de CPU, GPU y memoria de la Switch, el idioma, el volumen y el
->   renderizador, guardados en la tarjeta SD.
-> - **En tu idioma**: el juego sigue el idioma de la consola, con sus menús y subtítulos en español, francés,
->   alemán o italiano (las voces siguen en inglés: el disco solo trae esas). O elige uno en el menú.
-> - **Una pantalla de arranque limpia**: "Loading..." en vez del registro pasando (el registro se puede
->   volver a activar).
-> - **Tus partidas en su propia carpeta**, `save/`, aparte de la caché: fáciles de respaldar.
-> - **Más fácil de compilar**: en Windows, doble clic en `build-windows.cmd` y elige tu juego; en Linux,
->   `build.sh` instala sus propias herramientas. Los dos ponen tu juego en la carpeta de la tarjeta SD, lista.
-> - **Más rápido**: el hilo del juego necesita un 14% menos de tiempo de procesador por imagen (su código es más
->   pequeño y registra lo que dibuja con menos trabajo).
+> **Novedades de la 0.2.0**
+> - **Imagen más nítida**: dibuja el juego, con sus videos, a **720p** (píxel a píxel en la pantalla portátil) o
+>   **1080p**, desde el menú de depuración, en vez de los 480p de la Xbox.
+> - **Pantalla completa 16:9, sin estirar nada**: el juego trae una cámara panorámica propia que Treyarch nunca
+>   activó. El port la enciende: se ve más ciudad a los lados, y el HUD, los menús y los videos conservan su forma
+>   4:3 en el centro.
+> - **O 4:3 con algo a los lados** en vez de franjas negras: la imagen desenfocada o una telaraña.
+> - **Vibración** en los Joy-Con y el Pro Controller: Off, Low, Medium o High. Si el juego deja una vibración
+>   encendida, se apaga sola a los 2 segundos.
+> - **Escalado más nítido** y **filtrado anisotrópico**, para videos más definidos y calles nítidas a lo lejos.
 >
 > Todos los detalles están en la [lista de cambios](CHANGELOG.md) (en inglés).
 
@@ -66,6 +62,20 @@ balancéate por Nueva York.
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>La primera azotea, al atardecer</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/wide.jpg" alt="La primera azotea con la imagen 16:9 propia del juego a 720p, con el HUD en 4:3" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Nuevo en la 0.2.0: la cámara 16:9 propia del juego, a 720p. Más ciudad a los lados, el HUD conserva su forma</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/sides-blur.jpg" alt="El juego a 720p en 4:3 con la imagen desenfocada a los lados"></td>
+    <td width="50%"><img src="docs/images/screenshots/sides-web.jpg" alt="El menú de controles de balanceo en 4:3 con una telaraña a los lados"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>4:3 con la imagen desenfocada a los lados</sub></td>
+    <td align="center"><sub>4:3 con una telaraña a los lados</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
@@ -101,7 +111,7 @@ balancéate por Nueva York.
 
 <p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo
 código recompilado y el mismo renderizador por GPU que la versión de Switch (sobre el Mesa del PC en vez del de la
-Switch), con la disposición de pantalla de la versión de Switch: la imagen 4:3 del juego en la pantalla de
+Switch), con la disposición de pantalla de la versión de Switch: la imagen del juego en la pantalla de
 1280×720 de la Switch. Las pantallas y el menú del port los dibuja el código de pantalla de la versión de Switch,
 ejecutado en el PC.</sub></p>
 
@@ -114,6 +124,11 @@ ejecutado en el PC.</sub></p>
 - **Lo dibuja la GPU de la Switch.** Lo que el juego dibuja con Direct3D 8 se convierte en OpenGL para el
   chip gráfico de la Switch: sus programas de vértices y combinadores de píxeles se traducen a shaders, y sus
   texturas se decodifican una vez y se guardan, en un hilo de renderizado junto al del juego.
+- **A 480p, 720p o 1080p.** Todas las superficies que dibuja el juego se agrandan por igual, así que toda la
+  imagen es más nítida, videos incluidos, con escalado más nítido y filtrado anisotrópico si quieres.
+- **Pantalla completa sin estirar.** La cámara 16:9 oculta del propio juego muestra más ciudad a los lados; el
+  HUD, los menús y los videos se quedan en 4:3. O deja el 4:3, con los lados negros, desenfocados o con telaraña.
+- **Vibración** en los Joy-Con y el Pro Controller, con la fuerza que elijas, y nunca se queda encendida.
 - **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
   volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
@@ -122,9 +137,10 @@ ejecutado en el PC.</sub></p>
   recompila, compila el `.nro` y arma la carpeta de la tarjeta SD con tu juego dentro.
 - **En tu idioma.** El juego toma el idioma de la consola: menús y subtítulos en inglés, español, francés,
   alemán o italiano, con los textos de tu disco.
-- **Un menú de depuración** (**ZL + ZR + −**) con un contador de imágenes por segundo, los relojes de CPU, GPU
-  y memoria de la Switch (solo velocidades que usan los perfiles de Nintendo, devueltas en el menú HOME y al
-  salir), el idioma, el volumen y el renderizador. Se guarda en `settings.ini`.
+- **Un menú de depuración** (**ZL + ZR + −**) con la resolución, la forma de la pantalla, la vibración, un
+  contador de imágenes por segundo, los relojes de CPU, GPU y memoria de la Switch (solo velocidades que usan los
+  perfiles de Nintendo, devueltas en el menú HOME y al salir), el idioma, el volumen y el renderizador. Se guarda
+  en `settings.ini`.
 - **Dice qué está mal.** Falta la carpeta data, hay un archivo comprimido que extraer, una imagen de Xbox
   360, otra edición del juego: la pantalla lo explica con palabras sencillas.
 - **Pensado para las pruebas.** El registro llega a la tarjeta SD varias veces por segundo, así que
@@ -234,10 +250,15 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 | Ajuste | Opciones | Qué hace |
 |---|---|---|
 | Language (idioma) | Auto, English, Español, Français, Deutsch, Italiano | Los menús y subtítulos del juego. Auto sigue a la consola; un idioma que el juego no tiene es inglés. Las voces son en inglés en todos. Desde el siguiente arranque. |
+| Resolution (resolución) | 480p (la de la consola), 720p, 1080p | Con cuántos píxeles se dibujan el juego y sus videos. 720p llena la pantalla portátil píxel a píxel; 1080p se dibuja más grande y se reduce, con bordes más suaves. Más trabajo para la GPU: si bajan las imágenes por segundo, sube el reloj de la GPU. |
+| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada o una telaraña. |
+| Upscaling (escalado) | Smooth, Sharp | Cómo se agrandan los videos y la imagen: Sharp conserva más detalle (Catmull-Rom), Smooth es el aspecto más suave de una TV. |
+| Texture filtering (filtrado) | Standard, Anisotropic 4x, 8x, 16x | Las calles y fachadas vistas de lado se ven nítidas a lo lejos. |
+| Vibration (vibración) | Off, Low, Medium, High | La vibración del juego en los Joy-Con o un Pro Controller (la Switch Lite no tiene motor propio). Si el juego deja una vibración encendida, se apaga a los 2 segundos, y no vibra con el menú abierto ni en el menú HOME. |
 | CPU clock | Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | El código traducido del juego corre en la CPU: súbelo si el contador se queda por debajo de 30 en sitios con mucho movimiento. |
 | GPU clock | Stock, 307.2, 384, 460.8, 614.4, 768 MHz | El chip gráfico. 460,8 MHz es lo más alto que usa Nintendo en modo portátil. |
 | Memory clock | Stock, 1331.2, 1600 MHz | 1600 MHz es el reloj de memoria en el dock. |
-| Frame-rate counter | Off, FPS, Full | Arriba a la izquierda, junto a la imagen. Full añade el tiempo de cada imagen, las llamadas de dibujo, los relojes y la memoria. |
+| Frame-rate counter | Off, FPS, Full | Arriba a la izquierda. Full añade el tiempo de cada imagen, las llamadas de dibujo, los relojes y la memoria. |
 | Sound volume | 100% a 25%, Off | El sonido del juego, antes del volumen de la consola. |
 | Renderer | GPU, CPU | CPU es muchas veces más lento: solo para saber si un fallo de la imagen viene del renderizador por GPU. Desde el siguiente arranque. |
 | Render thread | On, Off | El trabajo gráfico en un núcleo propio. Desde el siguiente arranque. |
@@ -246,7 +267,9 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 Los relojes solo ofrecen velocidades que usan los perfiles de rendimiento de Nintendo. Los de la consola
 vuelven mientras el port está en el menú HOME y al cerrarlo, y el port vuelve a poner los tuyos después de
 conectar al dock o del modo reposo. "Restore recommended settings" deja todo como al principio (el idioma de la
-consola, relojes de fábrica, sin contador, volumen completo, el renderizador por GPU en su propio hilo).
+consola, 480p, 4:3 con lados negros, escalado suave, filtrado estándar, vibración media, relojes de fábrica, sin
+contador, volumen completo, el renderizador por GPU en su propio hilo). Los ajustes de imagen y la vibración
+cambian al momento, mientras juegas.
 
 ## Estado
 
@@ -261,6 +284,8 @@ consola, relojes de fábrica, sin contador, volumen completo, el renderizador po
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
 | Velocidad | ✅ Fluido en una Switch Lite, a las 30 imágenes por segundo propias del juego |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
+| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola |
+| Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |
 | Menús, cinemáticas, la ciudad | ✅ En una Switch Lite y en la versión de prueba para PC |
 | Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
 | Controles | ✅ Asignados por posición |
@@ -272,6 +297,9 @@ consola, relojes de fábrica, sin contador, volumen completo, el renderizador po
 
 **Problemas conocidos**
 - Jugar en el dock con la TV y guardar partida todavía no se han comprobado en una consola.
+- Vistos en una consola, todavía sin arreglar: **el balanceo con la telaraña muestra una sola animación**, y
+  **reflejos incorrectos en las ventanas de los edificios**. Un vídeo corto de cada uno, con la carpeta `logs`,
+  mostraría qué arreglar (las líneas `swing:` del log dicen qué animaciones de balanceo elige el juego).
 - La primera vez que pasas por un sitio nuevo puede haber un tirón breve mientras se preparan los shaders; se guardan para la siguiente vez.
 - En español, francés, alemán e italiano las voces son en inglés: el disco solo trae las inglesas.
 - Solo funciona la edición de arriba: otras ediciones necesitan su propia configuración del recompilador.
@@ -286,6 +314,9 @@ juego. Los reportes en español o en inglés ayudan mucho, con la carpeta `logs`
 | Qué | Cómo ayudar |
 |---|---|
 | 📺 **En el dock** | Juega con la consola en el dock, en una TV, y cuenta cómo va (el contador del menú de depuración muestra las imágenes por segundo). |
+| 🖼️ **720p, 1080p, 16:9** | Prueba las nuevas resoluciones y formas de pantalla: las imágenes por segundo en una calle concurrida, y cualquier cosa fuera de lugar (una parte del HUD o un marcador que no esté donde debe en 16:9). |
+| 📳 **Vibración** | Con Joy-Con o un Pro Controller: ¿se siente bien, y alguna vez se queda vibrando sola? |
+| 🕸️ **El balanceo y las ventanas** | Un vídeo corto balanceándote con la telaraña (¿Spider-Man usa siempre el mismo balanceo?) y de ventanas de edificios con reflejos que se vean mal, con la carpeta `logs`. |
 | 💾 **Partidas** | Guarda en el juego, sal, vuelve a abrirlo y carga: ¿vuelve tu progreso? |
 | 🎮 **Más adelante** | ¿Hasta dónde llegaste? Cualquier cosa que se detenga, se congele o se vea mal por el camino. |
 | 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), y otra manteniendo **R** (el renderizador por CPU). |
@@ -376,6 +407,33 @@ Sí: en una Switch Lite en modo portátil se juega fluido, al ritmo propio del j
 como en la Xbox. El contador del menú de depuración lo muestra en pantalla, y si algún sitio con mucho
 movimiento baja de 30 puedes subir ahí el reloj de la CPU (hasta 1785 MHz, una velocidad que usan los perfiles de
 Nintendo). En el dock todavía no se ha medido.
+</details>
+
+<details>
+<summary><b>¿Puede llenar toda la pantalla? ¿Se estira?</b></summary>
+
+Sí, y no. Pon **Screen** en **16:9 full screen** en el menú de depuración. El juego se hizo para TV 4:3, pero su
+código tiene una cámara 16:9 que Treyarch nunca activó; el port la enciende y amplía su vista, así que ves más ciudad
+a los lados y nada se estira. Lo que el juego dibuja plano en la pantalla (el HUD, los menús, los textos, los videos)
+se queda en 4:3 en el centro. Si prefieres la imagen 4:3 original, los lados pueden ser negros, la imagen
+desenfocada o una telaraña.
+</details>
+
+<details>
+<summary><b>¿Puede ir a más resolución?</b></summary>
+
+Sí: **Resolution** en el menú de depuración dibuja el juego a 720p (la de la pantalla portátil) o 1080p en vez de
+los 480p de la Xbox, videos incluidos. Es más trabajo para el chip gráfico de la Switch; si bajan las imágenes por
+segundo, sube el reloj de la GPU en el mismo menú o baja un paso. Los videos del disco son de 640×480, así que ganan
+bordes más suaves más que detalle nuevo; **Upscaling: Sharp** los deja más definidos.
+</details>
+
+<details>
+<summary><b>¿Vibra?</b></summary>
+
+Con Joy-Con o un Pro Controller, sí: elige **Vibration** en el menú de depuración (Medium de fábrica). La Switch Lite
+no tiene motor de vibración propio, así que en una Lite solo se siente con Joy-Con o un Pro Controller conectados. Si
+el juego alguna vez deja una vibración encendida, se apaga sola a los 2 segundos.
 </details>
 
 <details>

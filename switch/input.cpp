@@ -1,7 +1,7 @@
 // The Switch's controls as the console's controller on port 0. Face buttons go by position, as the game's prompts
 // show the Xbox letters: Xbox A (bottom) is the Switch's B, Xbox B (right) is A, Xbox X (left) is Y, Xbox Y (top)
 // is X. L and R are the Xbox's white and black buttons, ZL and ZR the triggers, + is Start and - is Back. The debug
-// menu's combination (ZL + ZR + -) and the menu itself don't reach the game.
+// menu's combination (ZL + ZR + -) and the menu itself don't reach the game. The game's rumble goes to switch/rumble.
 #include <switch.h>
 
 #include <mutex>
@@ -9,6 +9,7 @@
 #include "app/app.h"
 #include "core/input.h"
 #include "switch/menu.h"
+#include "switch/rumble.h"
 
 namespace input {
 
@@ -68,6 +69,7 @@ Pad Poll(int port) {
 
 void Rumble(int port, uint16_t left, uint16_t right) {
     if (app::kGame.rumble) app::kGame.rumble(port, left, right);
+    if (port == 0) sw::rumble::Set(left, right);
 }
 
 }  // namespace input

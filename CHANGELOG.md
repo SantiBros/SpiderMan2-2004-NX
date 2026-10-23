@@ -3,6 +3,62 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.2.0]
+
+**A sharper, fuller picture, and vibration.** The new picture settings and the vibration are checked on the PC test
+build; how fast 720p and 1080p run on a console, and how the vibration feels, are still to be tried on one.
+
+### Added
+- **720p and 1080p.** The debug menu's **Resolution** draws the game at 480p (the Xbox's), 720p or 1080p: every
+  surface the game draws is made bigger alike (the picture, the shadows and glows it renders first, the movies'
+  frames), and the game is told nothing, so it plays the same. 720p fills the handheld screen pixel for pixel; 1080p
+  is drawn bigger and shrunk, with smoother edges. The glows and blurs the game makes from its own picture keep their
+  size, and the movies are enlarged with a sharper filter.
+- **Full screen 16:9, nothing stretched.** The game's camera knows 16:9 (its display mode table has 16:9 modes the
+  retail game never lists): **Screen → 16:9 full screen** turns it on, with a field of view that keeps 4:3's height
+  and shows more of the city at the sides. What the game draws flat (the HUD, menus, text, the movies) stays 4:3 in
+  the middle; full-screen washes and fades cover the whole screen.
+- **4:3 with something at the sides** instead of black bars: **4:3 blurred sides** (the picture itself, blurred and
+  dimmed) or **4:3 web sides** (a spider web).
+- **Upscaling: Smooth or Sharp.** Sharp enlarges the picture and the movies with a Catmull-Rom filter, which keeps
+  more detail than the smooth one.
+- **Texture filtering**: standard, or anisotropic 4x, 8x or 16x, for streets and building fronts seen at a slant.
+- **Vibration.** The game's rumble (in the web-swing, among others) on the HD rumble of Joy-Con or a Pro Controller, at
+  the strength the debug menu sets: Off, Low, Medium (the default) or High. A rumble the game leaves on unchanged dies
+  away after 2 seconds, so a controller is never left shaking on its own; none runs while the debug menu is open or
+  the port is in the HOME menu, and it stops when the port closes. The Switch Lite has no rumble motor of its own:
+  Joy-Con or a Pro Controller paired with it do vibrate.
+
+### Fixed
+- **The game never vibrated.** Before shaking a controller the game asks it which motors it has
+  (`XInputGetCapabilities`), and the answer said none: the Xbox's library asked the USB driver about a pad the port
+  doesn't model. The port now answers for every pad: a standard Xbox controller with both motors.
+
+### Changed
+- **The debug menu** has new rows: Resolution, Screen, Upscaling, Texture filtering and Vibration, each with its line
+  of help. They change at once, while you play, and are saved in `settings.ini` (`resolution`, `screen`,
+  `upscaling`, `anisotropic`, `rumble`). "Restore recommended settings" puts them back to 480p, 4:3 black sides,
+  smooth, standard and medium.
+- **The shaders are built again** at the first start of this version (they changed): the first time through each
+  place can stutter briefly again, as after a first install.
+- **Swing logging.** Each new web-swing, and each change of what it plays, is written to the log as a `swing:` line
+  (the first 400 of a start): its angle, the two of the eight `SWING_V_` poses it blends, and which of the game's two
+  sets of swing animations it drew lots for (`A`, or `B` for the `_B` ones). For the report of the swing showing only
+  one animation.
+
+### Known issues
+- **Web-swinging showing only one animation** and **wrong reflections in building windows** were reported on the
+  console. Neither is fixed yet. On the PC test build a swing goes through its poses as it should (from
+  `SWING_V_270`/`315` down to `180`/`225` and back) and the game drew the `B` set; the windows are drawn the same as
+  by the port's CPU renderer. A short video of each from the console, and the `logs` folder with its `swing:` lines,
+  would show what differs there.
+
+### For the PC test build
+- `XBE_RES=720|1080`, `XBE_WIDESCREEN=1`, `XBE_SIDES=1|2` (blurred, web), `XBE_SHARP=1` and `XBE_ANISO=N` set the
+  picture as the debug menu does; `RUMBLELOG=1` logs the rumble the game asks for, `RUMBLETRACE=N` the game's rumble
+  effects, `RUMBLETEST=N` shakes the pad at its Nth update; `RANDLOG=N` and `FMODCHECK=N` trace the game's `rand()`
+  and x87 `fmod`.
+
 ## [0.1.0]
 
 **Playable.** Played on a Switch Lite in handheld mode: the game runs smoothly at its own 30 frames a second, with

@@ -96,7 +96,11 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 |---|---|
 | `GL=1` | The GPU renderer, every frame, paced as the game asks (a frame every two vertical blanks: 30 a second). Every 5 seconds a `perf:` line says where a frame's time goes, and a `hitch:` line names a frame that took far longer than the others. |
 | `RT=1` | The renderer on a thread of its own, as on the Switch. |
-| `GLCAP=N`, `GLCAP_AT="f f ..."` | Every Nth frame, or those frames, saved as `cap/gl_<frame>.tga` (the 4:3 picture). |
+| `GLCAP=N`, `GLCAP_AT="f f ..."` | Every Nth frame, or those frames, saved as `cap/gl_<frame>.tga` (the 4:3 picture, or the whole 1280×720 screen for a 16:9 picture or 4:3 with sides). |
+| `XBE_RES=720`, `XBE_RES=1080` | The picture drawn that tall, as the debug menu's Resolution sets it on the Switch. |
+| `XBE_WIDESCREEN=1` | The game's own 16:9 picture (Screen: 16:9 full screen). |
+| `XBE_SIDES=1`, `XBE_SIDES=2` | A 4:3 picture with blurred or spider-web sides. |
+| `XBE_SHARP=1`, `XBE_ANISO=16` | The sharper upscaling, anisotropic filtering. |
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
 | `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`, and guest memory under each. |
 | `GLREC="from to"` | Those frames into `cap/rec.mp4` at 60 frames a second, through `ffmpeg`. |
@@ -110,6 +114,9 @@ frame `f - 1` is `REFAT`'s frame `f`; draws count from 1 there and from 0 in the
 | `GLPROBE="frame x y"` | Every draw of that frame that changes the pixel (x, y), with its colour, depth, stencil, textures and vertex layout. `GLPROBE_ALL=1`: every draw, changed or not. |
 | `GLPROBE_RAW=draw` | That draw again without blending, depth, stencil or alpha tests: how many samples it covers and where, its GLSL (`probe_vs.glsl`, `probe_fs.glsl`) and every vertex's position (`probe_pos.txt`). `v<count>` picks the draw by its vertex count, steadier from run to run than its number. |
 | `GLTRACECLEAR=frame` | That frame's clears. |
+| `GLSQUEEZE=frame` | In the 16:9 picture, that frame's draws and whether each was kept 4:3 or left across the screen, with its box on screen, first texture and blending. |
+| `PEEK="frame address bytes; ..."` | Guest memory logged at that frame; `*address` reads the address there first. |
+| `RUMBLELOG=1`, `RANDLOG=N`, `FMODCHECK=N` | Every change of the rumble the game asks for; the first N values of the C library's `rand()`; the first N results of its x87 `fmod`, against the host's. |
 | `TRACE="x,y"`, `PROBES="x,y ..."` | In `REFAT`'s frames: every triangle over the pixel, why it was or wasn't drawn (culled, depth, stencil, alpha test) and the stencil before and after; `PROBES` the colour each draw leaves there. |
 | `IDMAP=1` | `cap/ids_<frame>.bin`: for each pixel, the last four CPU renderer draws that wrote it. |
 | `DUMPDRAW=n`, `DUMPTEX=address` | That draw, or every draw reading that texture (physical address, hex): its vertices in and out, each vertex program instruction, the constants. |

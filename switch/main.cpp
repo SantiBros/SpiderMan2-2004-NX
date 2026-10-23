@@ -32,6 +32,7 @@
 #include "switch/clocks.h"
 #include "switch/folders.h"
 #include "switch/menu.h"
+#include "switch/rumble.h"
 #include "switch/screen.h"
 #include "switch/settings.h"
 #include "switch/state.h"
@@ -142,7 +143,7 @@ int main(int argc, char** argv) {
     // held at start, for this start only: L no sound, R the CPU renderer, ZR the GPU renderer on the game's own thread
     uint64_t held = HeldAtStart();
     sw::g_no_sound = held & HidNpadButton_L;
-    sw::g_volume = settings.volume / 100.0f;
+    sw::menu::ApplyPicture(settings);
     sw::Init(settings.gpu_renderer && !(held & HidNpadButton_R));
     gpu::g_render_thread = sw::UsingGl() && settings.render_thread && !(held & HidNpadButton_ZR);
 
@@ -186,10 +187,12 @@ int main(int argc, char** argv) {
     sw::menu::SetConsoleLanguage(console ? console : 1);
     kernel::g_language = settings.language ? settings.language : console ? console : 1;
     LOGI("switch: console language %s, %s", console_name.c_str(), settings.language ? "the game's set in settings.ini" : "the game follows it");
-    LOGI("switch: settings: language %u, clocks CPU %u GPU %u memory %u MHz (0 stock), counter %d, volume %u%%, %s "
-         "renderer, render thread %s, start-up log %s", settings.language, settings.cpu_hz / 1000000,
-         settings.gpu_hz / 1000000, settings.mem_hz / 1000000, int(settings.counter), settings.volume,
-         settings.gpu_renderer ? "GPU" : "CPU", settings.render_thread ? "on" : "off", settings.startup_log ? "on" : "off");
+    LOGI("switch: settings: language %u, %up, screen %d, upscaling %s, anisotropic %ux, rumble %d, clocks CPU %u GPU %u "
+         "memory %u MHz (0 stock), counter %d, volume %u%%, %s renderer, render thread %s, start-up log %s", settings.language,
+         settings.resolution, int(settings.screen), settings.sharp ? "sharp" : "smooth", settings.anisotropy, int(settings.rumble),
+         settings.cpu_hz / 1000000, settings.gpu_hz / 1000000, settings.mem_hz / 1000000, int(settings.counter),
+         settings.volume, settings.gpu_renderer ? "GPU" : "CPU", settings.render_thread ? "on" : "off",
+         settings.startup_log ? "on" : "off");
 
     // the player's copy: in game/, or beside the .nro
     kernel::GameSearch search = kernel::FindGameCopies({game, dir}, IMAGE_XBE, kImageSha1);
@@ -271,6 +274,7 @@ int main(int argc, char** argv) {
         sw::Pump();
     }
     LOGI("switch: quitting");
+    sw::rumble::Stop();
     sw::clocks::Exit();
     if (int fd = logx::Descriptor(); fd >= 0) fsync(fd);  // every line is flushed already, no lock needed
     sw::Close();

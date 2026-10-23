@@ -102,10 +102,19 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
 
   Language            Auto (the console's), English, Espanol, Francais,
                       Deutsch, Italiano - from the next start
+  Resolution          480p (the Xbox's), 720p, 1080p - the whole picture and
+                      the movies; more work for the GPU
+  Screen              4:3 with black, blurred or web sides, or 16:9 full
+                      screen (the game's own wide camera; the HUD, menus and
+                      movies stay 4:3)
+  Upscaling           smooth or sharp
+  Texture filtering   standard, anisotropic 4x, 8x, 16x
+  Vibration           off, low, medium, high (Joy-Con or a Pro Controller;
+                      the Switch Lite has none of its own)
   CPU / GPU / memory  stock, or rates Nintendo's own profiles use (up to
   clock               1785 / 768 / 1600 MHz); the console's own clocks come
                       back in the HOME menu and when you quit
-  Frame-rate counter  off, FPS, full (top left, beside the picture)
+  Frame-rate counter  off, FPS, full (top left)
   Sound volume        100% to 25%, off
   Renderer            GPU or CPU - from the next start
   Render thread       on or off - from the next start

@@ -26,6 +26,12 @@ uint64_t CountedPixels();
 void ResetCount();
 // IDMAP=1: the numbers of the last four draws that wrote each pixel of a target, newest first, 0xFFFF for none
 const std::vector<uint16_t>* DrawIds(const gpu::Surface& s, uint32_t& w, uint32_t& h);
+// a small draw's vertices through its vertex program (or D3D's fixed function transform): their box in the console's
+// pixels {x0, y0, x1, y1}, and flat when every one has w exactly 1 (drawn in screen space: HUD, menus, text). False
+// for more than max_vertices, other primitives than triangles, or a draw it cannot read. Needs no target.
+// uv: when not null, the box of stage 0's coordinates (oT0.xy, or the vertices' own without a program)
+bool ScreenBox(const gpu::State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices,
+               uint32_t max_vertices, float box[4], bool& flat, float* uv = nullptr);
 // 24 bit TGA of a surface's colour
 bool WriteTga(const gpu::Surface& s, const char* path);
 // a surface's colour as RGBA8 (red in the low byte), top row first

@@ -1130,6 +1130,62 @@ void Copy(const Surface& src, const Surface& dst, uint32_t count, uint32_t rects
     Written(b.data, b.End());
 }
 
+bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, uint32_t max_vertices,
+               float box[4], bool& flat, float* uv) {
+    if (count > max_vertices * 3) return false;
+    Assembled as;
+    if (!Assemble(s, prim, start, count, indices, as) || as.topology != Topology::Triangles || !as.vertex_count ||
+        as.vertex_count > max_vertices)
+        return false;
+    bool program = (s.vs_handle & 1) && s.vs && !s.vs->program.empty();
+    int regs = 0, slot[16];
+    for (int r = 0; r < 16; r++) slot[r] = (as.regs >> r) & 1 ? regs++ : -1;
+    box[0] = box[1] = INFINITY;
+    box[2] = box[3] = -INFINITY;
+    if (uv) uv[0] = uv[1] = INFINITY, uv[2] = uv[3] = -INFINITY;
+    flat = true;
+    for (uint32_t vi = 0; vi < as.vertex_count; vi++) {
+        VertexProgram vp{s};
+        for (int r = 0; r < 16; r++) {
+            const float* p = slot[r] >= 0 ? &as.vertices[(size_t(vi) * regs + slot[r]) * 4] : nullptr;
+            vp.in[r] = p ? V(p[0], p[1], p[2], p[3]) : r == 3 ? V(1, 1, 1, 1) : V(0, 0, 0, 1);
+        }
+        float x, y, w;
+        if (program) {
+            vp.Run(s.vs->program);
+            x = vp.out[0][0], y = vp.out[0][1], w = vp.out[0][3];
+        } else if (as.pretransformed) {
+            const Vec& q = vp.in[0];
+            x = q[0], y = q[1], w = q[3] == 0 || q[3] == 1 ? 1.0f : 1 / q[3];
+        } else {
+            const Vec& q = vp.in[0];
+            float wv[16], wvp[16], cp[4];
+            auto mul = [](const float* a, const float* b, float* r) {
+                for (int i = 0; i < 4; i++)
+                    for (int j = 0; j < 4; j++)
+                        r[i * 4 + j] = a[i * 4] * b[j] + a[i * 4 + 1] * b[4 + j] + a[i * 4 + 2] * b[8 + j] + a[i * 4 + 3] * b[12 + j];
+            };
+            mul(s.transforms[256].data(), s.transforms[2].data(), wv);
+            mul(wv, s.transforms[3].data(), wvp);
+            for (int j = 0; j < 4; j++) cp[j] = q[0] * wvp[j] + q[1] * wvp[4 + j] + q[2] * wvp[8 + j] + wvp[12 + j];
+            w = cp[3];
+            float cw = w == 0 ? 1 : w;
+            const Viewport& v = s.viewport;
+            x = v.x + (cp[0] / cw + 1) * 0.5f * v.w;
+            y = v.y + (1 - cp[1] / cw) * 0.5f * v.h;
+        }
+        flat &= w == 1.0f;
+        if (uv) {
+            const Vec& t = program ? vp.out[9] : vp.in[9];
+            uv[0] = std::min(uv[0], t[0]), uv[1] = std::min(uv[1], t[1]);
+            uv[2] = std::max(uv[2], t[0]), uv[3] = std::max(uv[3], t[1]);
+        }
+        box[0] = std::min(box[0], x), box[1] = std::min(box[1], y);
+        box[2] = std::max(box[2], x), box[3] = std::max(box[3], y);
+    }
+    return true;
+}
+
 void Draw(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices) {
     uint32_t draw = g_draws++;
     g_stats = DrawStats{};

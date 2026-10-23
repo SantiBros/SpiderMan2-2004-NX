@@ -97,8 +97,14 @@ Pad Poll(int port) {
     return p;
 }
 
+// RUMBLELOG=1: every change of the rumble the game asks for, with the frame
 void Rumble(int port, uint16_t left, uint16_t right) {
     if (app::kGame.rumble) app::kGame.rumble(port, left, right);
+    static const bool log = std::getenv("RUMBLELOG") != nullptr;
+    static uint32_t last = 0;
+    uint32_t v = uint32_t(left) << 16 | right;
+    if (log && v != last) LOGI("rumble: frame %llu port %d left %u right %u", (unsigned long long)harness::g_frames, port, left, right);
+    last = v;
 }
 
 }  // namespace input

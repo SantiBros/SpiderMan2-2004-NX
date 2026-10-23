@@ -1,5 +1,6 @@
-// OpenGL renderer: the SDK's D3D12 renderer (sdk/runtime/gpu/d3d12.cpp) at render scale 1, step for step, with the
-// GL conventions of gl/glsl.cpp (console row order in every target, depth sent as 2z - w).
+// OpenGL renderer: the SDK's D3D12 renderer (sdk/runtime/gpu/d3d12.cpp) step for step, its render scale too (every
+// target the guest size times one scale across and one down, Picture::height), with the GL conventions of gl/glsl.cpp
+// (console row order in every target, depth sent as 2z - w).
 #include "gl/gl_backend.h"
 
 #include <algorithm>
@@ -26,6 +27,7 @@
 #include "gpu/texture.h"
 #include "gpu/vertex.h"
 #include "kernel/kernel.h"
+#include "reference_renderer.h"
 #include "kernel/memory.h"
 
 namespace glr {
@@ -36,6 +38,13 @@ namespace {
 
 constexpr uint64_t kStaleFrames = 8;  // frames a target may go unused and still be read back
 constexpr float kDepth24Max = 16777215.0f;
+constexpr float kUpscaledMin = 1.01f;   // host texels per console texel past rounding: the target is upscaled
+constexpr float kGlowBoxTexels = 3.0f;  // console texels across the box each wide tap averages, as d3d12.cpp's
+constexpr float kWideSqueeze = 0.75f;   // what the game draws flat in its 16:9 picture: 4:3 in the middle
+
+// a guest coordinate or size times a scale, as every target's
+int ScaledCoord(int v, float k) { return int(std::lround(double(v) * k)); }
+uint32_t ScaledSize(uint32_t v, float k) { return std::max<uint32_t>(1, uint32_t(std::lround(double(v) * k))); }
 
 float Bits(uint32_t v) {
     float f;
@@ -107,6 +116,7 @@ struct Target {
     GLuint tex = 0;
     bool depth = false;
     uint32_t gw = 0, gh = 0;
+    uint32_t w = 0, h = 0;  // the texture's: the guest size times the render scale
     uint32_t data = 0, bytes = 0, pitch = 0, format = 0;  // guest memory: virtual address, size, row pitch, D3DFORMAT
     uint64_t epoch = 0, sig = 0;  // last lock seen, guest memory as last matched
     uint64_t checked = 0;         // frame + 1 its memory was last compared with sig
@@ -190,6 +200,8 @@ struct DrawTextures {
     GLenum kind[4] = {GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_2D};
     bool rt[4] = {};       // stage samples a render target
     uint32_t levels[4] = {1, 1, 1, 1};
+    float wide[4][2] = {};  // kTexWide: host texels per console texel across and down
+    bool movie = false;     // a stage samples a movie frame (YUY2 or UYVY)
 };
 
 // a draw's shaders
@@ -648,6 +660,91 @@ void main() {
     o = vec4(c.rgb, opts.y > 0.0 ? c.a : 1.0);
 }
 )";
+// the frame onto the screen: rows flipped, through the gamma ramp, bilinear, an n x n box of bilinear taps when it
+// is drawn smaller (a 1080 picture on a 720 screen), Catmull-Rom when it is magnified and the picture is to be sharp
+const char* kPresentFragment = R"(#version 430 core
+in vec2 uv;
+layout(binding = 0) uniform sampler2D img;
+layout(binding = 1) uniform sampler2D lut;
+uniform vec4 opts;  // x gamma, y filter (0 bilinear, 1 box, 2 Catmull-Rom), z box taps per axis
+uniform vec4 step;  // xy: a screen pixel in uv
+layout(location = 0) out vec4 o;
+vec4 bicubic(vec2 uv) {
+    vec2 size = vec2(textureSize(img, 0)), p = uv * size - 0.5, f = fract(p), c = floor(p) + 0.5;
+    vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f)), w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f)), w3 = f * f * (-0.5 + 0.5 * f), w12 = w1 + w2;
+    vec2 a = (c - 1.0) / size, b = (c + w2 / w12) / size, d = (c + 2.0) / size;
+    vec4 r = (textureLod(img, vec2(a.x, a.y), 0.0) * w0.x + textureLod(img, vec2(b.x, a.y), 0.0) * w12.x + textureLod(img, vec2(d.x, a.y), 0.0) * w3.x) * w0.y;
+    r += (textureLod(img, vec2(a.x, b.y), 0.0) * w0.x + textureLod(img, vec2(b.x, b.y), 0.0) * w12.x + textureLod(img, vec2(d.x, b.y), 0.0) * w3.x) * w12.y;
+    r += (textureLod(img, vec2(a.x, d.y), 0.0) * w0.x + textureLod(img, vec2(b.x, d.y), 0.0) * w12.x + textureLod(img, vec2(d.x, d.y), 0.0) * w3.x) * w3.y;
+    return clamp(r, 0.0, 1.0);
+}
+void main() {
+    vec2 t = vec2(uv.x, 1.0 - uv.y);
+    vec4 c;
+    if (opts.y == 2.0) {
+        c = bicubic(t);
+    } else if (opts.y == 1.0) {
+        int n = int(opts.z);
+        c = vec4(0.0);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++) c += textureLod(img, t + step.xy * ((vec2(x, y) + 0.5) / float(n) - 0.5), 0.0);
+        c /= float(n * n);
+    } else {
+        c = textureLod(img, t, 0.0);
+    }
+    // the gamma ramp's entry for each channel's 8 bit value, read exactly (sampled at 1.0 the ramp would wrap)
+    if (opts.x > 0.0) {
+        ivec3 i = clamp(ivec3(c.rgb * 255.0 + 0.5), ivec3(0), ivec3(255));
+        c.rgb = vec3(texelFetch(lut, ivec2(i.r, 0), 0).r, texelFetch(lut, ivec2(i.g, 0), 0).g, texelFetch(lut, ivec2(i.b, 0), 0).b);
+    }
+    o = vec4(c.rgb, 1.0);
+}
+)";
+// a 4:3 picture's sides, over the whole screen before the picture goes in the middle: the picture zoomed to the
+// screen's width, blurred (a small mip level, nine taps) and dimmed; or a spider web drawn here, a corner each side
+const char* kSidesFragment = R"(#version 430 core
+in vec2 uv;
+layout(binding = 0) uniform sampler2D img;
+layout(binding = 1) uniform sampler2D lut;
+uniform vec4 opts;  // x 1 blur, 2 web; y the blur's mip level; z the screen's aspect over the picture's; w gamma
+uniform vec4 screen;  // xy the screen in pixels
+layout(location = 0) out vec4 o;
+float line(float d, float width) { return 1.0 - smoothstep(width * 0.5, width * 0.5 + 1.0, abs(d)); }
+void main() {
+    vec3 c;
+    if (opts.x == 1.0) {
+        vec2 t = vec2(uv.x, 0.5 - (uv.y - 0.5) / opts.z);
+        vec2 px = 1.5 / vec2(textureSize(img, int(opts.y)));
+        c = vec3(0.0);
+        for (int y = -1; y <= 1; y++)
+            for (int x = -1; x <= 1; x++) c += textureLod(img, t + px * vec2(x, y), opts.y).rgb * ((x == 0 ? 2.0 : 1.0) * (y == 0 ? 2.0 : 1.0));
+        c /= 16.0;
+        if (opts.w > 0.0) {
+            ivec3 i = clamp(ivec3(c * 255.0 + 0.5), ivec3(0), ivec3(255));
+            c = vec3(texelFetch(lut, ivec2(i.r, 0), 0).r, texelFetch(lut, ivec2(i.g, 0), 0).g, texelFetch(lut, ivec2(i.b, 0), 0).b);
+        }
+        c *= 0.42;
+    } else {
+        // pixels from the top left; the web hangs from the screen's top corner on each side
+        vec2 p = vec2(uv.x, 1.0 - uv.y) * screen.xy;
+        bool left = p.x < screen.x * 0.5;
+        vec2 d = left ? p : vec2(screen.x - p.x, p.y);
+        float r = length(d) + 1e-3, a = atan(d.y, d.x);
+        const float spokes = 9.0, k = 1.5707963 / spokes;
+        float sa = a / k, fa = fract(sa);
+        float spoke = r * sin(abs(fa - (fa > 0.5 ? 1.0 : 0.0)) * k);
+        // rings further apart going out, sagging between the spokes
+        float u = log(r / 26.0) / log(1.32), ring = 26.0 * pow(1.32, floor(u + 0.5));
+        float sag = 1.0 - 0.09 * sin(3.1415927 * fa);
+        float web = max(line(spoke, 1.3) * smoothstep(20.0, 60.0, r), line(r - ring * sag, 1.1) * step(0.0, u));
+        vec3 bg = mix(vec3(0.10, 0.015, 0.02), vec3(0.015, 0.03, 0.10), uv.y);
+        bg *= 1.0 - 0.55 * smoothstep(0.0, screen.y * 1.1, r);
+        c = mix(bg, vec3(0.62, 0.66, 0.74), web * 0.38 * (1.0 - smoothstep(screen.y * 0.4, screen.y * 1.3, r)));
+    }
+    o = vec4(c, 1.0);
+}
+)";
 // a depth buffer read as A8R8G8B8, as the console reads its D24S8 words: A Z[23:16], R Z[15:8], G Z[7:0], B the
 // stencil (left 0: no effect here reads it). The city's depth effects look the depth up through a dependent read.
 const char* kDepthColourFragment = R"(#version 430 core
@@ -701,6 +798,12 @@ private:
     bool BindTargets(const State& s);
     bool DepthCopy(const State& s);
     GLuint Feedback(Target& t);
+    // the render scale and the way frames are shown, from the host at the start and after every frame
+    void ApplyPicture();
+    void Rescale(Target& t);
+    // a colour texture at w x h and its framebuffer, for passes through the console's size
+    GLuint Scratch(uint32_t w, uint32_t h);
+    void PresentFrame(Target& t, uint32_t sw, uint32_t sh);
     // textures
     void BindTexture(const State& s, int stage, DrawTextures& st);
     void BindGuestTexture(const State& s, int stage, const TextureDesc& d, const FormatInfo& fi, DrawTextures& st);
@@ -711,6 +814,8 @@ private:
     GLuint Program(const State& s, const Assembled& a, const DrawShaders& sh, const PixelKey& pk);
     void ApplyState(const State& s, const Assembled& a);
     void UploadConstants(const State& s, const DrawShaders& sh, const DrawTextures& st, uint32_t gw, uint32_t gh);
+    // the 16:9 picture's squeeze of the draw (squeeze_, squeeze_all_; ext.zw in the shaders)
+    void Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st);
     void DrawGeometry(const Assembled& a);
     void FullScreen(GLuint program);
     void Blit(GLuint tex, float gamma, bool alpha, bool flip);
@@ -727,8 +832,9 @@ private:
         if (long(frame_) != pf || !bound_rt_ || bound_rt_->gw != 640) return;
         static uint32_t last = 0, last_ds = 0;
         uint32_t v = 0, ds = 0;
-        glReadPixels(GLint(px), GLint(py), 1, 1, GL_BGRA, GL_UNSIGNED_BYTE, &v);
-        if (bound_ds_) glReadPixels(GLint(px), GLint(py), 1, 1, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, &ds);
+        GLint hx = ScaledCoord(int(px), float(bound_rt_->w) / 640.0f), hy = ScaledCoord(int(py), float(bound_rt_->h) / float(bound_rt_->gh));
+        glReadPixels(hx, hy, 1, 1, GL_BGRA, GL_UNSIGNED_BYTE, &v);
+        if (bound_ds_) glReadPixels(hx, hy, 1, 1, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, &ds);
         static const bool all = std::getenv("GLPROBE_ALL") != nullptr;  // every draw, changed or not
         if (v == last && ds == last_ds && !all) return;
         last = v;
@@ -753,9 +859,11 @@ private:
         LOGI("probe:   vertices%s, %u buffers (stride %u, %u bytes), %u indices%s, %u drawn, base %d, %u vertices", el.c_str(),
              a.buffer_count, a.buffer_count ? a.buffers[0].stride : 0, a.buffer_count ? a.buffers[0].bytes : 0, a.index_count,
              a.index_src == a.indices.data() ? " (rebuilt)" : "", a.draw_count, a.base_vertex, a.vertex_count);
-        LOGI("probe: draw %llu rt %08X pixel %08X z %06X stencil %02X | vs %X prog %d ps %u modes %X combiners %u%s",
+        LOGI("probe: draw %llu rt %08X pixel %08X z %06X stencil %02X | vs %X prog %d ps %u modes %X combiners %u%s | z %u func %X write %u "
+             "bias %u, blend %u %X %X",
              (unsigned long long)frame_draws_, bound_rt_->data, v, ds >> 8, ds & 0xFF, s.vs_handle, (s.vs_handle & 1) && s.vs && !s.vs->program.empty(), pk.programmable, pk.tex_modes,
-             pk.count, tex.c_str());
+             pk.count, tex.c_str(), s.rs[kRsZEnable], SimpleState(s, kMZFunc), SimpleState(s, kMZWriteEnable),
+             SimpleState(s, kMSolidOffsetEnable), SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend), SimpleState(s, kMDestBlend));
     }
     // the context on the calling thread
     void Own() {
@@ -767,6 +875,16 @@ private:
 
     Host* host_;
     std::thread::id owner_;
+    Picture pic_;
+    float sx_ = 1, sy_ = 1;  // host pixels per console pixel across and down, every target's
+    float squeeze_ = 0, squeeze_all_ = 0;
+    uint32_t max_aniso_ = 1;  // what the driver takes, 1 without anisotropic filtering  // the draw's: what is drawn flat narrowed this much, all of it or not at the edges
+    GLuint scratch_tex_ = 0, scratch_fbo_ = 0;
+    uint32_t scratch_w_ = 0, scratch_h_ = 0;
+    // the present: programs, and the frame with mipmaps for blurred sides
+    GLuint present_ = 0, sides_ = 0, sides_tex_ = 0;
+    GLint present_opts_ = -1, present_step_ = -1, sides_opts_ = -1, sides_screen_ = -1;
+    uint32_t sides_w_ = 0, sides_h_ = 0;
     bool raw_probe_ = false;  // GLPROBE_RAW's draw
     uint32_t guest_w_ = 640, guest_h_ = 480;
     std::unordered_map<uint64_t, Target> targets_;
@@ -829,6 +947,14 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
         return false;
     }
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &ubo_align_);
+    // anisotropic filtering: core in 4.6, an extension before
+    if (major * 10 + minor >= 46 || glapi::HasExtension("GL_EXT_texture_filter_anisotropic") ||
+        glapi::HasExtension("GL_ARB_texture_filter_anisotropic")) {
+        GLfloat most = 1;
+        glGetFloatv(0x84FF, &most);  // GL_MAX_TEXTURE_MAX_ANISOTROPY
+        max_aniso_ = uint32_t(std::max(1.0f, most));
+    }
+    LOGI("gl: anisotropic filtering up to %ux", max_aniso_);
     glGenVertexArrays(1, &vao_);
     glBindVertexArray(vao_);
     bool persistent = glBufferStorage && (major * 10 + minor >= 44 || glapi::HasExtension("GL_ARB_buffer_storage"));
@@ -873,6 +999,16 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     depth_colour_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kDepthColourFragment));
     if (!blit_) return false;
     blit_opts_ = glGetUniformLocation(blit_, "opts");
+    present_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kPresentFragment));
+    sides_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kSidesFragment));
+    if (!present_) return false;
+    present_opts_ = glGetUniformLocation(present_, "opts");
+    present_step_ = glGetUniformLocation(present_, "step");
+    if (sides_) {
+        sides_opts_ = glGetUniformLocation(sides_, "opts");
+        sides_screen_ = glGetUniformLocation(sides_, "screen");
+    }
+    ApplyPicture();
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     // the port's version too: another build's shaders differ, and would only be built for nothing
@@ -934,6 +1070,8 @@ Target* GlBackend::EnsureTarget(const Surface& s, bool depth) {
     t.depth = depth;
     t.gw = gw;
     t.gh = gh;
+    t.w = ScaledSize(gw, sx_);
+    t.h = ScaledSize(gh, sy_);
     t.data = data;
     if (std::getenv("GLTRACE")) LOGI("gl: frame %llu new %s target %08X %ux%u", (unsigned long long)frame_, depth ? "depth" : "colour", data, gw, gh);
     TextureDesc d;
@@ -946,9 +1084,9 @@ Target* GlBackend::EnsureTarget(const Surface& s, bool depth) {
     glGenTextures(1, &t.tex);
     glBindTexture(GL_TEXTURE_2D, t.tex);
     if (depth) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, GLsizei(gw), GLsizei(gh), 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, GLsizei(t.w), GLsizei(t.h), 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
     } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(gw), GLsizei(gh), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(t.w), GLsizei(t.h), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
     }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
     cache_.Forget();
@@ -1007,9 +1145,25 @@ void GlBackend::UploadTarget(Target& t, const Surface& s) {
     uint32_t pitch;
     DecodeLevel(d, 0, 0, static_cast<const uint8_t*>(kernel::HostPtr(d.data)), nullptr, px, pitch);
     cache_.Forget();
-    glBindTexture(GL_TEXTURE_2D, t.tex);
+    GLsizei uw = GLsizei(std::min(d.width, t.gw)), uh = GLsizei(std::min(d.height, t.gh));
     glPixelStorei(GL_UNPACK_ROW_LENGTH, GLint(pitch / 4));
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, GLsizei(std::min(d.width, t.gw)), GLsizei(std::min(d.height, t.gh)), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+    if (t.w == t.gw && t.h == t.gh) {
+        glBindTexture(GL_TEXTURE_2D, t.tex);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, uw, uh, GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+    } else {
+        // an upscaled target: the pixels at the console's size, then drawn bigger into it
+        GLuint from = Scratch(t.gw, t.gh);
+        glBindTexture(GL_TEXTURE_2D, scratch_tex_);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, uw, uh, GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, from);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Framebuffer(&t, nullptr));
+        glDisable(GL_SCISSOR_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        float kx = float(t.w) / float(t.gw), ky = float(t.h) / float(t.gh);
+        glBlitFramebuffer(0, 0, uw, uh, 0, 0, ScaledCoord(uw, kx), ScaledCoord(uh, ky), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        bound_rt_ = bound_ds_ = nullptr;
+    }
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     t.epoch = DirtyEpoch(t.data);
     t.sig = MemSig(t.data, t.bytes);
@@ -1048,7 +1202,7 @@ bool GlBackend::DepthCopy(const State& s) {
     Target &dst = di->second, &src = si->second;
     cache_.Forget();
     glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer(nullptr, &dst));
-    glViewport(0, 0, GLsizei(dst.gw), GLsizei(dst.gh));
+    glViewport(0, 0, GLsizei(dst.w), GLsizei(dst.h));
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
@@ -1076,10 +1230,10 @@ GLuint GlBackend::Feedback(Target& t) {
         cache_.Forget();
         glGenTextures(1, &t.fb);
         glBindTexture(GL_TEXTURE_2D, t.fb);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(t.gw), GLsizei(t.gh), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(t.w), GLsizei(t.h), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
     }
-    glCopyImageSubData(t.tex, GL_TEXTURE_2D, 0, 0, 0, 0, t.fb, GL_TEXTURE_2D, 0, 0, 0, 0, GLsizei(t.gw), GLsizei(t.gh), 1);
+    glCopyImageSubData(t.tex, GL_TEXTURE_2D, 0, 0, 0, 0, t.fb, GL_TEXTURE_2D, 0, 0, 0, 0, GLsizei(t.w), GLsizei(t.h), 1);
     return t.fb;
 }
 
@@ -1184,6 +1338,10 @@ void GlBackend::BindGuestTexture(const State& s, int stage, const TextureDesc& d
     st.kind[stage] = tx.kind;
     st.levels[stage] = tx.levels;
     if (fi.depth) info.shadow = ShadowDepthKind(d.format);
+    if (d.format == 0x24 || d.format == 0x25) {  // YUY2, UYVY: the game's movie frames
+        st.movie = true;
+        if (pic_.sharp_movies && info.kind == kTex2D) info.flags |= glsl::kTexSharp;
+    }
 }
 
 void GlBackend::BindTexture(const State& s, int stage, DrawTextures& st) {
@@ -1212,6 +1370,15 @@ void GlBackend::BindTexture(const State& s, int stage, DrawTextures& st) {
             UploadTarget(t, su);
         }
         if (t.depth) info.shadow = ShadowDepthKind(d.format);
+        // a pass shrinking an upscaled target averages each tap over console texels, else its taps skip texels and
+        // the glow chain flickers (d3d12.cpp's BindTargetTexture)
+        float kx = float(t.w) / float(t.gw), ky = float(t.h) / float(t.gh);
+        if (!t.depth && std::max(kx, ky) > kUpscaledMin && bound_rt_ && bound_rt_ != &t &&
+            (t.gw > bound_rt_->gw || t.gh > bound_rt_->gh)) {
+            info.flags |= kTexWide;
+            st.wide[stage][0] = kx;
+            st.wide[stage][1] = ky;
+        }
         // the console reads the pixels it is about to overwrite: give the draw a copy
         st.tex[stage] = &t == bound_rt_ ? Feedback(t) : t.tex;
         st.kind[stage] = GL_TEXTURE_2D;
@@ -1240,7 +1407,7 @@ GLuint GlBackend::DepthAsColour(Target& t) {
     if (!t.zcolour) {
         glGenTextures(1, &t.zcolour);
         glBindTexture(GL_TEXTURE_2D, t.zcolour);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(t.gw), GLsizei(t.gh), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(t.w), GLsizei(t.h), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
         glGenFramebuffers(1, &t.zcolour_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, t.zcolour_fbo);
@@ -1251,7 +1418,7 @@ GLuint GlBackend::DepthAsColour(Target& t) {
         t.zcolour_writes = t.writes;
         cache_.Forget();
         glBindFramebuffer(GL_FRAMEBUFFER, t.zcolour_fbo);
-        glViewport(0, 0, GLsizei(t.gw), GLsizei(t.gh));
+        glViewport(0, 0, GLsizei(t.w), GLsizei(t.h));
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
@@ -1274,8 +1441,10 @@ GLuint GlBackend::Sampler(const State& s, int i, const DrawTextures& st) {
     const auto& t = s.tss[size_t(i)];
     uint32_t mag = t[kTssMagFilter], min = t[kTssMinFilter], mip = t[kTssMipFilter];
     bool shadow = st.info[i].shadow != 0;
+    // anisotropic filtering, when asked for, on mipmapped linear reads
+    uint32_t aniso = st.levels[i] > 1 && min >= 2 && !shadow ? std::min(pic_.anisotropy, max_aniso_) : 1u;
     uint32_t key_parts[12] = {mag, min, mip, t[kTssAddressU], t[kTssAddressV], t[kTssAddressW], t[kTssMipLodBias], t[kTssMaxMipLevel],
-                              t[kTssBorderColor], shadow ? s.rs[kRsShadowFunc] | 0x10000u : 0u, st.levels[i] > 1 ? 1u : 0u, 0};
+                              t[kTssBorderColor], shadow ? s.rs[kRsShadowFunc] | 0x10000u : 0u, st.levels[i] > 1 ? 1u : 0u, aniso};
     uint64_t key = Hash(key_parts, sizeof(key_parts));
     auto it = samplers_.find(key);
     if (it != samplers_.end()) return it->second;
@@ -1297,6 +1466,7 @@ GLuint GlBackend::Sampler(const State& s, int i, const DrawTextures& st) {
     float border[4];
     Color(t[kTssBorderColor], border);
     glSamplerParameterfv(sm, GL_TEXTURE_BORDER_COLOR, border);
+    if (aniso > 1) glSamplerParameterf(sm, 0x84FE, float(aniso));  // GL_TEXTURE_MAX_ANISOTROPY
     if (shadow) {
         // the console tests texel OP r, GL tests r OP texel
         static const uint8_t swap[8] = {0, 4, 2, 6, 1, 5, 3, 7};
@@ -1341,7 +1511,9 @@ GLuint GlBackend::Program(const State& s, const Assembled& a, const DrawShaders&
 
 void GlBackend::ApplyState(const State& s, const Assembled& a) {
     StateCache& c = cache_;
-    GLsizei w = GLsizei(bound_rt_ ? bound_rt_->gw : bound_ds_->gw), h = GLsizei(bound_rt_ ? bound_rt_->gh : bound_ds_->gh);
+    const Target& bt = bound_rt_ ? *bound_rt_ : *bound_ds_;
+    GLsizei w = GLsizei(bt.w), h = GLsizei(bt.h);
+    float kx = float(bt.w) / float(bt.gw), ky = float(bt.h) / float(bt.gh);  // host pixels per console pixel
     const GLint vp[4] = {0, 0, w, h};
     if (std::memcmp(c.vp, vp, sizeof vp)) {
         glViewport(0, 0, w, h);
@@ -1356,10 +1528,10 @@ void GlBackend::ApplyState(const State& s, const Assembled& a) {
         y1 = std::min(y1, int(s.scissors[3]));
     }
     x0 *= int(s.aa_x), x1 *= int(s.aa_x), y0 *= int(s.aa_y), y1 *= int(s.aa_y);  // samples
-    x0 = std::clamp(x0, 0, int(w));
-    x1 = std::clamp(x1, 0, int(w));
-    y0 = std::clamp(y0, 0, int(h));
-    y1 = std::clamp(y1, 0, int(h));
+    x0 = std::clamp(ScaledCoord(x0, kx), 0, int(w));
+    x1 = std::clamp(ScaledCoord(x1, kx), 0, int(w));
+    y0 = std::clamp(ScaledCoord(y0, ky), 0, int(h));
+    y1 = std::clamp(ScaledCoord(y1, ky), 0, int(h));
     if (Changed(c.scissor, int8_t(1))) glEnable(GL_SCISSOR_TEST);
     const GLint sc[4] = {x0, y0, std::max(x1 - x0, 0), std::max(y1 - y0, 0)};
     if (std::memcmp(c.sc, sc, sizeof sc)) {
@@ -1417,11 +1589,12 @@ void GlBackend::ApplyState(const State& s, const Assembled& a) {
             c.spass = pass;
         }
     }
-    // polygon offset: bias in 24 bit depth units, slope per pixel
+    // polygon offset: bias in 24 bit depth units, slope per pixel (a console pixel's: the slope per host pixel is
+    // smaller on an upscaled target)
     bool offset = bound_ds_ && a.topology == Topology::Triangles && SimpleState(s, kMSolidOffsetEnable);
     if (Changed(c.poffset, int8_t(offset))) offset ? glEnable(GL_POLYGON_OFFSET_FILL) : glDisable(GL_POLYGON_OFFSET_FILL);
     if (offset) {
-        float factor = Bits(SimpleState(s, kMSlopeScale)), units = std::round(Bits(SimpleState(s, kMDepthOffset)) * kDepth24Max / s.zscale);
+        float factor = Bits(SimpleState(s, kMSlopeScale)) * std::max(kx, ky), units = std::round(Bits(SimpleState(s, kMDepthOffset)) * kDepth24Max / s.zscale);
         if (c.pfactor != factor || c.punits != units) {
             glPolygonOffset(factor, units);
             c.pfactor = factor;
@@ -1437,6 +1610,51 @@ void GlBackend::ApplyState(const State& s, const Assembled& a) {
     if (culled && Changed(c.cullface, GLenum(GL_BACK))) glCullFace(GL_BACK);
     uint32_t fill = s.rs[kRsFillMode];
     if (Changed(c.poly, GLenum(fill == 0x1B01 ? GL_LINE : fill == 0x1B00 ? GL_POINT : GL_FILL))) glPolygonMode(GL_FRONT_AND_BACK, c.poly);
+}
+
+// The game's 16:9 picture: what it draws flat on a frame sized target (the HUD, menus, text) is kept 4:3 in the middle.
+// A small draw's box decides (reference::ScreenBox): one from the top to the bottom, or across the whole width and
+// reaching the top or the bottom, stays across the screen (full screen passes, also drawn in halves, as the shadows'
+// darkening; fades, bars along the top or bottom) unless it shows a picture (menus' layers, the title's logo), others
+// are narrowed.
+// A bigger draw is left to the vertex shader: every flat vertex narrowed but those on the left and right edges. Movie
+// frames are narrowed whole, to stay 4:3.
+void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st) {
+    squeeze_ = squeeze_all_ = 0;
+    if (!pic_.wide || !bound_rt_ || bound_rt_->gw != guest_w_ || bound_rt_->gh != guest_h_) return;
+    squeeze_ = kWideSqueeze;
+    if (st.movie) return;
+    constexpr uint32_t kSmallDraw = 24;
+    float box[4];
+    bool flat = false;
+    static const long trace0 = std::getenv("GLSQUEEZE") ? std::atol(std::getenv("GLSQUEEZE")) : -1;
+    float uv[4];
+    if (!reference::ScreenBox(s, prim, start, count, indices, kSmallDraw, box, flat, uv)) {
+        if (long(frame_) == trace0) LOGI("gl: squeeze draw %llu: %u vertices, left to the shader", (unsigned long long)frame_draws_, count);
+        return;
+    }
+    if (!flat) {
+        if (long(frame_) == trace0) LOGI("gl: squeeze draw %llu: not flat", (unsigned long long)frame_draws_);
+        squeeze_ = 0;
+        return;
+    }
+    const float w = float(guest_w_), h = float(guest_h_);
+    bool across = box[0] <= 1.0f && box[2] >= w - 1.0f, top = box[1] <= 1.0f, bottom = box[3] >= h - 1.0f;
+    // but a picture over the whole screen (a menu's layers, the title's logo) is the game's art: kept 4:3 too
+    TextureDesc d;
+    bool art = !st.rt[0] && s.textures[0] && Describe(s.textures[0], d) && d.width >= 32 && d.height >= 32;
+    if (((across && (top || bottom)) || (top && bottom)) && !art) squeeze_ = 0;
+    else squeeze_all_ = 1;
+    // GLSQUEEZE=frame: that frame's small flat draws and what was made of them
+    static const long trace = std::getenv("GLSQUEEZE") ? std::atol(std::getenv("GLSQUEEZE")) : -1;
+    if (long(frame_) == trace) {
+        bool tex = s.textures[0] && Describe(s.textures[0], d);
+        LOGI("gl: squeeze draw %llu box %.1f %.1f %.1f %.1f: %s; t0 %08X %ux%u format %X%s uv %.3f %.3f %.3f %.3f address %u %u, "
+             "blend %u %X %X", (unsigned long long)frame_draws_, box[0], box[1], box[2], box[3], squeeze_ ? "4:3" : "across",
+             tex ? d.data : 0, tex ? d.width : 0, tex ? d.height : 0, tex ? d.format : 0, st.rt[0] ? " (target)" : "", uv[0], uv[1],
+             uv[2], uv[3], s.tss[0][kTssAddressU], s.tss[0][kTssAddressV], SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend),
+             SimpleState(s, kMDestBlend));
+    }
 }
 
 void GlBackend::UploadConstants(const State& s, const DrawShaders& sh, const DrawTextures& st, uint32_t gw, uint32_t gh) {
@@ -1460,6 +1678,23 @@ void GlBackend::UploadConstants(const State& s, const DrawShaders& sh, const Dra
         c.bump[i][3] = Bits(t[kTssBumpEnvMat11]);
         c.bumpl[i][0] = Bits(t[kTssBumpEnvLScale]);
         c.bumpl[i][1] = Bits(t[kTssBumpEnvLOffset]);
+        // kTexWide: n x n taps over a box kGlowBoxTexels console texels across (d3d12.cpp's FillTexelConstants)
+        if ((st.info[i].flags & kTexWide) && c.texsize[i][0] > 0 && c.texsize[i][1] > 0) {
+            float n = std::ceil(kGlowBoxTexels * std::max(st.wide[i][0], st.wide[i][1]) * 0.5f);
+            c.spread[i][0] = kGlowBoxTexels / (n * c.texsize[i][0]);
+            c.spread[i][1] = kGlowBoxTexels / (n * c.texsize[i][1]);
+            c.spread[i][2] = n;
+        }
+    }
+    // host pixels per console pixel on the bound target, for the render target shift (glsl.cpp's TexUv); in the
+    // game's 16:9 picture what it draws flat on a frame sized target is kept 4:3 in the middle, movie frames to the
+    // edges too (VsEpilogue)
+    const Target& bt = bound_rt_ ? *bound_rt_ : *bound_ds_;
+    c.ext[0] = float(bt.w) / float(bt.gw);
+    c.ext[1] = float(bt.h) / float(bt.gh);
+    if (squeeze_ > 0) {
+        c.ext[2] = squeeze_;
+        c.ext[3] = st.movie ? 1.0f : squeeze_all_;
     }
     if (sh.fixed_transform) {
         FillTransformConstants(s, gw, gh, c);
@@ -1592,6 +1827,7 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     static const long raw_verts = raw_e && raw_e[0] == 'v' ? std::atol(raw_e + 1) : -1;
     raw_probe_ = raw_e && (long(frame_draws_) == raw_draw || long(a.vertex_count) == raw_verts) && std::getenv("GLPROBE") &&
                  long(frame_) == std::atol(std::getenv("GLPROBE"));
+    Squeeze(s, prim, start, count, indices, st);
     UploadConstants(s, sh, st, gw, gh);
     for (int i = 0; i < 4; i++) {
         const TexInfo& info = st.info[i];
@@ -1645,8 +1881,8 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     GLuint raw_query = 0;
     std::vector<uint32_t> raw_before;
     if (raw_probe && bound_rt_) {
-        raw_before.resize(size_t(bound_rt_->gw) * bound_rt_->gh);
-        glReadPixels(0, 0, GLsizei(bound_rt_->gw), GLsizei(bound_rt_->gh), GL_BGRA, GL_UNSIGNED_BYTE, raw_before.data());
+        raw_before.resize(size_t(bound_rt_->w) * bound_rt_->h);
+        glReadPixels(0, 0, GLsizei(bound_rt_->w), GLsizei(bound_rt_->h), GL_BGRA, GL_UNSIGNED_BYTE, raw_before.data());
     }
     GLuint raw_prog = 0;
     if (raw_probe && std::getenv("GLPROBE_FRESH")) {  // the draw with its program built again from the sources
@@ -1669,11 +1905,11 @@ void GlBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             LOGI("probe: raw draw %llu: %u samples", (unsigned long long)frame_draws_, n);
             if (!raw_before.empty()) {
                 std::vector<uint32_t> after(raw_before.size());
-                glReadPixels(0, 0, GLsizei(bound_rt_->gw), GLsizei(bound_rt_->gh), GL_BGRA, GL_UNSIGNED_BYTE, after.data());
-                uint32_t changed = 0, x0 = ~0u, y0 = ~0u, x1 = 0, y1 = 0;
-                for (uint32_t y = 0; y < bound_rt_->gh; y++)
-                    for (uint32_t x = 0; x < bound_rt_->gw; x++)
-                        if (after[size_t(y) * bound_rt_->gw + x] != raw_before[size_t(y) * bound_rt_->gw + x]) {
+                glReadPixels(0, 0, GLsizei(bound_rt_->w), GLsizei(bound_rt_->h), GL_BGRA, GL_UNSIGNED_BYTE, after.data());
+                uint32_t changed = 0, x0 = ~0u, y0 = ~0u, x1 = 0, y1 = 0;  // host pixels
+                for (uint32_t y = 0; y < bound_rt_->h; y++)
+                    for (uint32_t x = 0; x < bound_rt_->w; x++)
+                        if (after[size_t(y) * bound_rt_->w + x] != raw_before[size_t(y) * bound_rt_->w + x]) {
                             changed++;
                             x0 = std::min(x0, x), y0 = std::min(y0, y), x1 = std::max(x1, x), y1 = std::max(y1, y);
                         }
@@ -1742,6 +1978,8 @@ void GlBackend::GetReport(uint32_t va) {
         free_queries_.push_back(q);
     }
     counted_.clear();
+    // the console counts its own pixels: an upscaled target's come back to them
+    pixels = uint64_t(std::llround(double(pixels) / (double(sx_) * double(sy_))));
     kernel::W32(va, uint32_t(frame_));
     kernel::W32(va + 4, 0);
     kernel::W32(va + 8, uint32_t(std::min<uint64_t>(pixels, 0xFFFFFFFF)));
@@ -1800,10 +2038,11 @@ void GlBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint
             glClearColor(c[0], c[1], c[2], c[3]);
             bits = GL_COLOR_BUFFER_BIT;
         }
+        float kx = float(t->w) / float(t->gw), ky = float(t->h) / float(t->gh);
         for (auto& r : area) {
-            int ax = int(s.aa_x), ay = int(s.aa_y);  // the title's pixels to samples
-            int x0 = std::clamp(r[0] * ax, 0, int(t->gw)), y0 = std::clamp(r[1] * ay, 0, int(t->gh));
-            int x1 = std::clamp(r[2] * ax, 0, int(t->gw)), y1 = std::clamp(r[3] * ay, 0, int(t->gh));
+            int ax = int(s.aa_x), ay = int(s.aa_y);  // the title's pixels to samples, then to the target's
+            int x0 = std::clamp(ScaledCoord(r[0] * ax, kx), 0, int(t->w)), y0 = std::clamp(ScaledCoord(r[1] * ay, ky), 0, int(t->h));
+            int x1 = std::clamp(ScaledCoord(r[2] * ax, kx), 0, int(t->w)), y1 = std::clamp(ScaledCoord(r[3] * ay, ky), 0, int(t->h));
             if (x1 <= x0 || y1 <= y0) continue;
             glScissor(x0, y0, x1 - x0, y1 - y0);
             glClear(bits);
@@ -1853,7 +2092,14 @@ void GlBackend::Copy(const Surface& src, const Surface& dst, uint32_t count, uin
             }
         }
         if (x1 <= x0 || y1 <= y0) continue;
-        glBlitFramebuffer(x0, y0, x1, y1, dx, dy, dx + (x1 - x0), dy + (y1 - y0), GL_COLOR_BUFFER_BIT, GL_NEAREST);
+        // in host pixels, the same size at both ends when both targets have the same scale
+        float skx = float(src_t->w) / float(src_t->gw), sky = float(src_t->h) / float(src_t->gh);
+        float dkx = float(dst_t->w) / float(dst_t->gw), dky = float(dst_t->h) / float(dst_t->gh);
+        int sx0 = ScaledCoord(x0, skx), sy0 = ScaledCoord(y0, sky), sx1 = ScaledCoord(x1, skx), sy1 = ScaledCoord(y1, sky);
+        int dx0 = ScaledCoord(dx, dkx), dy0 = ScaledCoord(dy, dky);
+        bool same = skx == dkx && sky == dky;
+        int dx1 = same ? dx0 + (sx1 - sx0) : ScaledCoord(dx + (x1 - x0), dkx), dy1 = same ? dy0 + (sy1 - sy0) : ScaledCoord(dy + (y1 - y0), dky);
+        glBlitFramebuffer(sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1, GL_COLOR_BUFFER_BIT, same ? GL_NEAREST : GL_LINEAR);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     dst_t->drawn = true;
@@ -1868,7 +2114,19 @@ void GlBackend::Sync(uint32_t data, uint32_t) {
     auto t0 = Clock::now();
     Target& t = it->second;
     std::vector<uint8_t> px(size_t(t.gw) * t.gh * 4);
-    glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer(&t, nullptr));
+    if (t.w == t.gw && t.h == t.gh) {
+        glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer(&t, nullptr));
+    } else {
+        // an upscaled target: brought down to the console's size first
+        cache_.Forget();
+        GLuint to = Scratch(t.gw, t.gh);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, Framebuffer(&t, nullptr));
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, to);
+        glDisable(GL_SCISSOR_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glBlitFramebuffer(0, 0, GLint(t.w), GLint(t.h), 0, 0, GLint(t.gw), GLint(t.gh), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, to);
+    }
     glReadPixels(0, 0, GLsizei(t.gw), GLsizei(t.gh), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
     bound_rt_ = bound_ds_ = nullptr;
     uint8_t* guest = static_cast<uint8_t*>(kernel::HostPtr(data));
@@ -2000,50 +2258,43 @@ void GlBackend::LogPerf() {
 }
 
 // GLDUMP=n: every colour target as frame n leaves them, as gltarget_<frame>_<address>_<w>x<h>.tga beside the log
+// a top row first BGRA image to cap/<name>
+void WriteTga(const char* name, uint32_t w, uint32_t h, const uint8_t* px, size_t bytes) {
+    FILE* f = std::fopen(name, "wb");
+    if (!f) return;
+    uint8_t head[18] = {0, 0, 2};
+    head[12] = uint8_t(w), head[13] = uint8_t(w >> 8), head[14] = uint8_t(h), head[15] = uint8_t(h >> 8);
+    head[16] = 32;
+    head[17] = 0x28;  // top row first, 8 alpha bits
+    std::fwrite(head, 1, 18, f);
+    std::fwrite(px, 1, std::min(bytes, size_t(w) * h * 4), f);
+    std::fclose(f);
+}
+
+// GLDUMP=frame: every target as the GPU has it (host size) and guest memory under it (guest size)
 void DumpTargets(std::unordered_map<uint64_t, Target>& targets, uint64_t frame, GLuint (*fbo)(void*, const Target*), void* self) {
     for (auto& [key, t] : targets) {
+        char name[96];
+        std::vector<uint8_t> px(size_t(t.w) * t.h * 4);
         if (t.depth) {
             // its colour view, and guest memory under it read as A8R8G8B8 (what the CPU renderer left there)
-            uint8_t head[18] = {0, 0, 2};
-            head[12] = uint8_t(t.gw), head[13] = uint8_t(t.gw >> 8), head[14] = uint8_t(t.gh), head[15] = uint8_t(t.gh >> 8);
-            head[16] = 32;
-            head[17] = 0x28;
-            char name[96];
-            std::vector<uint8_t> px(size_t(t.gw) * t.gh * 4);
             if (t.zcolour) {
                 glBindFramebuffer(GL_FRAMEBUFFER, t.zcolour_fbo);
-                glReadPixels(0, 0, GLsizei(t.gw), GLsizei(t.gh), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+                glReadPixels(0, 0, GLsizei(t.w), GLsizei(t.h), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
                 std::snprintf(name, sizeof name, "cap/gldepth_%05llu_%08X_%ux%u.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
-                if (FILE* f = std::fopen(name, "wb")) {
-                    std::fwrite(head, 1, 18, f);
-                    std::fwrite(px.data(), 1, px.size(), f);
-                    std::fclose(f);
-                }
+                WriteTga(name, t.w, t.h, px.data(), px.size());
             }
+            std::vector<uint8_t> mem(size_t(t.gw) * t.gh * 4);
             const uint8_t* g = static_cast<const uint8_t*>(kernel::HostPtr(t.data));
-            for (uint32_t y = 0; y < t.gh; y++) std::memcpy(&px[size_t(y) * t.gw * 4], g + size_t(y) * t.pitch, t.gw * 4);
+            for (uint32_t y = 0; y < t.gh; y++) std::memcpy(&mem[size_t(y) * t.gw * 4], g + size_t(y) * t.pitch, t.gw * 4);
             std::snprintf(name, sizeof name, "cap/gldepth_%05llu_%08X_%ux%u_mem.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
-            if (FILE* f = std::fopen(name, "wb")) {
-                std::fwrite(head, 1, 18, f);
-                std::fwrite(px.data(), 1, px.size(), f);
-                std::fclose(f);
-            }
+            WriteTga(name, t.gw, t.gh, mem.data(), mem.size());
             continue;
         }
-        std::vector<uint8_t> px(size_t(t.gw) * t.gh * 4);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo(self, &t));
-        glReadPixels(0, 0, GLsizei(t.gw), GLsizei(t.gh), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
-        char name[96];
+        glReadPixels(0, 0, GLsizei(t.w), GLsizei(t.h), GL_BGRA, GL_UNSIGNED_BYTE, px.data());
         std::snprintf(name, sizeof name, "cap/gltarget_%05llu_%08X_%ux%u.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
-        FILE* f = std::fopen(name, "wb");
-        if (!f) continue;
-        uint8_t head[18] = {0, 0, 2};
-        head[12] = uint8_t(t.gw), head[13] = uint8_t(t.gw >> 8), head[14] = uint8_t(t.gh), head[15] = uint8_t(t.gh >> 8);
-        head[16] = 32;
-        head[17] = 0x28;  // top row first, 8 alpha bits
-        std::fwrite(head, 1, 18, f);
-        std::fwrite(px.data(), 1, px.size(), f);
-        std::fclose(f);
+        WriteTga(name, t.w, t.h, px.data(), px.size());
         // and guest memory under it, decoded as the surface's format: what the CPU renderer would read there
         TextureDesc d;
         d.data = t.data;
@@ -2057,11 +2308,7 @@ void DumpTargets(std::unordered_map<uint64_t, Target>& targets, uint64_t frame, 
         uint32_t pitch;
         DecodeLevel(d, 0, 0, static_cast<const uint8_t*>(kernel::HostPtr(t.data)), nullptr, mem, pitch);
         std::snprintf(name, sizeof name, "cap/gltarget_%05llu_%08X_%ux%u_mem.tga", (unsigned long long)frame, t.data, t.gw, t.gh);
-        if (FILE* m = std::fopen(name, "wb")) {
-            std::fwrite(head, 1, 18, m);
-            std::fwrite(mem.data(), 1, std::min(mem.size(), px.size()), m);
-            std::fclose(m);
-        }
+        WriteTga(name, t.gw, t.gh, mem.data(), mem.size());
     }
 }
 
@@ -2102,12 +2349,7 @@ void GlBackend::Present(const Surface& front) {
     glViewport(0, 0, GLsizei(sw), GLsizei(sh));
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-    if (t) {
-        // 4:3 at the screen's height, black bars at the sides
-        float vw = std::min(float(sw), sh * 4.0f / 3.0f), vh = vw * 3.0f / 4.0f;
-        glViewport(GLint((sw - vw) / 2), GLint((sh - vh) / 2), GLsizei(vw), GLsizei(vh));
-        Blit(t->tex, gamma_ ? 1.0f : 0.0f, false, true);
-    }
+    if (t) PresentFrame(*t, sw, sh);
     bound_rt_ = bound_ds_ = nullptr;
     host_->Presented(uint32_t(frame_draws_));
     cache_.Forget();  // the host may have drawn too
@@ -2127,8 +2369,148 @@ void GlBackend::Present(const Surface& front) {
     frame_draws_ = 0;
     ReleaseOldTextures();
     LogPerf();
+    ApplyPicture();
     frame_perf_ = perf_;
     frame_end_ = Clock::now();
+}
+
+// 4:3 at the screen's height (its sides black, the picture blurred or a web), or the game's 16:9 picture across it
+void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
+    float aspect = pic_.wide ? 16.0f / 9.0f : 4.0f / 3.0f;
+    float vw = std::min(float(sw), sh * aspect), vh = vw / aspect;
+    cache_.Forget();
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, lut_);
+    glBindSampler(1, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindSampler(0, 0);
+    if (vw < float(sw) && pic_.sides != Picture::Sides::Black && sides_) {
+        bool blur = pic_.sides == Picture::Sides::Blur;
+        float lod = 0;
+        if (blur) {
+            // the frame with its mipmaps, for a small level of it
+            uint32_t levels = 1;
+            while ((std::max(t.w, t.h) >> levels) > 0) levels++;
+            if (!sides_tex_ || sides_w_ != t.w || sides_h_ != t.h) {
+                if (sides_tex_) glDeleteTextures(1, &sides_tex_);
+                glGenTextures(1, &sides_tex_);
+                glBindTexture(GL_TEXTURE_2D, sides_tex_);
+                glTexStorage2D(GL_TEXTURE_2D, GLsizei(levels), GL_RGBA8, GLsizei(t.w), GLsizei(t.h));
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                sides_w_ = t.w;
+                sides_h_ = t.h;
+            }
+            glCopyImageSubData(t.tex, GL_TEXTURE_2D, 0, 0, 0, 0, sides_tex_, GL_TEXTURE_2D, 0, 0, 0, 0, GLsizei(t.w), GLsizei(t.h), 1);
+            glBindTexture(GL_TEXTURE_2D, sides_tex_);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            lod = std::max(0.0f, std::log2(float(t.h) / 22.0f));
+        }
+        glViewport(0, 0, GLsizei(sw), GLsizei(sh));
+        glUseProgram(sides_);
+        glUniform4f(sides_opts_, blur ? 1.0f : 2.0f, lod, (float(sw) / float(sh)) / aspect, gamma_ ? 1.0f : 0.0f);
+        glUniform4f(sides_screen_, float(sw), float(sh), 0.0f, 0.0f);
+        FullScreen(sides_);
+    }
+    // the filter: a box when the frame is drawn smaller, Catmull-Rom when bigger and sharp, else bilinear
+    float ratio = float(t.h) / vh;
+    float filter = ratio > 1.01f ? 1.0f : (pic_.sharp_movies && ratio < 0.99f) ? 2.0f : 0.0f;
+    float taps = std::ceil(ratio - 0.01f);
+    glBindTexture(GL_TEXTURE_2D, t.tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glViewport(GLint((float(sw) - vw) / 2), GLint((float(sh) - vh) / 2), GLsizei(vw), GLsizei(vh));
+    glUseProgram(present_);
+    glUniform4f(present_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, 0.0f);
+    glUniform4f(present_step_, 1.0f / vw, 1.0f / vh, 0.0f, 0.0f);
+    FullScreen(present_);
+}
+
+// the host's picture: a new render scale makes every target again at it, its contents drawn over
+void GlBackend::ApplyPicture() {
+    pic_ = host_->GetPicture();
+    uint32_t height = pic_.height ? pic_.height : guest_h_;
+    GLint max_size = 4096;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
+    height = std::clamp<uint32_t>(height, guest_h_, uint32_t(max_size) * guest_h_ / 4096);
+    float sy = float(height) / float(guest_h_), sx = sy;
+    // the 16:9 picture drawn bigger: as many pixels across as a 16:9 screen of that height
+    if (pic_.wide && height != guest_h_) sx = std::round(float(height) * 16.0f / 9.0f) / float(guest_w_);
+    if (sx == sx_ && sy == sy_) return;
+    sx_ = sx;
+    sy_ = sy;
+    LOGI("gl: render scale %.3f x %.3f (%ux%u for the %ux%u frame)", sx_, sy_, ScaledSize(guest_w_, sx_), ScaledSize(guest_h_, sy_),
+         guest_w_, guest_h_);
+    cache_.Forget();
+    for (auto& [key, t] : targets_) Rescale(t);
+    glPointSize(std::max(1.0f, std::round(std::max(sx_, sy_))));  // a point covers its console pixel
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    bound_rt_ = bound_ds_ = nullptr;
+}
+
+// a target made again at the render scale, its pixels (or depth and stencil) drawn over from the old one
+void GlBackend::Rescale(Target& t) {
+    uint32_t w = ScaledSize(t.gw, sx_), h = ScaledSize(t.gh, sy_);
+    if (w == t.w && h == t.h) return;
+    GLuint old = t.tex;
+    glGenTextures(1, &t.tex);
+    glBindTexture(GL_TEXTURE_2D, t.tex);
+    if (t.depth) glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, GLsizei(w), GLsizei(h), 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, nullptr);
+    else glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(w), GLsizei(h), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    GLuint fb[2];
+    glGenFramebuffers(2, fb);
+    GLenum at = t.depth ? GL_DEPTH_STENCIL_ATTACHMENT : GL_COLOR_ATTACHMENT0;
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fb[0]);
+    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, at, GL_TEXTURE_2D, old, 0);
+    glReadBuffer(t.depth ? GL_NONE : GL_COLOR_ATTACHMENT0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb[1]);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, at, GL_TEXTURE_2D, t.tex, 0);
+    glDrawBuffer(t.depth ? GL_NONE : GL_COLOR_ATTACHMENT0);
+    glDisable(GL_SCISSOR_TEST);
+    glBlitFramebuffer(0, 0, GLint(t.w), GLint(t.h), 0, 0, GLint(w), GLint(h),
+                      t.depth ? GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT : GL_COLOR_BUFFER_BIT, t.depth ? GL_NEAREST : GL_LINEAR);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(2, fb);
+    for (auto f = fbos_.begin(); f != fbos_.end();) {
+        if (f->first.first == old || f->first.second == old) {
+            glDeleteFramebuffers(1, &f->second);
+            f = fbos_.erase(f);
+        } else {
+            ++f;
+        }
+    }
+    glDeleteTextures(1, &old);
+    // the copies made at the old size go, made again when next needed
+    if (t.fb) glDeleteTextures(1, &t.fb);
+    t.fb = 0;
+    if (t.zcolour) glDeleteTextures(1, &t.zcolour);
+    if (t.zcolour_fbo) glDeleteFramebuffers(1, &t.zcolour_fbo);
+    t.zcolour = t.zcolour_fbo = 0;
+    t.zcolour_writes = ~0ull;
+    t.w = w;
+    t.h = h;
+}
+
+// the scratch texture at w x h (made again at another size) and its framebuffer
+GLuint GlBackend::Scratch(uint32_t w, uint32_t h) {
+    if (!scratch_tex_ || scratch_w_ != w || scratch_h_ != h) {
+        if (scratch_tex_) glDeleteTextures(1, &scratch_tex_);
+        if (!scratch_fbo_) glGenFramebuffers(1, &scratch_fbo_);
+        glGenTextures(1, &scratch_tex_);
+        glBindTexture(GL_TEXTURE_2D, scratch_tex_);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, GLsizei(w), GLsizei(h), 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, scratch_fbo_);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scratch_tex_, 0);
+        scratch_w_ = w;
+        scratch_h_ = h;
+    }
+    return scratch_fbo_;
 }
 
 }  // namespace

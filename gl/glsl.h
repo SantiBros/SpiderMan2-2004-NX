@@ -11,6 +11,13 @@
 
 namespace glsl {
 
+// gpu::TexInfo::flags bit 0, the backend's: a movie frame, sampled through Catmull-Rom (sharper than bilinear when
+// magnified). gl_backend.cpp sets it, with kTexWide for upscaled targets shrunk (spread taps) and ext's constants:
+// ext.xy host pixels per console pixel on the bound target, ext.z the 16:9 picture's squeeze of what the game draws
+// flat (0 off), ext.w 1 when every flat vertex is squeezed (movie frames, small draws inside the screen), 0 when those
+// on the left and right edges stay there.
+constexpr uint8_t kTexSharp = 1;
+
 // a vertex program's microcode; regs: the v registers the draw supplies, bit per register; decode: Assembled::decode
 std::string VertexProgram(const std::vector<uint32_t>& program, uint16_t regs, uint64_t decode, bool quad);
 // D3D's fixed function vertex pipeline; pretransformed for XYZRHW vertices

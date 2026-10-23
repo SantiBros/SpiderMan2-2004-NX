@@ -1,9 +1,9 @@
 #pragma once
 // The title's Direct3D 8 calls drawn with OpenGL 4.3 core: on the Switch's GPU through Mesa's nouveau driver, and on
-// Linux through any Mesa driver for the test build. It follows the SDK's D3D12 renderer (sdk/runtime/gpu/d3d12.cpp)
-// at render scale 1: console surfaces become GL textures the draws render into, read back to guest memory when the
-// CPU locks them and uploaded again when the CPU writes them; textures are decoded from guest memory and kept while
-// their bytes stay the same.
+// Linux through any Mesa driver for the test build. It follows the SDK's D3D12 renderer (sdk/runtime/gpu/d3d12.cpp):
+// console surfaces become GL textures the draws render into, every one scaled alike when the picture is drawn bigger
+// than the console's, read back to guest memory (at its size) when the CPU locks them and uploaded again when the CPU
+// writes them; textures are decoded from guest memory and kept while their bytes stay the same.
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -11,6 +11,23 @@
 #include "gpu/backend.h"
 
 namespace glr {
+
+// how the platform wants the frames drawn and shown, asked once a frame
+struct Picture {
+    // the game's picture drawn this many pixels tall, every surface scaled alike (720: 960x720 for 4:3); 0 or the
+    // console's height: as the console draws it
+    uint32_t height = 0;
+    // the game's own 16:9 picture (src/game/widescreen.cpp): shown 16:9 across the screen, drawn wider when scaled,
+    // what it draws flat (HUD, menus, text, movies) kept 4:3 in the middle
+    bool wide = false;
+    // a 4:3 picture's sides: black, the picture blurred, or a pattern
+    enum class Sides : uint8_t { Black, Blur, Web } sides = Sides::Black;
+    // the game's movies (YUY2 frames) and the frame onto the screen upscaled with a sharper filter than bilinear
+    bool sharp_movies = false;
+    // mipmapped textures read with this much anisotropic filtering (1: none), sharper at grazing angles: streets,
+    // building fronts
+    uint32_t anisotropy = 1;
+};
 
 // what the renderer needs from the platform; every call on the thread that draws. The renderer is set up on the
 // thread that makes the device and may then be driven from another (a render thread): the context moves with it.
@@ -32,6 +49,8 @@ public:
     virtual void SetSwapInterval(uint32_t /*blanks*/) {}
     // where the list of the programs built is kept between runs, empty for nowhere
     virtual std::string CachePath() { return {}; }
+    // read at the start and after every frame; a new size makes every surface again at it, contents kept
+    virtual Picture GetPicture() { return {}; }
 };
 
 // null when GL can't be set up (no context, missing functions, GL older than 4.3)

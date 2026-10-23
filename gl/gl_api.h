@@ -68,6 +68,8 @@
     X(void, glFrontFace, (GLenum))                                                                               \
     X(void, glGenBuffers, (GLsizei, GLuint*))                                                                    \
     X(void, glGenFramebuffers, (GLsizei, GLuint*))                                                               \
+    X(void, glGenerateMipmap, (GLenum))                                                                          \
+    X(void, glGetFloatv, (GLenum, GLfloat*))                                                                    \
     X(void, glGenQueries, (GLsizei, GLuint*))                                                                    \
     X(void, glGenSamplers, (GLsizei, GLuint*))                                                                   \
     X(void, glGenTextures, (GLsizei, GLuint*))                                                                   \
@@ -103,6 +105,7 @@
     X(void, glTexImage2D, (GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const void*))          \
     X(void, glTexImage3D, (GLenum, GLint, GLint, GLsizei, GLsizei, GLsizei, GLint, GLenum, GLenum, const void*)) \
     X(void, glTexParameteri, (GLenum, GLenum, GLint))                                                            \
+    X(void, glTexStorage2D, (GLenum, GLsizei, GLenum, GLsizei, GLsizei))                                         \
     X(void, glTexSubImage2D, (GLenum, GLint, GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, const void*))       \
     X(void, glUniform1i, (GLint, GLint))                                                                         \
     X(void, glUniform4f, (GLint, GLfloat, GLfloat, GLfloat, GLfloat))                                            \

@@ -34,23 +34,21 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > newer *Spider-Man* games.
 
 > [!NOTE]
-> **Playable on the Switch.** 0.1.0 has been played on a Switch Lite, in handheld mode: the game runs smoothly,
+> **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: the game runs smoothly,
 > at its own pace of 30 frames a second, with its music, sound effects and voices. Playing docked on a TV and
 > saving haven't been confirmed on a console yet, so [reports](#help-wanted-testers) are welcome.
 
 > [!TIP]
-> **New in 0.1.0**
-> - **Playable on a real Switch**: tested on a Switch Lite, smooth and with sound.
-> - **A debug menu**: hold **ZL + ZR** and press **−** for the port's settings: a frame-rate counter, the
->   Switch's CPU, GPU and memory clocks, the language, the sound volume and the renderer, saved on the SD card.
-> - **In your language**: the game follows the console's language, with its menus and subtitles in Spanish,
->   French, German or Italian (the voices stay in English: the disc only has those). Or pick one in the menu.
-> - **A clean start screen**: "Loading..." instead of the log scrolling by (the log can still be turned on).
-> - **Your saves in their own folder**, `save/`, apart from the cache: easy to back up.
-> - **Easier to build**: on Windows, double-click `build-windows.cmd` and choose your game; on Linux,
->   `build.sh` installs its own tools. Both put your game in the SD card folder, ready to copy.
-> - **Faster**: the game's thread needs about 14% less processor time a frame (its code is smaller and records
->   its drawing with less work).
+> **New in 0.2.0**
+> - **Sharper picture**: draw the game, its movies included, at **720p** (pixel for pixel on the handheld screen)
+>   or **1080p**, from the debug menu, instead of the Xbox's 480p.
+> - **Full screen 16:9, nothing stretched**: the game has a widescreen camera of its own that Treyarch never
+>   switched on. The port turns it on: more of the city at the sides, while the HUD, menus and movies keep
+>   their 4:3 shape in the middle.
+> - **Or 4:3 with something at the sides** instead of black bars: the picture blurred, or a spider web.
+> - **Vibration** on Joy-Con and the Pro Controller, Off, Low, Medium or High. A rumble the game leaves on stops
+>   by itself after 2 seconds.
+> - **Sharper upscaling** and **anisotropic filtering**, for crisper movies and streets in the distance.
 >
 > All the details are in the [changelog](CHANGELOG.md).
 
@@ -62,6 +60,20 @@ around it. Bring your own copy of the game, build the port from it once, and swi
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>The first rooftop, at dusk</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/wide.jpg" alt="The first rooftop in the game's own 16:9 picture at 720p, with the HUD kept 4:3" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>New in 0.2.0: the game's own 16:9 camera, at 720p. More city at the sides, the HUD keeps its shape</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/screenshots/sides-blur.jpg" alt="The game at 720p in 4:3 with its picture blurred at the sides"></td>
+    <td width="50%"><img src="docs/images/screenshots/sides-web.jpg" alt="The swing control menu in 4:3 with a spider web at the sides"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>4:3 with the picture blurred at the sides</sub></td>
+    <td align="center"><sub>4:3 with a spider web at the sides</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="The title screen, PRESS START TO BEGIN"></td>
@@ -97,7 +109,7 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 
 <p align="center"><sub>The game screenshots come from the port's PC test build, which runs the same recompiled code
 and the same GPU renderer as the Switch build (on the PC's Mesa instead of the Switch's), with the Switch build's
-screen layout: the game's 4:3 picture on the Switch's 1280×720 screen. The port's own screens and menu are drawn
+screen layout: the game's picture on the Switch's 1280×720 screen. The port's own screens and menu are drawn
 by the Switch build's screen code, run on the PC.</sub></p>
 
 ## Features
@@ -109,6 +121,11 @@ by the Switch build's screen code, run on the PC.</sub></p>
 - **Drawn by the Switch's GPU.** The game's Direct3D 8 drawing becomes OpenGL for the Switch's graphics
   chip: its vertex programs and pixel combiners are translated to shaders, its textures decoded once and
   kept, on a render thread beside the game's.
+- **At 480p, 720p or 1080p.** Every surface the game draws is made bigger alike, so the whole picture is
+  sharper, movies included, with sharper upscaling and anisotropic filtering if you like.
+- **Full screen without stretching.** The game's own hidden 16:9 camera shows more of the city at the sides;
+  the HUD, menus and movies stay 4:3. Or keep 4:3, with black, blurred or spider-web sides.
+- **Vibration** on Joy-Con and the Pro Controller, at the strength you choose, and never left running.
 - **Your copy in the format you have.** A disc image (`.iso` or `.xiso`, a trimmed XISO or a full disc
   dump), the compressed `.cci` (Cerbios) and `.cso` (StellarOS) images that Repackinator makes, any of
   them split into parts for a FAT32 card, or the files from the disc.
@@ -117,9 +134,9 @@ by the Switch build's screen code, run on the PC.</sub></p>
   recompiles it, builds the `.nro`, and lays out the SD card folder with your game in it.
 - **In your language.** The game takes the console's language: English, Spanish, French, German or
   Italian menus and subtitles, from the texts on your disc.
-- **A debug menu** (**ZL + ZR + −**) with a frame-rate counter, the Switch's CPU, GPU and memory clocks
-  (only rates Nintendo's own profiles use, given back in the HOME menu and when you quit), the language, the
-  sound volume and the renderer. Saved in `settings.ini`.
+- **A debug menu** (**ZL + ZR + −**) with the resolution, the screen shape, the vibration, a frame-rate
+  counter, the Switch's CPU, GPU and memory clocks (only rates Nintendo's own profiles use, given back in the
+  HOME menu and when you quit), the language, the sound volume and the renderer. Saved in `settings.ini`.
 - **Says what's wrong.** Missing data folder, an archive that needs extracting, an Xbox 360 image, another
   release of the game: the screen explains it in plain words.
 - **Made for testing.** The log reaches the SD card several times a second, so it survives a frozen console,
@@ -227,10 +244,15 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 | Setting | Choices | What it does |
 |---|---|---|
 | Language | Auto, English, Español, Français, Deutsch, Italiano | The game's menus and subtitles. Auto follows the console; a language the game doesn't have is English. The voices are English in every language. From the next start. |
+| Resolution | 480p (the console's), 720p, 1080p | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p is drawn bigger and shrunk, with smoother edges. More work for the GPU: if the frame rate drops, raise the GPU clock. |
+| Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. |
+| Upscaling | Smooth, Sharp | How the movies and the picture are enlarged: Sharp keeps more detail (Catmull-Rom), Smooth is the softer look of a TV. |
+| Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. |
+| Vibration | Off, Low, Medium, High | The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its own). A rumble the game leaves on stops after 2 seconds, and none runs while the menu is open or in the HOME menu. |
 | CPU clock | Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | The game's translated code runs on the CPU: raise it if the counter stays under 30 in busy places. |
 | GPU clock | Stock, 307.2, 384, 460.8, 614.4, 768 MHz | The graphics chip. 460.8 MHz is the highest Nintendo uses in handheld mode. |
 | Memory clock | Stock, 1331.2, 1600 MHz | 1600 MHz is the docked memory clock. |
-| Frame-rate counter | Off, FPS, Full | In the top left corner, beside the picture. Full adds the time of a frame, the draw calls, the clocks and the memory. |
+| Frame-rate counter | Off, FPS, Full | In the top left corner. Full adds the time of a frame, the draw calls, the clocks and the memory. |
 | Sound volume | 100% to 25%, Off | The game's sound, before the console's own volume. |
 | Renderer | GPU, CPU | CPU is many times slower: only to tell whether a fault in the picture comes from the GPU renderer. From the next start. |
 | Render thread | On, Off | The graphics work on a core of its own. From the next start. |
@@ -238,8 +260,9 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 
 The clocks only offer rates Nintendo's own performance profiles use. The console's own clocks come back
 while the port is in the HOME menu and when it closes, and the port puts yours back after docking or sleep.
-"Restore recommended settings" puts everything back to the defaults (the console's language, stock clocks,
-no counter, full volume, the GPU renderer on its own thread).
+"Restore recommended settings" puts everything back to the defaults (the console's language, 480p, 4:3 with
+black sides, smooth upscaling, standard filtering, medium vibration, stock clocks, no counter, full volume, the GPU
+renderer on its own thread). The picture settings and the vibration change at once, while you play.
 
 ## Status
 
@@ -253,6 +276,8 @@ no counter, full volume, the GPU renderer on its own thread).
 | Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
 | Speed | ✅ Smooth on a Switch Lite, at the game's own 30 frames a second |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
+| 720p, 1080p, 16:9 | 🧪 New in 0.2.0: checked on the PC test build; how fast they run on a console is to be measured |
+| Vibration | 🧪 New in 0.2.0: needs Joy-Con or a Pro Controller, not tried on a console yet |
 | Menus, cinematics, the city | ✅ On a Switch Lite and on the PC test build |
 | Sound | ✅ Music, sound effects and voices, on a Switch Lite |
 | Controls | ✅ Mapped by position |
@@ -264,6 +289,9 @@ no counter, full volume, the GPU renderer on its own thread).
 
 **Known issues**
 - Docked play on a TV and saving haven't been confirmed on a console yet.
+- Reported on a console, not fixed yet: **web-swinging showing only one animation**, and **wrong reflections in
+  building windows**. A short video of each, with the `logs` folder, would show what to fix (the log's `swing:`
+  lines say which swing animations the game picks).
 - The first time through a new place can stutter briefly while shaders are built; they are kept for the next time.
 - In Spanish, French, German and Italian the voices are in English: the disc only has the English ones.
 - Only the release above is supported: other releases need their own recompiler config.
@@ -278,6 +306,9 @@ Reports in English or Spanish help most, with the `logs` folder:
 | What | How to help |
 |---|---|
 | 📺 **Docked** | Play with the console in the dock, on a TV, and tell how it runs (the debug menu's counter shows the frame rate). |
+| 🖼️ **720p, 1080p, 16:9** | Try the new resolutions and screen shapes: the frame rate in a busy street, and anything that looks out of place (a HUD piece or a marker off where it should be in 16:9). |
+| 📳 **Vibration** | With Joy-Con or a Pro Controller: does it feel right, and does it ever keep going on its own? |
+| 🕸️ **The swing and the windows** | A short video of web-swinging (does Spider-Man always use the same swing?) and of building windows whose reflections look wrong, with the `logs` folder. |
 | 💾 **Saves** | Save in the game, quit, start it again and load: does your progress come back? |
 | 🎮 **Further in** | How far did you get? Anything that stops, freezes or looks wrong along the way. |
 | 🧊 **Freezes** | If the console freezes, take a photo, restart, and send the `logs` folder and the newest files in `atmosphere/crash_reports/`. Then try once holding **L** at start (no sound), and once holding **R** (the CPU renderer). |
@@ -365,6 +396,33 @@ Yes, on a Switch Lite in handheld mode it plays smoothly at the game's own pace:
 the Xbox. The debug menu's frame-rate counter shows it on screen, and if a busy place ever drops under 30 you
 can raise the CPU clock there (up to 1785 MHz, a rate Nintendo's own profiles use). Docked play hasn't been
 measured yet.
+</details>
+
+<details>
+<summary><b>Can it fill the whole screen? Is it stretched?</b></summary>
+
+Yes, and no. Set the debug menu's **Screen** to **16:9 full screen**. The game was made for 4:3 TVs, but its code
+has a 16:9 camera that Treyarch never switched on; the port turns it on and widens its view, so you see more of
+the city at the sides and nothing is stretched. What the game draws flat on the screen (the HUD, the menus, the
+text, the movies) is kept 4:3 in the middle. If you'd rather keep the original 4:3 picture, the sides can be
+black, the picture blurred, or a spider web.
+</details>
+
+<details>
+<summary><b>Can it run at a higher resolution?</b></summary>
+
+Yes: the debug menu's **Resolution** draws the game at 720p (the handheld screen's own) or 1080p instead of the
+Xbox's 480p, movies included. It is more work for the Switch's graphics chip; if the frame rate drops, raise the
+GPU clock in the same menu or go back a step. The movies on the disc are 640×480, so they get smoother edges
+rather than new detail; **Upscaling: Sharp** keeps them crisper.
+</details>
+
+<details>
+<summary><b>Does it vibrate?</b></summary>
+
+With Joy-Con or a Pro Controller, yes: set **Vibration** in the debug menu (Medium by default). The Switch Lite has
+no rumble motor of its own, so on a Lite you feel it only through Joy-Con or a Pro Controller paired with it. If the
+game ever leaves a rumble running, it fades out by itself after 2 seconds.
 </details>
 
 <details>

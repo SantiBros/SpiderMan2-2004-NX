@@ -6,10 +6,18 @@
 namespace sw {
 
 enum class Counter { Off, Fps, Full };
+// the picture on the screen: 4:3 with black, blurred or web sides, or the game's own 16:9 across it
+enum class Screen { Black, Blur, Web, Wide };
+enum class Rumble { Off, Low, Medium, High };
 
 struct Settings {
     uint32_t language = 0;     // 0 the console's; else the game's language code: 1 English, 3 German, 4 French,
                                // 5 Spanish, 6 Italian (the next start)
+    uint32_t resolution = 480; // the picture drawn this many pixels tall: 480 as the console, 720, 1080
+    Screen screen = Screen::Black;
+    bool sharp = false;        // the picture and the movies enlarged with a sharper filter
+    uint32_t anisotropy = 1;   // textures' anisotropic filtering: 1 none, 2, 4, 8, 16
+    Rumble rumble = Rumble::Medium;
     uint32_t cpu_hz = 0;       // 0 the system's own clock
     uint32_t gpu_hz = 0;
     uint32_t mem_hz = 0;

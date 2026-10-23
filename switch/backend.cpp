@@ -15,6 +15,7 @@
 #include "gpu/texture.h"
 #include "reference_renderer.h"
 #include "switch/screen.h"
+#include "switch/settings.h"
 #include "switch/state.h"
 
 namespace gpu {
@@ -102,6 +103,19 @@ public:
     void SetSwapInterval(uint32_t blanks) override { sw::GlSwapInterval(blanks); }
     // beside the .nro (the working folder): the programs built, built again ahead at the next start
     std::string CachePath() override { return "cache/shaders.cache"; }
+    // the debug menu's Resolution, Screen and Upscaling
+    glr::Picture GetPicture() override {
+        glr::Picture p;
+        p.height = sw::g_resolution.load(std::memory_order_relaxed);
+        int screen = sw::g_screen.load(std::memory_order_relaxed);
+        p.wide = screen == int(sw::Screen::Wide);
+        p.sides = screen == int(sw::Screen::Blur) ? glr::Picture::Sides::Blur
+                  : screen == int(sw::Screen::Web) ? glr::Picture::Sides::Web
+                                                    : glr::Picture::Sides::Black;
+        p.sharp_movies = sw::g_sharp.load(std::memory_order_relaxed);
+        p.anisotropy = sw::g_anisotropy.load(std::memory_order_relaxed);
+        return p;
+    }
     void Swap() override { sw::GlSwap(); }
 };
 

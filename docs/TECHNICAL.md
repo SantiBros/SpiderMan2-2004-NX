@@ -68,7 +68,7 @@ Two backends take the draws:
 
 - The **GPU renderer** ([`gl/`](../gl)), what the Switch draws with: OpenGL 4.3 core through Mesa's nouveau
   driver (devkitPro's `switch-mesa`), on Linux through any Mesa driver for the test build. It follows the SDK's
-  Direct3D 12 renderer at render scale 1. Console surfaces become GL textures the draws render into, read back to
+  Direct3D 12 renderer, its render scale too. Console surfaces become GL textures the draws render into, read back to
   guest memory when the CPU locks them and uploaded again when the CPU writes them; textures are decoded from guest
   memory (swizzled, S3TC, palettes) and kept while their bytes stay the same. The shader translator's vertex
   programs, register combiners and fixed function stages come out as GLSL ([`gl/glsl.cpp`](../gl/glsl.cpp), carried
@@ -91,6 +91,34 @@ Two backends take the draws:
   depth tested: `gpu::State::aa_x`, `aa_y` scale it back. And an element offset of a whole number of vertices (a
   shadow volume placed further into a shared buffer) moves into the buffer's start, since GL takes element offsets up
   to 2047 bytes only.
+  **Render scale.** With the debug menu's Resolution at 720p or 1080p every target is made that much bigger alike
+  (the guest size times one scale across and one down: 1.5 for 720p, 2.25 for 1080p, more across for the 16:9
+  picture), and what is in guest pixels is scaled with it: viewports, scissors, clear rects, copies, the slope of
+  the depth bias, point sizes, the half pixel render target reads move back by (`ext.xy` in the shaders), and the
+  pixels a visibility test counts (divided back to the console's). The game's own screen space stays 640×480 in the
+  shaders' `surf` constant. CPU writes into a target go in at the console's size and are drawn bigger; read-backs
+  are brought down first. A pass shrinking an upscaled target (the glow chain: the frame into 256×256 targets)
+  averages each tap over a box of console texels, as the D3D12 renderer does, or its taps skip texels and flicker.
+  A change in play makes every target again at the new size, its contents drawn over.
+
+  **Presenting.** The frame goes to the 1280×720 screen through the gamma ramp: bilinear, a box of bilinear taps
+  when it is drawn smaller (1080p), Catmull-Rom when it is enlarged and Upscaling is Sharp (movie frames, the YUY2
+  textures, are sampled through Catmull-Rom in the draw too). A 4:3 frame's sides can be the frame itself, zoomed to
+  the screen's width, from a small mip level of a copy, blurred and dimmed, or a spider web drawn in the shader.
+  Anisotropic filtering goes on every mipmapped linear sampler when asked for.
+
+  **The game's 16:9 picture.** The engine has 16:9 display modes the retail game never lists (its start-up code
+  fills the mode table with the 4:3 ones only), and its camera takes an aspect: 16:9 there keeps the horizontal
+  field of view and shows less height. [`src/game/widescreen.cpp`](../src/game/widescreen.cpp) sets the camera's
+  aspect to 16:9 and widens its field of view so that it shows 4:3's height (the game's culling cone widens with
+  it), before the projection is made (`0x00343930`); the field of view the game reads back is the one it set. The
+  640×480 frame is then shown across the 16:9 screen (and drawn 1280×720 or 1920×1080 when scaled). What the game
+  draws flat, every vertex at w exactly 1 (the HUD, menus, text), is narrowed to 4:3 in the middle in the vertex
+  shader. Which draws: a small draw's box on screen is worked out on the CPU through the reference renderer's vertex
+  stage (`reference::ScreenBox`), and one from the top to the bottom, or across the width and touching the top or
+  the bottom, stays across (full screen passes, the shadows' darkening drawn in halves, fades, bars) unless it shows
+  a picture (a menu's layers, the logo); a bigger draw is narrowed vertex by vertex but for those on the left and
+  right edges; movie frames are always narrowed.
 - The CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
   which draws into guest memory in software, register combiners and vertex programs included. It is exact enough
   to compare against and slow (seconds per city frame). The test build uses it, and the Switch falls back to it
@@ -106,11 +134,12 @@ Two backends take the draws:
 | `main.cpp` | Checks the launch mode (title takeover), loads `settings.ini`, reads the console's language, finds the game (`kernel/game_source`), asks before a different release, mounts the disc image, boots the game, and keeps the applet alive, running the debug menu. Until the game draws, the start screen says "Loading..." (or, with the start-up log on, shows the newest log lines). Quitting (+ and −) takes no lock the game could hold. |
 | `screen.cpp` | The 1280×720 window. With GL (the default): an EGL window surface and an OpenGL 4.3 core context; the main thread draws the text screens (libnx's console font, as an image) until the renderer takes the context, then the renderer puts the status text over the frames until the game draws its own picture. Without: libnx's framebuffer, presented by the main thread, with the reference renderer's frames scaled to the screen's height. Two overlay layers (the frame-rate counter and the debug menu), RGBA pictures the main thread draws on the CPU, are blended over every frame: by the renderer's thread with `glr::DrawOverlay` after the frame, or into the framebuffer. |
 | `menu.cpp` | The debug menu (ZL + ZR + −): its own pad state on the main thread, so it works whatever the game does; the game's controller reads nothing while it is open, nor the − of the combination, nor the buttons that closed it until they are let go. The touch screen picks rows and steps values. The frame-rate counter is counted from the frames presented, every half second. |
-| `settings.cpp` | `settings.ini` beside the `.nro`: language, clocks, counter, volume, renderer, render thread, start-up log; written whole (a new file, then renamed) at every change. The buttons held at start override it for that start. |
+| `settings.cpp` | `settings.ini` beside the `.nro`: language, resolution, screen, upscaling, texture filtering, vibration, clocks, counter, volume, renderer, render thread, start-up log; written whole (a new file, then renamed) at every change. The buttons held at start override it for that start. The picture settings reach the renderer's thread and the game's through atomics (`state.h`) and change in play. |
 | `clocks.cpp` | CPU, GPU and memory clocks through `clkrst` (`pcv` before 8.0.0), as the NFS Most Wanted port does: only the rates of Nintendo's performance configurations, the configuration's own clocks found through `apm:sys`, put back twice a second after the system resets them (docking, sleep, performance mode changes), given back while out of focus (the focus mode notifies the port of the HOME menu) and at exit; while custom clocks are in use the exit is locked so that closing from HOME first restores them. |
 | `backend.cpp` | The GPU renderer's host (the window, the context, the swap), falling back to the reference renderer when GL doesn't start; the reference renderer paced for the Switch (60 frames a second, a frame drawn when as long as the last drawing has passed, at least half a second). Held at start: R the reference renderer, ZR the GPU renderer on the game's thread (no render thread). |
 | `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer, at the settings' volume; L at start turns it off. |
 | `input.cpp` | The Xbox controller from the Switch's, mapped by position; nothing while the debug menu has it. |
+| `rumble.cpp` | The game's rumble (`XInputSetState`'s two motors) on the HD rumble of a Pro Controller, two Joy-Con or the handheld Joy-Con: the heavy left motor as the low band (160 Hz), the light right one as the high band (320 Hz), at the settings' strength. A request left unchanged for 2 s fades out over 0.6 s; nothing is sent while the debug menu is open or the port is out of focus, and the motors stop at quit. |
 | `watch.cpp` | Two threads above the game's priority: one puts the log on the SD card every 250 ms (a reset console loses cached writes), one logs a status line every 2 s with each game thread's current kernel or library function. |
 | `crash.cpp` | The exception handler: registers, the module offset of the crash, return addresses from the stack and the game thread's current function, into `logs/crash.txt` and the run's log. |
 | `pthread_detach.cpp` | `pthread_detach`, which libnx doesn't have (below). |
@@ -244,7 +273,11 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 Added to `config/game.toml` by hand (located with [XbSymbolDatabase](https://github.com/Cxbx-Reloaded/XbSymbolDatabase)
 and by reading the XDK code that uses them): `D3D_Streams`, `D3DDevice_BeginPush`, `D3DDevice_EndPush`,
 `D3DDevice_SetPalette`, `D3DDevice_Reset`, the DirectSound methods above, and `XGetFilePhysicalSortKey`.
-`D3DDevice_Reset` and `XGetFilePhysicalSortKey` are replaced in [`src/game/hooks.cpp`](../src/game/hooks.cpp).
+`D3DDevice_Reset` and `XGetFilePhysicalSortKey` are replaced in [`src/game/hooks.cpp`](../src/game/hooks.cpp). So is
+`XInputGetCapabilities` (0x00445438, which the symbol finder doesn't know): the XDK's body asks the USB driver about
+the device behind the handle, which the port's controller handles aren't, and answered no rumble motors, so the game's
+`SetVibration` (0x00287900, which checks them first) never reached `XInputSetState`. The port answers for every pad:
+a standard controller with both motors.
 
 ## Supporting another release
 
@@ -267,9 +300,12 @@ config/game.toml     recompiler input for the supported default.xbe: addresses a
 src/common/          the game's description for the runtime (title, log name)
 src/game/hooks.cpp   the game's own replacements of recompiled functions
 src/game/language.cpp  the game in the console's language (game.ini's SKU, the English voices)
+src/game/widescreen.cpp  the game's own 16:9 camera, widened
+src/game/swing_log.cpp   each web swing's direction and animations, in the log
+src/game/debug_hooks.cpp hooks that only log, for the test build
 gl/                  the GPU renderer: OpenGL 4.3 (loader, GLSL translation, the backend)
 switch/              the Switch program: start-up, screen, debug menu, settings, clocks, renderer host, sound,
-                     controls, watch, crash handler
+                     controls, rumble, watch, crash handler
 tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)

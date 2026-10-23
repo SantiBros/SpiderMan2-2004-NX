@@ -16,6 +16,11 @@ inline Stats g_stats;
 
 inline bool g_no_sound = false;  // L held at start
 inline std::atomic<float> g_volume{1.0f};  // the game's sound, from the settings
+// the picture as the settings have it, for the renderer's thread and the game's (Settings::resolution, screen, sharp)
+inline std::atomic<uint32_t> g_resolution{480};
+inline std::atomic<int> g_screen{0};
+inline std::atomic<bool> g_sharp{false};
+inline std::atomic<uint32_t> g_anisotropy{1};
 
 // log sync every 250 ms and a pulse line every 2 s, on threads of their own
 void StartWatch();

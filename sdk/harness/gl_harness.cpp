@@ -1,6 +1,10 @@
 // GL=1: the test build draws with the GL renderer (gl/) on a headless EGL context (Mesa, llvmpipe without a GPU),
-// every frame, into a 1280x720 screen like the Switch's. Paced to 60 frames a second when it keeps up.
-// GLCAP=N: every Nth frame's screen saved as cap/gl_<frame>.tga (the 4:3 picture, 960x720); GLCAP_AT="f f ...": those
+// every frame, into a 1280x720 screen like the Switch's. Paced to 60 frames a second when it keeps up. The picture as
+// the Switch's debug menu sets it: XBE_RES=720 or 1080 drawn that tall, XBE_WIDESCREEN=1 the game's 16:9 picture,
+// XBE_SIDES=1 or 2 a 4:3 picture's sides blurred or a web, XBE_SHARP=1 the sharper upscaling, XBE_ANISO=16 anisotropic
+// texture filtering.
+// GLCAP=N: every Nth frame's screen saved as cap/gl_<frame>.tga (the 4:3 picture, 960x720, or the whole screen for a
+// 16:9 picture or 4:3 with sides); GLCAP_AT="f f ...": those
 // frames too. GLREC="from to": the screen's 4:3 picture of those frames into cap/rec.mp4 at 60 frames a second
 // (through ffmpeg; with TIMESCALE each frame shows for its blanks, a 30th of a second of the game at this game's pace). Built with -DXBE_GL_HARNESS and
 // gl/*.cpp, linked with -lEGL.
@@ -91,6 +95,25 @@ public:
         w = kScreenW;
         h = kScreenH;
     }
+    glr::Picture GetPicture() override {
+        static const glr::Picture p = [] {
+            glr::Picture q;
+            q.height = uint32_t(Env("XBE_RES"));
+            q.wide = app::Widescreen();
+            long sides = Env("XBE_SIDES");
+            q.sides = sides == 1 ? glr::Picture::Sides::Blur : sides == 2 ? glr::Picture::Sides::Web : glr::Picture::Sides::Black;
+            q.sharp_movies = Env("XBE_SHARP") != 0;
+            q.anisotropy = uint32_t(std::max(1L, Env("XBE_ANISO")));
+            return q;
+        }();
+        return p;
+    }
+    // the part of the screen captures keep
+    static void CapArea(uint32_t& w, uint32_t& x0) {
+        static const bool whole = app::Widescreen() || Env("XBE_SIDES");
+        w = whole ? kScreenW : 960;
+        x0 = (kScreenW - w) / 2;
+    }
     void Presented(uint32_t drawn) override {
         frames_++;
         g_frames = frames_;
@@ -107,6 +130,33 @@ public:
         if ((every_ && frames_ % uint64_t(every_) == 0) || at_.count(long(frames_)) || now) Save();
         if (long(frames_) >= rec_from_ && long(frames_) <= rec_to_) Record();
         if (frames_ % 600 == 0) LOGI("renderer: frame %llu", (unsigned long long)frames_);
+        Peek();
+    }
+    // PEEK="frame address bytes; ...": guest memory logged at that frame, an address written *A read from A first
+    void Peek() {
+        static const char* e = std::getenv("PEEK");
+        if (!e) return;
+        for (const char* p = e; *p;) {
+            long f = 0;
+            char a[32] = {};
+            unsigned n = 0;
+            int used = 0;
+            if (std::sscanf(p, " %ld %31s %u%n", &f, a, &n, &used) < 3) break;
+            p += used;
+            while (*p == ' ' || *p == ';') p++;
+            if (f != long(frames_)) continue;
+            bool deref = a[0] == '*';
+            uint32_t va = uint32_t(std::strtoul(a + (deref ? 1 : 0), nullptr, 16));
+            if (deref) va = kernel::R32(va);
+            std::string hex;
+            for (unsigned i = 0; i < n; i++) {
+                char b[4];
+                std::snprintf(b, sizeof b, "%02X", *kernel::GuestByte(va + i));
+                hex += b;
+                if (i % 4 == 3) hex += ' ';
+            }
+            LOGI("peek: frame %ld %s = %08X: %s", f, a, va, hex.c_str());
+        }
     }
     void Swap() override {
         glFlush();
@@ -120,9 +170,11 @@ public:
 private:
     // one frame of the recording, piped to ffmpeg as it comes
     void Record() {
-        constexpr uint32_t w = 960, h = 720, x0 = (kScreenW - w) / 2;
+        uint32_t w, x0;
+        constexpr uint32_t h = 720;
+        CapArea(w, x0);
         if (!rec_) {
-            std::string cmd = "ffmpeg -loglevel error -y -f rawvideo -pix_fmt bgra -s 960x720 -r 60 -i - -vf vflip "
+            std::string cmd = "ffmpeg -loglevel error -y -f rawvideo -pix_fmt bgra -s " + std::to_string(w) + "x720 -r 60 -i - -vf vflip "
                               "-c:v libx264 -preset veryfast -crf 16 -pix_fmt yuv420p \"" +
                               (app::ExeDir() / "cap/rec.mp4").string() + "\"";
             rec_ = popen(cmd.c_str(), "w");
@@ -145,9 +197,11 @@ private:
         }
     }
 
-    // the 4:3 picture in the middle of the screen, rows top first
+    // the picture in the middle of the screen, rows top first
     void Save() {
-        constexpr uint32_t w = 960, h = 720, x0 = (kScreenW - w) / 2;
+        uint32_t w, x0;
+        constexpr uint32_t h = 720;
+        CapArea(w, x0);
         std::vector<uint8_t> px(size_t(w) * h * 4);
         glBindFramebuffer(GL_FRAMEBUFFER, screen_);
         glReadPixels(GLint(x0), 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, px.data());

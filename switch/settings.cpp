@@ -42,6 +42,22 @@ std::string Mhz(uint32_t hz) {
         std::snprintf(b, sizeof b, "%u", hz / 1000000);
     return b;
 }
+const char* ScreenKey(Screen v) {
+    switch (v) {
+        case Screen::Blur: return "4:3-blur";
+        case Screen::Web: return "4:3-web";
+        case Screen::Wide: return "16:9";
+        default: return "4:3";
+    }
+}
+const char* RumbleKey(Rumble v) {
+    switch (v) {
+        case Rumble::Off: return "off";
+        case Rumble::Low: return "low";
+        case Rumble::High: return "high";
+        default: return "medium";
+    }
+}
 bool On(const std::string& v, bool def) {
     if (v == "on" || v == "1" || v == "yes" || v == "true") return true;
     if (v == "off" || v == "0" || v == "no" || v == "false") return false;
@@ -68,6 +84,19 @@ void LoadSettings() {
         if (k == "language") {
             for (const Lang& l : kLanguages)
                 if (v == l.key) s.language = l.code;
+        } else if (k == "resolution") {
+            int n = std::atoi(v.c_str());
+            if (n == 480 || n == 720 || n == 1080) s.resolution = uint32_t(n);
+        } else if (k == "screen") {
+            s.screen = v == "16:9" ? Screen::Wide : v == "4:3-blur" ? Screen::Blur : v == "4:3-web" ? Screen::Web : Screen::Black;
+        } else if (k == "upscaling") {
+            s.sharp = v == "sharp";
+        } else if (k == "anisotropic") {
+            int n = std::atoi(v.c_str());
+            if (n == 2 || n == 4 || n == 8 || n == 16) s.anisotropy = uint32_t(n);
+            else if (v == "off") s.anisotropy = 1;
+        } else if (k == "rumble") {
+            s.rumble = v == "off" ? Rumble::Off : v == "low" ? Rumble::Low : v == "high" ? Rumble::High : Rumble::Medium;
         } else if (k == "cpu_clock") {
             s.cpu_hz = Hz(v);
         } else if (k == "gpu_clock") {
@@ -99,6 +128,13 @@ void SaveSettings() {
     o << "# Spider-Man 2 (Xbox) for Switch: the port's settings, changed in its debug menu (hold ZL + ZR, press -).\n"
          "# Delete this file to go back to the recommended settings.\n"
       << "language=" << lang << "        # auto (the console's), en, es, fr, de, it\n"
+      << "resolution=" << s.resolution << "p" << (s.resolution < 1000 ? "      " : "     ")
+      << "# 480p (the console's), 720p, 1080p\n"
+      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 16:9\n"
+      << "upscaling=" << (s.sharp ? "sharp" : "smooth") << "  # smooth, sharp\n"
+      << "anisotropic=" << (s.anisotropy > 1 ? std::to_string(s.anisotropy) + "x" : std::string("off"))
+      << "   # texture filtering: off, 2x, 4x, 8x, 16x\n"
+      << "rumble=" << RumbleKey(s.rumble) << "      # off, low, medium, high\n"
       << "cpu_clock=" << Mhz(s.cpu_hz) << "      # stock, or MHz\n"
       << "gpu_clock=" << Mhz(s.gpu_hz) << "\n"
       << "memory_clock=" << Mhz(s.mem_hz) << "\n"

@@ -216,12 +216,21 @@ tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en
 
 - **Language** (idioma): Auto (el de la consola), English, Español, Français, Deutsch o Italiano, desde el
   siguiente arranque.
+- **Resolution** (resolución): 480p (la de la Xbox), 720p o 1080p: todo el juego y sus videos dibujados con esos
+  píxeles. 720p llena la pantalla portátil píxel a píxel; 1080p se dibuja más grande y se reduce. Más trabajo para
+  la GPU: si bajan las imágenes por segundo, sube el reloj de la GPU o baja un paso.
+- **Screen** (pantalla): 4:3 con los lados negros, desenfocados o con telaraña, o **16:9 full screen**, la cámara
+  panorámica oculta del propio juego, con más ciudad a los lados y el HUD, los menús y los videos en 4:3 en el
+  centro.
+- **Upscaling** (escalado: Smooth o Sharp) y **Texture filtering** (filtrado: Standard o anisotrópico de 4x a 16x).
+- **Vibration** (vibración): Off, Low, Medium o High, en los Joy-Con o un Pro Controller (la Switch Lite no tiene
+  vibración propia). Si el juego deja una vibración encendida, se apaga a los 2 segundos.
 - **CPU, GPU y memory clock** (relojes): de fábrica, o una de las velocidades que usan los perfiles de
   rendimiento de Nintendo (hasta 1785 MHz de CPU, 768 MHz de GPU, 1600 MHz de memoria). Los relojes de la consola
   vuelven mientras el port está en el menú HOME y al cerrarlo. Si el contador se queda por debajo de 30 en
   sitios con mucho movimiento, prueba primero un reloj de CPU más alto.
 - **Frame-rate counter** (contador): apagado, FPS, o completo (también el tiempo de cada imagen, las llamadas de
-  dibujo, los relojes y la memoria), en la franja negra a la izquierda de la imagen.
+  dibujo, los relojes y la memoria), arriba a la izquierda.
 - **Sound volume** (volumen), **Renderer** (GPU o CPU), **Render thread** (hilo de renderizado) y el
   **Start-up log** (las últimas líneas del registro en la pantalla de arranque en vez de "Loading...", para
   una foto si el juego no arranca).
@@ -266,7 +275,8 @@ Los mensajes de la pantalla están en inglés:
 | **The game did not start** | El archivo más nuevo de `logs/` dice por qué. |
 | **La pantalla se congela** | Toma una foto de la pantalla, reinicia la consola (mantén POWER 12 segundos) y envía la carpeta `logs`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), otra manteniendo **ZR** (sin hilo de renderizado) y otra manteniendo **R** (el renderizador por CPU), y cuenta con cuáles se sigue congelando. Si se congela en "Loading...", activa **Start-up log** en el [menú de depuración](#el-menú-de-depuración) (o en `settings.ini`: `startup_log=on`), para que la foto muestre hasta dónde llegó. |
 | **La imagen sale mal** (falta, negra, parpadea, colores raros) | Toma una foto y envía la carpeta `logs`. Luego prueba manteniendo **R** al arrancar (el renderizador por CPU): si así la imagen sale bien, el problema está en el renderizador por GPU. |
-| **Va lento** | Activa el contador en el [menú de depuración](#el-menú-de-depuración) y prueba ahí un reloj de CPU más alto. Envía la carpeta `logs`: cada 5 segundos el registro tiene una línea `perf:` que dice en qué se va el tiempo. |
+| **Va lento** | Activa el contador en el [menú de depuración](#el-menú-de-depuración) y prueba ahí un reloj de CPU más alto. A 720p o 1080p, prueba un reloj de GPU más alto o una resolución menor. Envía la carpeta `logs`: cada 5 segundos el registro tiene una línea `perf:` que dice en qué se va el tiempo. |
+| **No vibra** | La Switch Lite no tiene motor de vibración: usa Joy-Con o un Pro Controller. Revisa que **Vibration** no esté en Off en el [menú de depuración](#el-menú-de-depuración), y que la vibración del control esté activada en la configuración de la consola. |
 | **El juego sale en otro idioma** | Sigue el idioma de la consola, que se lee al arrancar. Cambia **Language** en el [menú de depuración](#el-menú-de-depuración) y vuelve a arrancar el port. Las voces siempre son en inglés. |
 | **Da tirones** (paradas cortas al jugar) | Sobre todo la primera vez que pasas por un sitio, mientras el driver gráfico prepara los shaders que necesita; se guardan en `cache/shaders.cache` y la siguiente vez se preparan al arrancar. Si siguen, envía la carpeta `logs`: una línea `hitch:` señala cada tirón y en qué se fue el tiempo. |
 | **Una pantalla de error de Atmosphère** | Envía el archivo más nuevo de `atmosphere/crash_reports/` y la carpeta `logs`. |
