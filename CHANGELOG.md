@@ -5,7 +5,13 @@ builds.
 
 ## [0.2.2]
 
-**The 16:9 picture's slowdown, found.** For the report that 0.2.1 still ran badly, slower still in 16:9.
+**The 16:9 picture's slowdown, found**, for the report that 0.2.1 still ran badly, slower still in 16:9, and a new
+4:3 decoration.
+
+### Added
+- **4:3, suit sides**, a fifth Screen choice: the web at the sides in the suit's colours, red with raised black
+  webbing hanging from the top corners, a dark seam, and blue below it. Like the web sides it is drawn once and
+  copied, so it costs nothing a frame (`screen=4:3-suit` in `settings.ini`).
 
 ### Fixed
 - **16:9 wrote to the SD card several times a frame.** The game sets its camera back to 4:3 every frame, for each of
@@ -16,6 +22,8 @@ builds.
   are kept in a 64 KB buffer and written out by the port's watch thread every 250 ms, when there is something new, so
   a burst of lines can never slow the game again. A crash still leaves its report, and the log up to a quarter of a
   second before it.
+- The PC test build's captures were black with web sides since 0.2.1 (the sides were copied to the wrong
+  framebuffer there; on the Switch it was the right one).
 
 ### Changed
 - **Texture filtering's help** says what anisotropic filtering costs the Switch's graphics chip in the city: try
@@ -107,7 +115,7 @@ build; how fast 720p and 1080p run on a console, and how the vibration feels, ar
   would show what differs there.
 
 ### For the PC test build
-- `XBE_RES=720|1080`, `XBE_WIDESCREEN=1`, `XBE_SIDES=1|2` (blurred, web), `XBE_SHARP=1` and `XBE_ANISO=N` set the
+- `XBE_RES=720|1080`, `XBE_WIDESCREEN=1`, `XBE_SIDES=1|2|3` (blurred, web, suit), `XBE_SHARP=1` and `XBE_ANISO=N` set the
   picture as the debug menu does; `RUMBLELOG=1` logs the rumble the game asks for, `RUMBLETRACE=N` the game's rumble
   effects, `RUMBLETEST=N` shakes the pad at its Nth update; `RANDLOG=N` and `FMODCHECK=N` trace the game's `rand()`
   and x87 `fmod`.

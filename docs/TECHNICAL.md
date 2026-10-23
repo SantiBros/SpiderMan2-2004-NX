@@ -111,8 +111,10 @@ Two backends take the draws:
   **Presenting.** The frame goes to the 1280×720 screen through the gamma ramp: bilinear, a box of bilinear taps
   when it is drawn smaller (1080p), Catmull-Rom when it is enlarged and Upscaling is Sharp (movie frames, the YUY2
   textures, are sampled through Catmull-Rom in the draw too). A 4:3 frame's sides can be the frame itself, zoomed to
-  the screen's width, from a small mip level of a copy, blurred and dimmed, or a spider web drawn in the shader.
-  Anisotropic filtering goes on every mipmapped linear sampler when asked for.
+  the screen's width, from a small mip level of a copy, blurred and dimmed, or a spider web drawn in the shader, in
+  grey on dark red and blue or in the suit's colours (raised black webbing on red, a seam, blue beyond); a web is
+  drawn once for the screen's size and copied to the bars each frame. Anisotropic filtering goes on every
+  mipmapped linear sampler when asked for.
 
   **The game's 16:9 picture.** The engine has 16:9 display modes the retail game never lists (its start-up code
   fills the mode table with the 4:3 ones only), and its camera takes an aspect: 16:9 there keeps the horizontal

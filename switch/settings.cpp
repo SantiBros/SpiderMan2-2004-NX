@@ -48,6 +48,7 @@ const char* ScreenKey(Screen v) {
     switch (v) {
         case Screen::Blur: return "4:3-blur";
         case Screen::Web: return "4:3-web";
+        case Screen::Suit: return "4:3-suit";
         case Screen::Wide: return "16:9";
         default: return "4:3";
     }
@@ -98,7 +99,8 @@ void LoadSettings() {
             int n = std::atoi(v.c_str());
             if (n == 480 || n == 720 || n == 1080) s.resolution = uint32_t(n);
         } else if (k == "screen") {
-            s.screen = v == "16:9" ? Screen::Wide : v == "4:3-blur" ? Screen::Blur : v == "4:3-web" ? Screen::Web : Screen::Black;
+            s.screen = v == "16:9" ? Screen::Wide : v == "4:3-blur" ? Screen::Blur : v == "4:3-web" ? Screen::Web
+                                                                                        : v == "4:3-suit" ? Screen::Suit : Screen::Black;
         } else if (k == "upscaling") {
             s.sharp = v == "sharp";
         } else if (k == "anisotropic") {
@@ -153,7 +155,7 @@ void SaveSettings() {
       << "language=" << lang << "        # auto (the console's), en, es, fr, de, it\n"
       << "resolution=" << s.resolution << "p" << (s.resolution < 1000 ? "      " : "     ")
       << "# 480p (the console's), 720p, 1080p\n"
-      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 16:9\n"
+      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 4:3-suit, 16:9\n"
       << "upscaling=" << (s.sharp ? "sharp" : "smooth") << "  # smooth, sharp\n"
       << "anisotropic=" << (s.anisotropy > 1 ? std::to_string(s.anisotropy) + "x" : std::string("off"))
       << "   # texture filtering: off, 2x, 4x, 8x, 16x\n"

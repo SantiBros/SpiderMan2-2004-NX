@@ -220,9 +220,9 @@ tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en
   píxeles. 720p llena la pantalla portátil píxel a píxel; 1080p, para jugar en el dock, se dibuja más grande y se
   reduce (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU
   sube: si bajan las imágenes por segundo, baja un paso.
-- **Screen** (pantalla): 4:3 con los lados negros, desenfocados o con telaraña, o **16:9 full screen**, la cámara
-  panorámica oculta del propio juego, con más ciudad a los lados y el HUD, los menús y los videos en 4:3 en el
-  centro.
+- **Screen** (pantalla): 4:3 con los lados negros, desenfocados, con telaraña o con la telaraña en los colores del
+  traje (rojo, azul y negro), o **16:9 full screen**, la cámara panorámica oculta del propio juego, con más ciudad
+  a los lados y el HUD, los menús y los videos en 4:3 en el centro.
 - **Upscaling** (escalado: Smooth o Sharp) y **Texture filtering** (filtrado: Standard o anisotrópico de 4x a 16x;
   el anisotrópico es mucho más trabajo para el chip gráfico en la ciudad, así que prueba Standard primero si bajan
   las imágenes por segundo).

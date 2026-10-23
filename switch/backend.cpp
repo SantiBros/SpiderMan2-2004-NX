@@ -113,6 +113,7 @@ public:
         p.wide = screen == int(sw::Screen::Wide);
         p.sides = screen == int(sw::Screen::Blur) ? glr::Picture::Sides::Blur
                   : screen == int(sw::Screen::Web) ? glr::Picture::Sides::Web
+                  : screen == int(sw::Screen::Suit) ? glr::Picture::Sides::Suit
                                                     : glr::Picture::Sides::Black;
         p.sharp_movies = sw::g_sharp.load(std::memory_order_relaxed);
         p.anisotropy = sw::g_anisotropy.load(std::memory_order_relaxed);

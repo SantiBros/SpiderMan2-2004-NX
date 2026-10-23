@@ -771,7 +771,8 @@ const char* kSidesFragment = R"(#version 430 core
 in vec2 uv;
 layout(binding = 0) uniform sampler2D img;
 layout(binding = 1) uniform sampler2D lut;
-uniform vec4 opts;  // x 1 blur, 2 web; y the blur's mip level; z the screen's aspect over the picture's; w gamma
+uniform vec4 opts;  // x 1 blur, 2 web, 3 the web in the suit's colours; y the blur's mip level; z the screen's aspect
+                    // over the picture's; w gamma
 uniform vec4 screen;  // xy the screen in pixels
 layout(location = 0) out vec4 o;
 float line(float d, float width) { return 1.0 - smoothstep(width * 0.5, width * 0.5 + 1.0, abs(d)); }
@@ -801,10 +802,28 @@ void main() {
         // rings further apart going out, sagging between the spokes
         float u = log(r / 26.0) / log(1.32), ring = 26.0 * pow(1.32, floor(u + 0.5));
         float sag = 1.0 - 0.09 * sin(3.1415927 * fa);
-        float web = max(line(spoke, 1.3) * smoothstep(20.0, 60.0, r), line(r - ring * sag, 1.1) * step(0.0, u));
-        vec3 bg = mix(vec3(0.10, 0.015, 0.02), vec3(0.015, 0.03, 0.10), uv.y);
-        bg *= 1.0 - 0.55 * smoothstep(0.0, screen.y * 1.1, r);
-        c = mix(bg, vec3(0.62, 0.66, 0.74), web * 0.38 * (1.0 - smoothstep(screen.y * 0.4, screen.y * 1.3, r)));
+        float dr = r - ring * sag;
+        if (opts.x == 3.0) {
+            // the suit: red where the web is, a seam, blue beyond it, the webbing dark and raised (a lighter rim on
+            // the side towards the corner), all a little darker towards the picture
+            float bound = screen.y * (0.56 + 0.05 * sin(a * 2.6 + 0.4));
+            float red = 1.0 - smoothstep(bound - 1.5, bound + 1.5, r);
+            float thick = max(line(spoke, 2.2) * smoothstep(18.0, 50.0, r), line(dr, 2.0) * step(0.0, u));
+            float rim = max(line(spoke - 1.6, 1.2) * smoothstep(18.0, 50.0, r), line(dr + 1.7, 1.1) * step(0.0, u));
+            vec3 suit = mix(vec3(0.07, 0.12, 0.40), vec3(0.58, 0.05, 0.07), red);
+            suit *= 1.0 - 0.28 * smoothstep(0.0, screen.y * 1.2, r) - 0.12 * (1.0 - uv.y) * (1.0 - red);
+            suit = mix(suit, vec3(0.80, 0.22, 0.20), rim * red * 0.45);
+            suit = mix(suit, vec3(0.035, 0.015, 0.02), thick * red);
+            suit = mix(suit, vec3(0.02, 0.02, 0.03), line(r - bound, 3.0));  // the seam
+            float bar = (screen.x - screen.x / opts.z) * 0.5;  // a side's width: the picture is screen.x / opts.z across
+            suit *= mix(0.6, 1.0, smoothstep(0.0, 26.0, bar - d.x));
+            c = suit;
+        } else {
+            float web = max(line(spoke, 1.3) * smoothstep(20.0, 60.0, r), line(dr, 1.1) * step(0.0, u));
+            vec3 bg = mix(vec3(0.10, 0.015, 0.02), vec3(0.015, 0.03, 0.10), uv.y);
+            bg *= 1.0 - 0.55 * smoothstep(0.0, screen.y * 1.1, r);
+            c = mix(bg, vec3(0.62, 0.66, 0.74), web * 0.38 * (1.0 - smoothstep(screen.y * 0.4, screen.y * 1.3, r)));
+        }
     }
     o = vec4(c, 1.0);
 }
@@ -963,6 +982,7 @@ private:
     uint32_t sides_w_ = 0, sides_h_ = 0;
     GLuint web_tex_ = 0, web_fbo_ = 0;  // the web sides, drawn once for the screen's size
     uint32_t web_w_ = 0, web_h_ = 0;
+    float web_mode_ = 0;  // 2 the web, 3 in the suit's colours
     bool raw_probe_ = false;  // GLPROBE_RAW's draw
     uint32_t guest_w_ = 640, guest_h_ = 480;
     std::unordered_map<uint64_t, Target> targets_;
@@ -2518,6 +2538,7 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
     glBindSampler(0, 0);
     if (vw < float(sw) && pic_.sides != Picture::Sides::Black && sides_) {
         bool blur = pic_.sides == Picture::Sides::Blur;
+        float mode = blur ? 1.0f : pic_.sides == Picture::Sides::Suit ? 3.0f : 2.0f;
         float lod = 0;
         if (blur) {
             // the frame with its mipmaps, for a small level of it
@@ -2545,7 +2566,7 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
         auto sides = [&]() {
             glViewport(0, 0, GLsizei(sw), GLsizei(sh));
             glUseProgram(sides_);
-            glUniform4f(sides_opts_, blur ? 1.0f : 2.0f, lod, (float(sw) / float(sh)) / aspect, gamma_ ? 1.0f : 0.0f);
+            glUniform4f(sides_opts_, mode, lod, (float(sw) / float(sh)) / aspect, gamma_ ? 1.0f : 0.0f);
             glUniform4f(sides_screen_, float(sw), float(sh), 0.0f, 0.0f);
             glEnable(GL_SCISSOR_TEST);
             glScissor(0, 0, bar, GLsizei(sh));
@@ -2557,7 +2578,7 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
         if (blur) {
             sides();
         } else {
-            if (!web_tex_ || web_w_ != sw || web_h_ != sh) {
+            if (!web_tex_ || web_w_ != sw || web_h_ != sh || web_mode_ != mode) {
                 if (!web_tex_) glGenTextures(1, &web_tex_);
                 if (!web_fbo_) glGenFramebuffers(1, &web_fbo_);
                 glBindTexture(GL_TEXTURE_2D, web_tex_);
@@ -2568,12 +2589,15 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
                 sides();
                 web_w_ = sw;
                 web_h_ = sh;
+                web_mode_ = mode;
             }
+            // to the host's screen (the Switch's is 0, the PC test build's a framebuffer of its own)
+            const GLuint screen = host_->ScreenFramebuffer();
             glBindFramebuffer(GL_READ_FRAMEBUFFER, web_fbo_);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, screen);
             glBlitFramebuffer(0, 0, bar, GLint(sh), 0, 0, bar, GLint(sh), GL_COLOR_BUFFER_BIT, GL_NEAREST);
             glBlitFramebuffer(GLint(sw) - bar, 0, GLint(sw), GLint(sh), GLint(sw) - bar, 0, GLint(sw), GLint(sh), GL_COLOR_BUFFER_BIT, GL_NEAREST);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, screen);
         }
     }
     // the filter: a box when the frame is drawn smaller, Catmull-Rom when bigger and sharp, else bilinear

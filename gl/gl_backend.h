@@ -21,7 +21,7 @@ struct Picture {
     // what it draws flat (HUD, menus, text, movies) kept 4:3 in the middle
     bool wide = false;
     // a 4:3 picture's sides: black, the picture blurred, or a pattern
-    enum class Sides : uint8_t { Black, Blur, Web } sides = Sides::Black;
+    enum class Sides : uint8_t { Black, Blur, Web, Suit } sides = Sides::Black;  // Suit: the web in the suit's colours
     // the game's movies (YUY2 frames) and the frame onto the screen upscaled with a sharper filter than bilinear
     bool sharp_movies = false;
     // mipmapped textures read with this much anisotropic filtering (1: none), sharper at grazing angles: streets,

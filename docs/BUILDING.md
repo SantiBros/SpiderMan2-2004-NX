@@ -99,7 +99,7 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 | `GLCAP=N`, `GLCAP_AT="f f ..."` | Every Nth frame, or those frames, saved as `cap/gl_<frame>.tga` (the 4:3 picture, or the whole 1280×720 screen for a 16:9 picture or 4:3 with sides). |
 | `XBE_RES=720`, `XBE_RES=1080` | The picture drawn that tall, as the debug menu's Resolution sets it on the Switch. |
 | `XBE_WIDESCREEN=1` | The game's own 16:9 picture (Screen: 16:9 full screen). |
-| `XBE_SIDES=1`, `XBE_SIDES=2` | A 4:3 picture with blurred or spider-web sides. |
+| `XBE_SIDES=1`, `2`, `3` | A 4:3 picture with blurred or spider-web sides, or the web in the suit's colours. |
 | `XBE_SHARP=1`, `XBE_ANISO=16` | The sharper upscaling, anisotropic filtering. |
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
 | `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`, and guest memory under each. |
