@@ -217,7 +217,8 @@ speed). The bottom line shows the frame rate, the time of a frame and the draw c
   drops, go back a step.
 - **Screen**: 4:3 with black, blurred or spider-web sides, or **16:9 full screen**, the game's own hidden
   widescreen camera, with more of the city at the sides and the HUD, menus and movies kept 4:3 in the middle.
-- **Upscaling** (Smooth or Sharp) and **Texture filtering** (Standard or Anisotropic 4x to 16x).
+- **Upscaling** (Smooth or Sharp) and **Texture filtering** (Standard or Anisotropic 4x to 16x; anisotropic is much
+  more work for the graphics chip in the city, so try Standard first if the frame rate drops).
 - **Vibration**: Off, Low, Medium or High, on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its
   own). A rumble the game leaves on stops after 2 seconds.
 - **CPU, GPU and memory clocks**: Auto (the default), stock, or one of the rates Nintendo's own performance
@@ -266,7 +267,7 @@ places, the one in `hdd/` stays where it is and is used, and the log says so.
 | **The game did not start** | The newest file in `logs/` says why. |
 | **The screen freezes** | Take a photo of the screen, restart the console (hold POWER for 12 seconds), and send the `logs` folder. Then try once holding **L** at start (no sound), once holding **ZR** (no render thread) and once holding **R** (the CPU renderer), and say which ones still freeze. If it freezes on "Loading...", turn on **Start-up log** in the [debug menu](#the-debug-menu) (or in `settings.ini`: `startup_log=on`), so the photo shows how far it got. |
 | **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
-| **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and check that the clocks are on Auto there. At 720p or 1080p, try a lower Resolution, or 4:3 instead of 16:9. Send the `logs` folder: every 5 seconds the log has `perf:` lines that say where the time goes. |
+| **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and check that the clocks are on Auto there and Texture filtering on Standard. At 720p or 1080p, try a lower Resolution. Send the `logs` folder: every 5 seconds the log has `perf:` lines that say where the time goes. |
 | **It doesn't vibrate** | The Switch Lite has no rumble motor: use Joy-Con or a Pro Controller. Check that **Vibration** isn't Off in the [debug menu](#the-debug-menu), and that the controller's vibration is on in the console's System Settings. |
 | **The game is in the wrong language** | It follows the console's language, read at start. Set **Language** in the [debug menu](#the-debug-menu) and start the port again. The voices are always in English. |
 | **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `cache/shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |

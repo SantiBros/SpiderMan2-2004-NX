@@ -205,13 +205,13 @@ Things the PC test build couldn't show, found on the console or by reading libnx
   file), where Windows and Linux allow it, and the game opens its packs more than once. Existing files open
   read-only unless the game asks to write (never on the disc), renames close the file around them, and resizes go
   through the open file. Conflicting opens are logged.
-- **Cached writes are lost on a reset.** The log is `fsync`ed every 250 ms from its own thread when lines were
-  written since, so a frozen console still leaves the log behind and an idle one leaves the card alone.
-- **A thread starts on one core only.** A libnx thread (and so a pthread) starts with the process's default core,
-  core 0, as its only one: before 0.2.1 the game, the renderer and the sound all took turns there.
-  `kernel::NameHostThread` now gives the renderer core 1, the sound and the port's main and watch threads core 2,
-  the game's threads core 0, each as its preferred core with the process's whole mask (cores 0 to 2), so the
-  scheduler can move one to an idle core.
+- **Cached writes are lost on a reset, and a write to the card is slow.** The log is buffered (64 KB) and put on
+  the card every 250 ms from its own thread, when lines were written since (`fflush`, `fsync`); warnings and errors
+  go at once. Before 0.2.2 every line was flushed by the thread that logged it, and 16:9's camera line, logged
+  several times a frame, made the game wait for the card. A frozen console still leaves the log behind.
+- **Cores.** libnx's pthreads start on the process's default core, core 0, with the process's whole core mask
+  (cores 0 to 2), so the scheduler moves a thread to an idle core. `kernel::NameHostThread` gives the renderer core 1
+  and the sound and the port's main and watch threads core 2 as their preferred cores, the game's threads core 0.
 - **The scheduler only time-slices priority 59 (0x3B) on cores 0 to 2,** libnx's default for threads; the game's
   threads stay there, and the port's watch threads sit above them.
 - **Float to integer conversion** out of range gives `INT_MIN` on x86 and saturates on ARM. The recompiled code

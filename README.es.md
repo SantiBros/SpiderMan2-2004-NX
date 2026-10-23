@@ -37,14 +37,18 @@ balancéate por Nueva York.
 > [!NOTE]
 > **Jugable en la Switch.** El port se ha jugado en una Switch Lite, en modo portátil: la 0.1.0 iba fluida a 480p,
 > al propio ritmo del juego de 30 imágenes por segundo, con su música, efectos de sonido y voces. Se reportó que la
-> 0.2.0 no se podía jugar; la 0.2.1 es más rápida, y los [reportes](#se-buscan-testers) sobre cómo va son
-> bienvenidos, igual que sobre jugar en el dock y guardar partida, que todavía no se han comprobado en una consola.
+> 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9; la 0.2.2 arregla la causa encontrada, y los
+> [reportes](#se-buscan-testers) sobre cómo va son bienvenidos, igual que sobre jugar en el dock y guardar partida,
+> que todavía no se han comprobado en una consola.
 
 > [!TIP]
-> **Novedades de la 0.2.1: más rápida.** El port ahora usa los tres núcleos de la Switch (el juego, el
-> renderizador y el sonido compartían uno), pone los relojes para el juego por sí solo (**Auto**, el nuevo valor de
-> fábrica), mantiene el HUD en 4:3 con 16:9 casi sin costo, y a 720p y 1080p solo agranda la imagen principal.
-> 1080p ahora es para jugar en el dock.
+> **Novedades de la 0.2.2: 16:9 sin el bajón.** En 16:9 el port escribía una línea en su registro de la tarjeta SD
+> varias veces por imagen, y el juego esperaba cada escritura. Eso se acabó, y ninguna línea del registro espera ya
+> a la tarjeta.
+>
+> **Novedades de la 0.2.1: más rápida.** El port pone los relojes para el juego por sí solo (**Auto**, el nuevo
+> valor de fábrica), mantiene el HUD en 4:3 con 16:9 con mucho menos costo, y a 720p y 1080p solo agranda la imagen
+> principal. 1080p ahora es para jugar en el dock.
 >
 > **Novedades de la 0.2.0**
 > - **Imagen más nítida**: dibuja el juego, con sus videos, a **720p** (píxel a píxel en la pantalla portátil) o
@@ -258,7 +262,7 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 | Resolution (resolución) | 480p (la de la consola), 720p, 1080p (docked: en el dock) | Con cuántos píxeles se dibujan el juego y sus videos. 720p llena la pantalla portátil píxel a píxel; 1080p, en el dock, se dibuja más grande y se reduce, con bordes más suaves (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU sube. |
 | Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada o una telaraña. |
 | Upscaling (escalado) | Smooth, Sharp | Cómo se agrandan los videos y la imagen: Sharp conserva más detalle (Catmull-Rom), Smooth es el aspecto más suave de una TV. |
-| Texture filtering (filtrado) | Standard, Anisotropic 4x, 8x, 16x | Las calles y fachadas vistas de lado se ven nítidas a lo lejos. |
+| Texture filtering (filtrado) | Standard, Anisotropic 4x, 8x, 16x | Las calles y fachadas vistas de lado se ven nítidas a lo lejos. Mucho más trabajo para el chip gráfico en la ciudad: si bajan las imágenes por segundo, vuelve a Standard. |
 | Vibration (vibración) | Off, Low, Medium, High | La vibración del juego en los Joy-Con o un Pro Controller (la Switch Lite no tiene motor propio). Si el juego deja una vibración encendida, se apaga a los 2 segundos, y no vibra con el menú abierto ni en el menú HOME. |
 | CPU clock | Auto (1785 MHz), Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | El código traducido del juego y el controlador gráfico corren en la CPU. Auto la deja en 1785 MHz mientras corre el juego. |
 | GPU clock | Auto, Stock, 307.2, 384, 460.8, 614.4, 768 MHz | El chip gráfico. Auto es 460,8 MHz (lo más alto que usa Nintendo en modo portátil) a 480p en modo portátil, y 768 MHz a 720p y en el dock. |
@@ -288,7 +292,7 @@ Stock para que la batería dure más.
 | El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; funciona en una Switch Lite |
 | Leer tu copia: imágenes de disco y archivos | ✅ Todos los formatos comprobados byte a byte contra los archivos extraídos, en PC y en ARM |
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
-| Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 no se podía jugar, y la 0.2.1 es más rápida (los hilos en tres núcleos, relojes Auto, un 16:9 y una resolución más ligeros): falta confirmarlo en una consola |
+| Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9. La 0.2.2 quita las escrituras en la tarjeta SD del 16:9 (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1): falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
 | 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola |
 | Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |

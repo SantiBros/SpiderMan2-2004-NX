@@ -953,6 +953,7 @@ private:
     // with the frame they last were: a 3D draw (sparks, debris, a sign) stays one, and is not transformed on the CPU
     // again for a while
     std::unordered_map<uint64_t, uint64_t> not_flat_;
+    GLint max_texture_ = 0;  // GL_MAX_TEXTURE_SIZE
     uint32_t max_aniso_ = 1;  // what the driver takes, 1 without anisotropic filtering  // the draw's: what is drawn flat narrowed this much, all of it or not at the edges
     GLuint scratch_tex_ = 0, scratch_fbo_ = 0;
     uint32_t scratch_w_ = 0, scratch_h_ = 0;
@@ -2595,9 +2596,8 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
 void GlBackend::ApplyPicture() {
     pic_ = host_->GetPicture();
     uint32_t height = pic_.height ? pic_.height : guest_h_;
-    GLint max_size = 4096;
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
-    height = std::clamp<uint32_t>(height, guest_h_, uint32_t(max_size) * guest_h_ / 4096);
+    if (!max_texture_) glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_);  // once: this runs every frame
+    height = std::clamp<uint32_t>(height, guest_h_, uint32_t(std::max<GLint>(max_texture_, 4096)) * guest_h_ / 4096);
     float sy = float(height) / float(guest_h_), sx = sy;
     // the 16:9 picture drawn bigger: as many pixels across as a 16:9 screen of that height
     if (pic_.wide && height != guest_h_) sx = std::round(float(height) * 16.0f / 9.0f) / float(guest_w_);

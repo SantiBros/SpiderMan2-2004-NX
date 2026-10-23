@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
     LOGI("switch: quitting");
     sw::rumble::Stop();
     sw::clocks::Exit();
-    if (int fd = logx::Descriptor(); fd >= 0) fsync(fd);  // every line is flushed already, no lock needed
+    logx::Sync();  // the lines not on the card yet (the watch thread puts them there every 250 ms)
     sw::Close();
     std::_Exit(0);
 }

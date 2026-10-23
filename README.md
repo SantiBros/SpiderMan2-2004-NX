@@ -35,14 +35,16 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 
 > [!NOTE]
 > **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: 0.1.0 ran smoothly at
-> 480p, at the game's own pace of 30 frames a second, with its music, sound effects and voices. 0.2.0 was reported
-> unplayable; 0.2.1 is faster, and [reports](#help-wanted-testers) on how it runs are welcome, as on playing docked
-> and saving, not confirmed on a console yet.
+> 480p, at the game's own pace of 30 frames a second, with its music, sound effects and voices. 0.2.0 and 0.2.1 were
+> reported slow, above all in 16:9; 0.2.2 fixes the cause found, and [reports](#help-wanted-testers) on how it runs
+> are welcome, as on playing docked and saving, not confirmed on a console yet.
 
 > [!TIP]
-> **New in 0.2.1: faster.** The port now uses all three of the Switch's cores (the game, the renderer and the
-> sound used to share one), sets the clocks for the game by itself (**Auto**, the new default), keeps the HUD 4:3 in
-> 16:9 for next to nothing, and at 720p and 1080p enlarges only the main picture. 1080p is now for docked play.
+> **New in 0.2.2: 16:9 without the slowdown.** In 16:9 the port wrote a line to its log on the SD card several
+> times a frame, and the game waited for each write. That is gone, and no log line waits for the card any more.
+>
+> **New in 0.2.1: faster.** The port sets the clocks for the game by itself (**Auto**, the new default), keeps the
+> HUD 4:3 in 16:9 for much less, and at 720p and 1080p enlarges only the main picture. 1080p is now for docked play.
 >
 > **New in 0.2.0**
 > - **Sharper picture**: draw the game, its movies included, at **720p** (pixel for pixel on the handheld screen)
@@ -253,7 +255,7 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 | Resolution | 480p (the console's), 720p, 1080p (docked) | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p, docked, is drawn bigger and shrunk, with smoother edges (in handheld mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises. |
 | Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. |
 | Upscaling | Smooth, Sharp | How the movies and the picture are enlarged: Sharp keeps more detail (Catmull-Rom), Smooth is the softer look of a TV. |
-| Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. |
+| Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. Much more work for the graphics chip in the city: if the frame rate drops, go back to Standard. |
 | Vibration | Off, Low, Medium, High | The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its own). A rumble the game leaves on stops after 2 seconds, and none runs while the menu is open or in the HOME menu. |
 | CPU clock | Auto (1785 MHz), Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | The game's translated code and the graphics driver run on the CPU. Auto keeps it at 1785 MHz while the game runs. |
 | GPU clock | Auto, Stock, 307.2, 384, 460.8, 614.4, 768 MHz | The graphics chip. Auto is 460.8 MHz (the highest Nintendo uses in handheld mode) at 480p in handheld mode, 768 MHz at 720p and docked. |
@@ -281,7 +283,7 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | The game's code on the Switch's processor | ✅ Recompiled and compiled; runs on a Switch Lite |
 | Reading your copy: disc images and files | ✅ All formats checked byte for byte against the extracted files, on PC and ARM |
 | Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
-| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 was reported unplayable, and 0.2.1 is faster (the threads on three cores, Auto clocks, a lighter 16:9 and render scale): to be confirmed on a console |
+| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9. 0.2.2 removes 16:9's writes to the SD card (Auto clocks, a lighter 16:9 and render scale came in 0.2.1): to be confirmed on a console |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
 | 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1: checked on the PC test build; how fast they run on a console is to be measured |
 | Vibration | 🧪 New in 0.2.0: needs Joy-Con or a Pro Controller, not tried on a console yet |

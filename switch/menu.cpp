@@ -179,9 +179,9 @@ void Build() {
     af.get = [](const Settings& s) { return s.anisotropy; };
     af.set = [](Settings& s, uint32_t v) { s.anisotropy = v; };
     af.choices = {{1, "Standard", ""},
-                  {4, "Anisotropic 4x", ""},
-                  {8, "Anisotropic 8x", "A little more work for the graphics chip."},
-                  {16, "Anisotropic 16x", "A little more work for the graphics chip."}};
+                  {4, "Anisotropic 4x", "More work for the graphics chip: if the frame rate drops, go back to Standard."},
+                  {8, "Anisotropic 8x", "Much more work for the graphics chip in the city: the frame rate can drop."},
+                  {16, "Anisotropic 16x", "Much more work for the graphics chip in the city: the frame rate can drop."}};
     af.help = "Streets, rooftops and building fronts seen at a slant stay sharp in the distance instead of "
               "blurring.";
     g_items.push_back(af);

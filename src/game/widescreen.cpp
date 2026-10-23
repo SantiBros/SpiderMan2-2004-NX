@@ -45,7 +45,9 @@ void Apply(uint8_t* base, uint32_t view) {
     if ((std::fabs(aspect - kAspect43) < 1e-4f || std::fabs(aspect - kAspect169) < 1e-4f) && aspect != want) {
         SetF(base, view + kAspect, want);
         dirty = true;
-        LOGI("sm2: camera aspect %s", wide ? "16:9 (widescreen picture)" : "4:3");
+        // the game sets its 4:3 again every frame: only the first few times in the log (each line is a write to the
+        // SD card, which in 0.2.0 made the 16:9 picture slow)
+        LOG_FIRST(4, "sm2: camera aspect %s", wide ? "16:9 (widescreen picture)" : "4:3");
     }
     if (X86_MEM32(view + kPerspective)) {
         float fov = GetF(base, view + kFov);

@@ -109,7 +109,8 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
                       screen (the game's own wide camera; the HUD, menus and
                       movies stay 4:3)
   Upscaling           smooth or sharp
-  Texture filtering   standard, anisotropic 4x, 8x, 16x
+  Texture filtering   standard, anisotropic 4x, 8x, 16x (much more work for
+                      the GPU in the city)
   Vibration           off, low, medium, high (Joy-Con or a Pro Controller;
                       the Switch Lite has none of its own)
   CPU / GPU / memory  auto (the default: 1785 MHz CPU, 1600 MHz memory,

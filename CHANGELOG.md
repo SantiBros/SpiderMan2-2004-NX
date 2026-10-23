@@ -3,16 +3,36 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.2.2]
+
+**The 16:9 picture's slowdown, found.** For the report that 0.2.1 still ran badly, slower still in 16:9.
+
+### Fixed
+- **16:9 wrote to the SD card several times a frame.** The game sets its camera back to 4:3 every frame, for each of
+  its passes, and every time the port made it 16:9 again it wrote a line to the log, and on the Switch every line
+  went to the card at once: a write the game waited for, several times a frame (over 20,000 lines in a short session
+  of the PC test build). It is logged the first few times only now.
+- **No log line waits for the SD card any more.** Warnings and errors still go to the card at once; the other lines
+  are kept in a 64 KB buffer and written out by the port's watch thread every 250 ms, when there is something new, so
+  a burst of lines can never slow the game again. A crash still leaves its report, and the log up to a quarter of a
+  second before it.
+
+### Changed
+- **Texture filtering's help** says what anisotropic filtering costs the Switch's graphics chip in the city: try
+  Standard first when the frame rate drops.
+- The renderer asks the driver for its largest texture once, not every frame.
+- **Correction:** 0.2.1's notes said the port's threads all shared one of the Switch's cores. They did not: libnx
+  already lets every thread run on all three. 0.2.1 only gave the renderer and the sound a starting core of their own.
+
 ## [0.2.1]
 
 **Faster**, for the report that 0.2.0 was unplayable on a Switch Lite. The changes below are checked on the PC test
 build; the Switch's own frame rate is still to be measured on a console.
 
 ### Fixed
-- **The port's threads shared one of the Switch's cores.** A thread a Switch program starts may only run on the core
-  it starts on, the first one: the game, the renderer and the sound all took turns on it, and the render thread
-  gained nothing. Now the renderer prefers the second core, the sound and the port's menu and log threads the third,
-  the game's own threads the first, each free to move to an idle one.
+- **The renderer and the sound start on cores of their own** (the second and the third), the game on the first,
+  each still free to move to an idle one. (These notes first said the threads had shared one core: they had not,
+  as 0.2.2 found. libnx already lets every thread run on all three, so this changed little.)
 - **The 16:9 picture cost the renderer about 11 ms a frame** on the PC test build (several times that on a Switch):
   to keep the HUD 4:3, every small draw went through its vertex program on the CPU. Now a draw's first vertex in
   perspective ends that (most small draws are 3D: sparks, debris, signs), and the 3D ones are remembered for a second:

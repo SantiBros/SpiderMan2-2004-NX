@@ -56,6 +56,10 @@ void Init(const std::string& dir, const std::string& prefix, bool append) {
     std::snprintf(name, sizeof(name), "%s_%03d.log", prefix.c_str(), runs.empty() ? 1 : runs.back().first + 1);
     g_path = (fs::path(dir) / name).string();
     g_file = std::fopen(g_path.c_str(), "w");
+#ifdef __SWITCH__
+    // lines go out in big writes, at the watch thread's Sync (every 250 ms) or when full
+    if (g_file) std::setvbuf(g_file, nullptr, _IOFBF, 64 * 1024);
+#endif
 }
 
 const std::string& Path() { return g_path; }
@@ -83,11 +87,9 @@ void Write(Level lv, const char* fmt, ...) {
     if (g_file) {
         g_written++;
         std::fwrite(line, 1, size_t(n), g_file);
-#ifdef __SWITCH__
-        std::fflush(g_file);  // a crash leaves every line on the card
-#else
+        // warnings and errors at once; the rest within 250 ms, when the Switch's watch thread syncs the log: a line
+        // is then never a write to the SD card on the thread that logs it (a flood of them made 0.2.0's 16:9 slow)
         if (lv >= Level::Warn) std::fflush(g_file);
-#endif
     }
 #ifndef __SWITCH__
     std::fwrite(line, 1, size_t(n), stderr);  // on the Switch stderr is the text console, not thread safe
