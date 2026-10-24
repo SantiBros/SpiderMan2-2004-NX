@@ -1,5 +1,6 @@
-// Two small threads above the game's priority. One puts the log on the SD card every 250 ms: the card's cache only
-// reaches it on a flush, and 0.0.3's log lost its last lines when a frozen console was reset. The other writes a
+// Two small threads above the game's priority. One writes the log to the SD card every 250 ms, the only thread that
+// does: the others hand it their lines (logx::Background). It also flushes the card's cache then, as 0.0.3's log
+// lost its last lines when a frozen console was reset. The other writes a
 // pulse line every 2 s with the frame and sound counters and, for every guest thread, the kernel or library function
 // it is in, so a hang names the call it hangs in.
 #include <switch.h>
@@ -19,12 +20,14 @@ namespace {
 
 constexpr int kWatchPriority = 0x2C;  // the main thread's; the game's threads run at 0x3B
 
-void Start(void* (*fn)(void*)) {
+bool Start(void* (*fn)(void*)) {
     pthread_t th;
-    if (pthread_create(&th, nullptr, fn, nullptr) == 0)
+    if (pthread_create(&th, nullptr, fn, nullptr) == 0) {
         pthread_detach(th);
-    else
-        LOGW("watch: a watch thread could not start");
+        return true;
+    }
+    LOGW("watch: a watch thread could not start");
+    return false;
 }
 
 void* SyncLoop(void*) {
@@ -78,7 +81,10 @@ void* PulseLoop(void*) {
 }  // namespace
 
 void StartWatch() {
-    Start(SyncLoop);
+    // from now on the threads that log only hand their lines over, and this thread writes them to the card: none of
+    // them waits for the SD card any more (in 0.2.1 the game did, and froze for seconds in 16:9 when the card was slow)
+    logx::Background(true);
+    if (!Start(SyncLoop)) logx::Background(false);
     Start(PulseLoop);
 }
 

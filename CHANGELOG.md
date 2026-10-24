@@ -3,6 +3,27 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.2.3]
+
+**The log can no longer hold the game up**, for two reports that the game failed after updating. The logs sent in
+are 0.2.1's: in 4:3 at 720p it held 30 frames a second, but in 16:9 the game took 45 ms a frame instead of 7.5 and
+stopped for up to 4 seconds at a time, down to 2.6 frames a second, waiting for the SD card. 0.2.2 removed the
+16:9 lines that caused it; 0.2.3 makes sure no log line can do it again.
+
+### Fixed
+- **No game thread writes to the SD card for the log any more, warnings included.** Once the port's watch thread
+  runs, a line only goes into a buffer in memory, and the watch thread writes it to the card every 250 ms, without
+  holding the log's lock. In 0.2.2 warnings were still written by the thread that logged them, and the watch thread
+  held the lock while it wrote, so a thread that logged during a slow write waited for the card. A card slow for long
+  fills the buffer up to 1 MB, and the lines after that are counted, not waited for.
+- **A message logged too often is cut short:** more than 100 times in 10 seconds, the rest of that time it is only
+  counted, and a line says how many were left out. Errors are always written. A line logged every frame, like 16:9's
+  camera line in 0.2.0 and 0.2.1 (over 9,000 lines in 80 seconds of 0.2.1's 16:9), can no longer fill the log.
+- A crash writes the lines still in memory to the log before its report.
+
+### Changed
+- PC test build: `LOGBG=1` writes the log the way the Switch build does, from a thread of its own.
+
 ## [0.2.2]
 
 **The 16:9 picture's slowdown, found**, for the report that 0.2.1 still ran badly, slower still in 16:9, and a new

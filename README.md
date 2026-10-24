@@ -36,10 +36,15 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > [!NOTE]
 > **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: 0.1.0 ran smoothly at
 > 480p, at the game's own pace of 30 frames a second, with its music, sound effects and voices. 0.2.0 and 0.2.1 were
-> reported slow, above all in 16:9; 0.2.2 fixes the cause found, and [reports](#help-wanted-testers) on how it runs
-> are welcome, as on playing docked and saving, not confirmed on a console yet.
+> reported slow and freezing, above all in 16:9: their logs show the game waiting for the SD card. 0.2.2 and 0.2.3
+> fix that, and [reports](#help-wanted-testers) on how it runs are welcome, as on playing docked and saving, not
+> confirmed on a console yet.
 
 > [!TIP]
+> **New in 0.2.3: the log never holds the game up.** A tester's logs from 0.2.1 showed 16:9 freezing for up to
+> 4 seconds while the game waited for the SD card. Now the game's threads never write to the card: one thread of
+> the port's own does it, and a message repeated too often is cut short.
+>
 > **New in 0.2.2: 16:9 without the slowdown.** In 16:9 the port wrote a line to its log on the SD card several
 > times a frame, and the game waited for each write. That is gone, and no log line waits for the card any more.
 > And a new decoration for 4:3: **suit sides**, the web in the suit's red, blue and black.
@@ -290,7 +295,7 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | The game's code on the Switch's processor | ✅ Recompiled and compiled; runs on a Switch Lite |
 | Reading your copy: disc images and files | ✅ All formats checked byte for byte against the extracted files, on PC and ARM |
 | Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
-| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9. 0.2.2 removes 16:9's writes to the SD card (Auto clocks, a lighter 16:9 and render scale came in 0.2.1): to be confirmed on a console |
+| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9, where their logs show the game waiting for the SD card. 0.2.2 removes 16:9's writes to the card and 0.2.3 takes every write to the card off the game's threads (Auto clocks, a lighter 16:9 and render scale came in 0.2.1); in 4:3 at 720p a tester's 0.2.1 held 30 frames a second: to be confirmed on a console |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
 | 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1: checked on the PC test build; how fast they run on a console is to be measured |
 | Vibration | 🧪 New in 0.2.0: needs Joy-Con or a Pro Controller, not tried on a console yet |

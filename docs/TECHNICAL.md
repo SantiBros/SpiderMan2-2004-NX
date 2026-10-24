@@ -151,7 +151,7 @@ Two backends take the draws:
 | `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer, at the settings' volume; L at start turns it off. |
 | `input.cpp` | The Xbox controller from the Switch's, mapped by position; nothing while the debug menu has it. |
 | `rumble.cpp` | The game's rumble (`XInputSetState`'s two motors) on the HD rumble of a Pro Controller, two Joy-Con or the handheld Joy-Con: the heavy left motor as the low band (160 Hz), the light right one as the high band (320 Hz), at the settings' strength. A request left unchanged for 2 s fades out over 0.6 s; nothing is sent while the debug menu is open or the port is out of focus, and the motors stop at quit. |
-| `watch.cpp` | Two threads above the game's priority: one puts the log on the SD card every 250 ms (a reset console loses cached writes), one logs a status line every 2 s with each game thread's current kernel or library function. |
+| `watch.cpp` | Two threads above the game's priority: one writes the log to the SD card every 250 ms, the only thread that does (a reset console loses cached writes), one logs a status line every 2 s with each game thread's current kernel or library function. |
 | `crash.cpp` | The exception handler: registers, the module offset of the crash, return addresses from the stack and the game thread's current function, into `logs/crash.txt` and the run's log. |
 | `pthread_detach.cpp` | `pthread_detach`, which libnx doesn't have (below). |
 
@@ -207,10 +207,15 @@ Things the PC test build couldn't show, found on the console or by reading libnx
   file), where Windows and Linux allow it, and the game opens its packs more than once. Existing files open
   read-only unless the game asks to write (never on the disc), renames close the file around them, and resizes go
   through the open file. Conflicting opens are logged.
-- **Cached writes are lost on a reset, and a write to the card is slow.** The log is buffered (64 KB) and put on
-  the card every 250 ms from its own thread, when lines were written since (`fflush`, `fsync`); warnings and errors
-  go at once. Before 0.2.2 every line was flushed by the thread that logged it, and 16:9's camera line, logged
-  several times a frame, made the game wait for the card. A frozen console still leaves the log behind.
+- **Cached writes are lost on a reset, and a write to the card is slow.** Once the watch thread runs, a thread
+  that logs only adds its line to a buffer in memory (`logx::Background`), and the watch thread writes it to the card
+  every 250 ms, when lines were added since (`fwrite`, `fflush`, `fsync`): no game thread waits for the card, warnings
+  included. A card slow for long fills the buffer up to 1 MB, and the lines after that are counted. A message
+  logged more than 100 times in 10 s (its format string) is counted for the rest of them, and a line says how many
+  were left out; errors are always written. A crash writes the buffer by the log's descriptor before its report.
+  Before 0.2.2 every line was flushed by the thread that logged it, and 16:9's camera line, logged several times a
+  frame, made the game wait for the card: a tester's 0.2.1 log shows the game taking 45 ms a frame instead of 7.5,
+  and stopping for up to 4 s. A frozen console still leaves the log behind.
 - **Cores.** libnx's pthreads start on the process's default core, core 0, with the process's whole core mask
   (cores 0 to 2), so the scheduler moves a thread to an idle core. `kernel::NameHostThread` gives the renderer core 1
   and the sound and the port's main and watch threads core 2 as their preferred cores, the game's threads core 0.

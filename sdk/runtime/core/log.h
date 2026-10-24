@@ -16,9 +16,15 @@ void Write(Level lv, const char* fmt, ...) __attribute__((format(printf, 2, 3)))
 std::string Last();
 // the newest n lines, oldest first; false without waiting when a writer holds the log
 bool Recent(size_t n, std::string& out);
+// the lines not in the file yet written to it, and the file's buffer out
 void Flush();
 // Flush, then the file's data and size onto the storage itself (a console can lose cached writes when it is reset)
 void Sync();
+// on: Write only keeps a line, and Flush or Sync (a thread of their own, every 250 ms on the Switch) write it out, so
+// no thread that logs waits for the storage; off (the default): Write puts it into the file at once
+void Background(bool on);
+// the kept lines into the file without waiting for a lock, for a crash handler (nothing if a lock is held)
+void CrashFlush();
 // the log's file descriptor, -1 without a file: for a crash handler that must not take the log's lock
 int Descriptor();
 const std::string& Path();

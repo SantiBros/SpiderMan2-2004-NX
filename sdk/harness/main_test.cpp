@@ -1,6 +1,7 @@
 // headless host: <exe> <game folder or disc image> [--instance N], run from the folder that gets logs, hdd and cap
 // the game folder may come from GAME_DIR instead; a folder is searched as the Switch build does (kernel/game_source)
 // PULSE=1: every 2 s a line naming the kernel or library function each guest thread is in, as the Switch build logs
+// LOGBG=1: the log kept in memory and written once a second by its own thread, as on the Switch
 // RT=1: the renderer on a render thread of its own (gpu::g_render_thread), as the Switch's GPU renderer runs
 // TIMESCALE=0.2: the guest's clock at a fifth of real time (kernel::g_time_scale), for recordings: with GL=1 every
 // frame then covers a 60th of a second of the game however long it takes to draw
@@ -36,6 +37,8 @@ int main(int argc, char** argv) {
         return 2;
     }
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
+    // LOGBG=1: the log written by the once-a-second Flush below only, as the Switch's watch thread writes it
+    if (std::getenv("LOGBG")) logx::Background(true);
     app::Load();
     // XBE_LANGUAGE=n: the console language (XC_LANGUAGE: 1 English, 3 German, 4 French, 5 Spanish, 6 Italian)
     if (const char* l = std::getenv("XBE_LANGUAGE")) kernel::g_language = uint32_t(std::atoi(l));

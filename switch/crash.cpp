@@ -40,7 +40,9 @@ void Put(const char* fmt, ...) {
 size_t g_logged = 0;  // how much of g_buf is in the run's log already
 
 void Save() {
-    // the run's log first, by its descriptor: the crashing thread may hold the log's or a stdio lock
+    // the lines the watch thread had not written yet, then the crash, by the log's descriptor: the crashing thread may
+    // hold the log's or a stdio lock
+    logx::CrashFlush();
     int log = logx::Descriptor();
     if (log >= 0 && g_len > g_logged) {
         write(log, g_buf + g_logged, g_len - g_logged);

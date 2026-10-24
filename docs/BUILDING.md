@@ -70,6 +70,7 @@ cd out/run && SWITCH=1 PULSE=1 ../harness/sm2 "/path/to/Spider-Man 2.iso"   # or
 |---|---|
 | `SWITCH=1` | The Switch build's pacing: 60 frames a second, a frame drawn when as long as the last drawing has passed (at least half a second), saved as `cap/switch_<frame>.tga` from the first one with draws. |
 | `PULSE=1` | The Switch build's status line every 2 seconds: the kernel or library function each game thread is in. |
+| `LOGBG=1` | The log kept in memory and written once a second by a thread of its own, as the Switch build writes it. |
 | `SCRIPT=pad.txt` | Presses from a script, lines of `frame buttons [frames held]`, for example `1000 START 30`. Buttons: `UP DOWN LEFT RIGHT START BACK A B X Y BLACK WHITE LT RT LTHUMB RTHUMB`, the left stick `LS LSD LSL LSR` (up, down, left, right) and the right stick `RS RSD RSL RSR`, joined with `+`. |
 | `cmd`, `capnow` | Playing live: a file `cmd` in the run folder holding `buttons [frames held]` is pressed once and removed; with `GL=1`, an empty file `capnow` saves the next frame as `cap/gl_<frame>.tga` and is removed. |
 | `CAP=1` | With `SWITCH=1`, every drawn frame's draws listed in `cap/draws_<frame>.txt`. |

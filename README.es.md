@@ -37,11 +37,15 @@ balancéate por Nueva York.
 > [!NOTE]
 > **Jugable en la Switch.** El port se ha jugado en una Switch Lite, en modo portátil: la 0.1.0 iba fluida a 480p,
 > al propio ritmo del juego de 30 imágenes por segundo, con su música, efectos de sonido y voces. Se reportó que la
-> 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9; la 0.2.2 arregla la causa encontrada, y los
-> [reportes](#se-buscan-testers) sobre cómo va son bienvenidos, igual que sobre jugar en el dock y guardar partida,
-> que todavía no se han comprobado en una consola.
+> 0.2.0 y la 0.2.1 iban lentas y se congelaban, sobre todo en 16:9: sus registros muestran al juego esperando a la
+> tarjeta SD. La 0.2.2 y la 0.2.3 lo arreglan, y los [reportes](#se-buscan-testers) sobre cómo va son bienvenidos,
+> igual que sobre jugar en el dock y guardar partida, que todavía no se han comprobado en una consola.
 
 > [!TIP]
+> **Novedades de la 0.2.3: el registro nunca frena el juego.** Los registros de un tester con la 0.2.1 mostraban el
+> 16:9 congelándose hasta 4 segundos mientras el juego esperaba a la tarjeta SD. Ahora los hilos del juego nunca
+> escriben en la tarjeta: lo hace un hilo propio del port, y un mensaje que se repite demasiado se corta.
+>
 > **Novedades de la 0.2.2: 16:9 sin el bajón.** En 16:9 el port escribía una línea en su registro de la tarjeta SD
 > varias veces por imagen, y el juego esperaba cada escritura. Eso se acabó, y ninguna línea del registro espera ya
 > a la tarjeta. Y una decoración nueva para el 4:3: **suit sides**, la telaraña con los colores del traje, rojo, azul
@@ -299,7 +303,7 @@ Stock para que la batería dure más.
 | El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; funciona en una Switch Lite |
 | Leer tu copia: imágenes de disco y archivos | ✅ Todos los formatos comprobados byte a byte contra los archivos extraídos, en PC y en ARM |
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
-| Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9. La 0.2.2 quita las escrituras en la tarjeta SD del 16:9 (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1): falta confirmarlo en una consola |
+| Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo: falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
 | 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola |
 | Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |
