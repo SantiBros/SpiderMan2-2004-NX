@@ -36,3 +36,4 @@ settings.toml
 
 # build-windows.cmd: the SD card folder it makes (holds the .nro and your game)
 /SD card/
+__pycache__/
