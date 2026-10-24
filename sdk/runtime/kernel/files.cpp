@@ -3,10 +3,12 @@
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <set>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -51,6 +53,46 @@ void NoteOpen(const std::string& path, bool writer) {
     }
     (writer ? writers : readers)++;
 }
+
+// The title's saves (UseSaveFolders): a file there written is flushed onto the storage when it closes, and every
+// change there counted, for a port that keeps a copy of them elsewhere (SaveChanges).
+std::vector<std::string> g_save_roots;
+std::atomic<uint64_t> g_save_changes{0};
+
+bool InSaves(const std::string& host) {
+    std::lock_guard<std::mutex> lock(g_links_lock);
+    for (const std::string& root : g_save_roots)
+        if (host.size() > root.size() && host.compare(0, root.size(), root) == 0 &&
+            (host[root.size()] == '/' || host[root.size()] == '\\'))
+            return true;
+    return false;
+}
+
+void SaveChanged() { g_save_changes.fetch_add(1, std::memory_order_relaxed); }
+
+// FILETRACE=text: every open, read, write and query of a file whose path holds the text, logged (for saves: UDATA)
+bool Traced(const std::string& path) {
+    static const char* want = std::getenv("FILETRACE");
+    return want && *want && path.find(want) != std::string::npos;
+}
+
+// return addresses into the title's code among the guest stack's first words, for a trace line
+std::string Callers(X86Context& ctx) {
+    std::string out;
+    char buf[12];
+    for (uint32_t i = 0, found = 0; i < 96 && found < 8; i++) {
+        uint32_t v = R32(ctx.esp + i * 4);
+        if (v >= X86CodeBase && v < X86CodeEnd) {
+            std::snprintf(buf, sizeof buf, " %08X", v);
+            out += buf;
+            found++;
+        }
+    }
+    return out;
+}
+
+// the files open for writing, for FlushOpenFiles
+std::set<FILE*> g_writing;
 
 void NoteClose(const std::string& path, bool writer) {
     std::lock_guard<std::mutex> lock(g_open_lock);
@@ -127,6 +169,8 @@ struct File : Object {
     bool listed = false;
     bool delete_on_close = false;
     bool writer = false;  // fp was opened for writing
+    bool save = false;    // in the title's saves
+    bool async = false;   // opened for asynchronous I/O (neither FILE_SYNCHRONOUS_IO_ALERT nor _NONALERT)
     std::mutex io;  // threads sharing a handle: seek and transfer stay together
     File() : Object(ObjType::File) {}
     // a host file opened with fopen's mode; noted for the conflicts above
@@ -134,17 +178,41 @@ struct File : Object {
         fp = std::fopen(path.c_str(), mode);
         if (!fp) return false;
         writer = mode[0] != 'r' || std::strchr(mode, '+');
+        save = InSaves(path);
         NoteOpen(path, writer);
+        if (writer) {
+            std::lock_guard<std::mutex> lock(g_open_lock);
+            g_writing.insert(fp);
+        }
         return true;
     }
-    ~File() override {
-        if (fp) {
-            std::fclose(fp);
-            NoteClose(host.string(), writer);
+    // closes fp; a save written goes onto the storage first (a console turned off or reset right after saving
+    // would lose what its cache still held)
+    void Close() {
+        if (!fp) return;
+        if (writer) {
+            {
+                std::lock_guard<std::mutex> lock(g_open_lock);
+                g_writing.erase(fp);
+            }
+            if (save) {
+                std::fflush(fp);
+#ifndef _WIN32
+                fsync(fileno(fp));
+#endif
+                SaveChanged();
+            }
         }
+        std::fclose(fp);
+        fp = nullptr;
+        NoteClose(host.string(), writer);
+    }
+    ~File() override {
+        Close();
         if (delete_on_close) {
             std::error_code ec;
             fs::remove(host, ec);
+            if (save || InSaves(host.string())) SaveChanged();
         }
     }
 };
@@ -282,6 +350,20 @@ void UseSaveFolders(uint32_t title_id, const std::string& saves, const std::stri
     std::snprintf(id, sizeof id, "%08X", title_id);
     MapFolder(std::string("\\Device\\Harddisk0\\Partition1\\UDATA\\") + id, saves);
     MapFolder(std::string("\\Device\\Harddisk0\\Partition1\\TDATA\\") + id, title_data);
+    std::lock_guard<std::mutex> lock(g_links_lock);
+    g_save_roots = {fs::path(saves).string(), fs::path(title_data).string()};
+}
+
+uint64_t SaveChanges() { return g_save_changes.load(std::memory_order_relaxed); }
+
+void FlushOpenFiles() {
+    std::lock_guard<std::mutex> lock(g_open_lock);
+    for (FILE* fp : g_writing) {
+        std::fflush(fp);
+#ifndef _WIN32
+        fsync(fileno(fp));
+#endif
+    }
 }
 
 bool CreateSymbolicLink(const std::string& link, const std::string& target) {
@@ -480,6 +562,8 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
         IoStatus(iosb, kObjectPathNotFound, 0);
         return kObjectPathNotFound;
     }
+    if (Traced(host))
+        LOGI("filetrace: create %s access %08X disposition %u options %08X", host.c_str(), access, disposition, options);
     std::error_code ec;
     bool exists = fs::exists(host, ec);
     bool is_dir = exists && fs::is_directory(host, ec);
@@ -493,6 +577,7 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
             }
             fs::create_directories(host, ec);
             info = 2;
+            if (InSaves(host)) SaveChanged();
         } else if (disposition == 2) {
             IoStatus(iosb, kObjectNameCollision, 4);
             return kObjectNameCollision;
@@ -505,6 +590,7 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
         f->host = host;
         f->xbox = Normalize(name);
         f->dir = true;
+        f->save = InSaves(host);
         W32(handle_out, NewHandle(f));
         IoStatus(iosb, kSuccess, info);
         return kSuccess;
@@ -564,6 +650,7 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
     }
     f->xbox = Normalize(name);
     f->delete_on_close = options & 0x1000;  // FILE_DELETE_ON_CLOSE
+    f->async = !(options & 0x30) && !OnCdRom(host);  // the disc's files as before, from a folder as from an image
     W32(handle_out, NewHandle(f));
     IoStatus(iosb, kSuccess, info);
     LOG_FIRST(400, "open %s", name.c_str());
@@ -595,7 +682,7 @@ KERNEL_EXPORT(202, NtOpenFile, 6) {
             return kAccessDenied;
         }
     }
-    (void)options;
+    f->async = !(options & 0x30) && !OnCdRom(host);
     W32(handle_out, NewHandle(f));
     IoStatus(iosb, kSuccess, 1);
     return kSuccess;
@@ -636,9 +723,22 @@ static uint32_t Transfer(const Args& a, bool write, uint32_t pages) {
         if (done < chunk) break;
     }
     f->pos = pos + n;
+    // Asynchronous I/O to the hard disk is still in progress when the call returns on the console, always: the
+    // title gets STATUS_PENDING and the result later (GetOverlappedResult). Here it is done already, and its
+    // status block, event and file are set before the call returns, but the call still says pending: Spider-Man 2
+    // reads a save 512 bytes a frame and takes a read that completes at once for the end of the file, so its
+    // saves never loaded (it stopped after 1 KB of 48 and found them damaged). The disc's files, read the same
+    // way since the first versions, and reads with a completion routine (ReadFileEx) are left as they were.
+    const bool pending = f->async && f->fp && !apc;
+    if (Traced(f->host.string()))
+        LOGI("filetrace: %s %s at %llu, %u of %u bytes%s, buffer %08X, event %X apc %X, callers%s", write ? "write" : "read",
+             f->host.string().c_str(), (unsigned long long)pos, n, len, pages ? " (pages)" : "", buf, event, apc,
+             Callers(a.ctx).c_str());
+    if (write && f->save) SaveChanged();
     if (write && n < len) return Finish(*f, 0xC000007F, n, event, apc, apc_ctx, iosb);  // disk full
     if (!write && len && !n) return Finish(*f, kEndOfFile, 0, event, apc, apc_ctx, iosb);
-    return Finish(*f, kSuccess, n, event, apc, apc_ctx, iosb);
+    uint32_t status = Finish(*f, kSuccess, n, event, apc, apc_ctx, iosb);
+    return pending ? kPending : status;
 }
 
 KERNEL_EXPORT(219, NtReadFile, 8) { return Transfer(a, false, 0); }
@@ -658,6 +758,7 @@ KERNEL_EXPORT(211, NtQueryInformationFile, 5) {
         size = fs::file_size(f->host, ec);
     }
     std::memset(HostPtr(out), 0, len);
+    if (Traced(f->host.string())) LOGI("filetrace: query %s class %u, size %llu", f->host.string().c_str(), cls, (unsigned long long)size);
     switch (cls) {
         case 4: {  // FileBasicInformation
             uint64_t t = f->entry ? MountedDisc()->Time() : ToFileTime(fs::last_write_time(f->host, ec));
@@ -717,25 +818,38 @@ KERNEL_EXPORT(226, NtSetInformationFile, 5) {
                         LOGW("NtSetInformationFile: %s not resized (errno %d)", f->host.string().c_str(), errno);
 #endif
                 }
+                if (f->save) SaveChanged();
             }
             break;
         case 13:  // disposition
             f->delete_on_close = G<uint8_t>(in) != 0;
             break;
         case 10: {  // rename: ReplaceIfExists, RootDirectory, FileName (ANSI_STRING inline)
+            bool replace = G<uint8_t>(in) != 0;
             uint32_t root = R32(in + 4);
             std::string target = ReadAnsiString(in + 8);
             std::string host = ResolvePath(target, root);
             if (host.empty()) return kObjectPathNotFound;
+            bool same = fs::path(host) == f->host;
+            bool taken = !same && fs::exists(host, ec);
+            if (taken && !replace) return kObjectNameCollision;
             // closed around the rename: the Switch's file system does not rename an open file
             bool was_open = f->fp != nullptr, writer = f->writer;
-            if (was_open) {
-                std::fclose(f->fp);
-                f->fp = nullptr;
-                NoteClose(f->host.string(), writer);
-            }
+            f->Close();
+            // nor over a file that is there, where Windows and Linux replace it: a title that saves to a new file
+            // and renames it over the old one would fail every save after the first
+            if (taken) fs::remove(host, ec);
+            ec.clear();
             fs::rename(f->host, host, ec);
             if (!ec) f->host = host;
+            if (f->save || InSaves(host)) {
+                f->save = InSaves(f->host.string());
+                SaveChanged();
+            }
+            if (ec)
+                LOGW("NtSetInformationFile: %s not renamed to %s (%s)", f->host.string().c_str(), host.c_str(), ec.message().c_str());
+            else
+                LOG_FIRST(40, "files: renamed to %s%s", target.c_str(), taken ? ", over the file there" : "");
             if (was_open && !f->Open(f->host.string(), writer ? "r+b" : "rb"))
                 LOGW("NtSetInformationFile: %s did not open again after the rename", f->host.string().c_str());
             if (ec) return kAccessDenied;
@@ -869,12 +983,19 @@ KERNEL_EXPORT(195, NtDeleteFile, 1) {
     std::string host = ResolvePath(ReadAnsiString(R32(a[0] + 4)), R32(a[0]));
     std::error_code ec;
     if (host.empty() || !fs::remove(host, ec)) return kObjectNameNotFound;
+    if (InSaves(host)) SaveChanged();
     return kSuccess;
 }
 
 KERNEL_EXPORT(198, NtFlushBuffersFile, 2) {
     if (auto f = FileFromHandle(a[0]))
-        if (f->fp) std::fflush(f->fp);
+        if (f->fp) {
+            std::lock_guard<std::mutex> lock(f->io);
+            std::fflush(f->fp);
+#ifndef _WIN32
+            if (f->save) fsync(fileno(f->fp));
+#endif
+        }
     IoStatus(a[1], kSuccess, 0);
     return kSuccess;
 }

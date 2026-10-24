@@ -9,6 +9,7 @@
 //   cache/                               the rest of the Xbox's hard disk and the shader list: safe to delete
 //   logs/                                sm2_NNN.log, what to send back when something goes wrong
 //   settings.ini                         the debug menu's settings (ZL + ZR + -)
+// and a copy of save/ in sdmc:/config/SpiderMan2Xbox/save/, kept up to date (switch/saves)
 #include <switch.h>
 
 #include <unistd.h>
@@ -33,6 +34,7 @@
 #include "switch/folders.h"
 #include "switch/menu.h"
 #include "switch/rumble.h"
+#include "switch/saves.h"
 #include "switch/screen.h"
 #include "switch/settings.h"
 #include "switch/state.h"
@@ -240,12 +242,18 @@ int main(int argc, char** argv) {
 
     // the saves in save/, the rest of the Xbox's hard disk in cache/ (hdd/ before 0.1.0, moved there)
     sw::Folders folders = sw::SetUpFolders(app::ExeDir(), copy.title_id);
+    // an update that replaced this folder took save/ with it: the copy kept in sdmc:/config puts it back
+    if (sw::RestoreSaves(folders)) {
+        sw::Loading(start_title, "Your saves were put back from their copy. Loading...", start_footer);
+        sw::Pump();
+    }
     kernel::UseSaveFolders(copy.title_id, folders.saves.string(), folders.title_data.string());
 
     if (copy.disc) kernel::MountDisc(std::move(copy.disc));
     if (app::kGame.init) app::kGame.init();
     if (!kernel::Boot(std::move(copy.xbe), IMAGE_XBE, copy.folder.string(), folders.cache.string()))
         Fail("The game did not start", "See the newest file in " + dir + "/logs");
+    sw::StartSaveBackup(folders);
 
     // the guest runs on its own threads. This one keeps the applet alive, runs the debug menu and puts things on
     // screen: until the game draws its first picture, "Loading...", or with the start-up log on, the newest log
@@ -276,6 +284,9 @@ int main(int argc, char** argv) {
     }
     LOGI("switch: quitting");
     sw::rumble::Stop();
+    // what the game was still writing onto the card, then the saves' copy brought up to date
+    kernel::FlushOpenFiles();
+    sw::BackUpSavesNow();
     sw::clocks::Exit();
     logx::Sync();  // the lines not on the card yet (the watch thread puts them there every 250 ms)
     sw::Close();

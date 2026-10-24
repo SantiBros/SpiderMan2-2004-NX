@@ -254,9 +254,15 @@ el menú de depuración y vuelve a arrancar el port.
 
 Tus partidas están en `switch/SpiderMan2Xbox/save/`: las partidas del juego en `save/progress/` (lo que la Xbox
 guarda en `E:\UDATA` para este juego) y sus datos propios en `save/data/` (`E:\TDATA`). Haz una copia de la
-carpeta `save` de vez en cuando, y vuelve a copiarla para restaurar; las actualizaciones no la tocan. El resto del
-disco duro de la Xbox (sus unidades de caché) y la lista de shaders están en `cache/`, que se puede borrar cuando
-quieras: se vuelve a crear al arrancar.
+carpeta `save` de vez en cuando, y vuelve a copiarla para restaurar; las actualizaciones no la tocan. El port
+también guarda una copia en `sdmc:/config/SpiderMan2Xbox/save/`, al día unos segundos después de cada guardado:
+si al arrancar `save/progress` no tiene partidas (por ejemplo, una actualización que reemplazó toda la carpeta), la
+copia vuelve sola. Para empezar de cero, elige **New Game** en el menú de guardado del juego, o borra las dos. El
+resto del disco duro de la Xbox (sus unidades de caché) y la lista de shaders están en `cache/`, que se puede
+borrar cuando quieras: se vuelve a crear al arrancar.
+
+Antes de la 0.2.3 el juego guardaba pero no podía cargar sus partidas ("UNABLE TO LOAD SPIDER-MAN 2 SAVED GAME").
+Las partidas se escribían completas, y la 0.2.3 las carga.
 
 ## Actualizar
 

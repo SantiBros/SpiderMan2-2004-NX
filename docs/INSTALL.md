@@ -246,8 +246,14 @@ debug menu and start the port again.
 
 Your saves are in `switch/SpiderMan2Xbox/save/`: the game's saves in `save/progress/` (what the Xbox keeps in
 `E:\UDATA` for this game) and its own data in `save/data/` (`E:\TDATA`). Back the `save` folder up from time to
-time, and copy it back to restore; updates don't touch it. The rest of the Xbox's hard disk (its cache drives) and
-the shader list are in `cache/`, which can be deleted at any time: it is made again at the next start.
+time, and copy it back to restore; updates don't touch it. The port keeps a copy of it too, in
+`sdmc:/config/SpiderMan2Xbox/save/`, up to date a few seconds after each save: when `save/progress` has no saves at
+start (an update that replaced the whole folder, for one), the copy is put back by itself. To start over, choose
+**New Game** in the game's save menu, or delete both. The rest of the Xbox's hard disk (its cache drives) and the
+shader list are in `cache/`, which can be deleted at any time: it is made again at the next start.
+
+Before 0.2.3 the game saved but could not load its saves ("UNABLE TO LOAD SPIDER-MAN 2 SAVED GAME"). The saves
+were written whole, and 0.2.3 loads them.
 
 ## Updating
 

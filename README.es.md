@@ -39,12 +39,15 @@ balancéate por Nueva York.
 > al propio ritmo del juego de 30 imágenes por segundo, con su música, efectos de sonido y voces. Se reportó que la
 > 0.2.0 y la 0.2.1 iban lentas y se congelaban, sobre todo en 16:9: sus registros muestran al juego esperando a la
 > tarjeta SD. La 0.2.2 y la 0.2.3 lo arreglan, y los [reportes](#se-buscan-testers) sobre cómo va son bienvenidos,
-> igual que sobre jugar en el dock y guardar partida, que todavía no se han comprobado en una consola.
+> igual que sobre jugar en el dock, que todavía no se ha comprobado en una consola. Antes de la 0.2.3 las partidas
+> guardadas no cargaban.
 
 > [!TIP]
-> **Novedades de la 0.2.3: el registro nunca frena el juego.** Los registros de un tester con la 0.2.1 mostraban el
-> 16:9 congelándose hasta 4 segundos mientras el juego esperaba a la tarjeta SD. Ahora los hilos del juego nunca
-> escriben en la tarjeta: lo hace un hilo propio del port, y un mensaje que se repite demasiado se corta.
+> **Novedades de la 0.2.3: las partidas guardadas cargan, y el 16:9 no se congela.** Las partidas se guardaban pero
+> nunca se podían cargar ("unable to load saved game"): ahora cargan, también las que ya tienes en la tarjeta, y se
+> guarda una copia en `sdmc:/config/SpiderMan2Xbox/save/` por si una actualización reemplaza la carpeta. Además, los
+> registros de un tester con la 0.2.1 mostraban el 16:9 congelándose hasta 4 segundos mientras el juego esperaba a
+> que la tarjeta SD escribiera el registro: ningún hilo del juego escribe ya en la tarjeta.
 >
 > **Novedades de la 0.2.2: 16:9 sin el bajón.** En 16:9 el port escribía una línea en su registro de la tarjeta SD
 > varias veces por imagen, y el juego esperaba cada escritura. Eso se acabó, y ninguna línea del registro espera ya
@@ -168,7 +171,8 @@ ejecutado en el PC.</sub></p>
   del juego. Los cierres inesperados dejan un informe. La pantalla de arranque también puede mostrar las
   últimas líneas del registro (el registro de arranque del menú de depuración).
 - **Tus partidas en una carpeta**, `save/`, aparte de la caché: se respaldan copiando una sola carpeta, y se
-  conservan entre actualizaciones.
+  conservan entre actualizaciones, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` que vuelve sola si alguna
+  vez se reemplaza la carpeta.
 - **Controles asignados por posición**, para que los botones que muestra el juego estén donde tus dedos
   los esperan.
 - **Totalmente sin conexión.** El port no usa la red.
@@ -311,13 +315,14 @@ Stock para que la batería dure más.
 | Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
 | Controles | ✅ Asignados por posición |
 | En el dock (TV) | 🧪 Todavía no se ha probado en una consola |
-| Partidas | 🧪 En `save/` en la tarjeta SD, aparte de la caché; guardar y cargar todavía no se ha comprobado en una consola |
+| Partidas | ✅ Guardar y cargar comprobado en la versión de prueba para PC en la 0.2.3 (antes, las partidas se guardaban pero nunca cargaban); en `save/` en la tarjeta SD, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` |
 | Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco) |
 | Menú de depuración, contador | ✅ En una Switch Lite; los relojes solo ofrecen velocidades que usan los perfiles de Nintendo |
 | En línea | ❌ Nada: el port no usa la red |
 
 **Problemas conocidos**
-- Jugar en el dock con la TV y guardar partida todavía no se han comprobado en una consola.
+- Jugar en el dock con la TV todavía no se ha comprobado en una consola. Antes de la 0.2.3 las partidas guardadas no
+  cargaban.
 - Vistos en una consola, todavía sin arreglar: **el balanceo con la telaraña muestra una sola animación**, y
   **reflejos incorrectos en las ventanas de los edificios**. Un vídeo corto de cada uno, con la carpeta `logs`,
   mostraría qué arreglar (las líneas `swing:` del log dicen qué animaciones de balanceo elige el juego).
@@ -479,9 +484,11 @@ Nintendo. Lo habitual es usar el homebrew en un emuMMC y tener una copia de segu
 <summary><b>¿Dónde está mi partida y cómo la respaldo?</b></summary>
 
 En `switch/SpiderMan2Xbox/save/`: el juego guarda sus partidas en `save/progress/` como lo haría en el disco
-duro de la Xbox, y algunos datos propios en `save/data/`. Copia la carpeta `save` a un lugar seguro de vez en
-cuando, y vuelve a copiarla para restaurar. Las actualizaciones nunca la tocan, y `cache/`, a su lado, se puede
-borrar cuando quieras.
+duro de la Xbox, y algunos datos propios en `save/data/`. El port además guarda una copia en
+`sdmc:/config/SpiderMan2Xbox/save/`, al día unos segundos después de cada guardado: si al arrancar `save/progress`
+está vacía (por ejemplo, una actualización que reemplazó toda la carpeta), la copia vuelve sola. Copia también la
+carpeta `save` a un lugar seguro de vez en cuando. `cache/`, a su lado, se puede borrar cuando quieras. Para empezar
+desde cero, elige **New Game** en el menú de guardado del juego, o borra `save/` y `sdmc:/config/SpiderMan2Xbox/`.
 </details>
 
 <details>

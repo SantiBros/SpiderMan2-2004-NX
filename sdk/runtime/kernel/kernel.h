@@ -38,6 +38,10 @@ extern std::function<std::string(const std::string& device_path)> g_missing_disc
 void MapFolder(const std::string& device_path, const std::string& host_dir);
 // the title's saves (E:\UDATA\<title>) and its own data on the hard disk (E:\TDATA\<title>) in host folders
 void UseSaveFolders(uint32_t title_id, const std::string& saves, const std::string& title_data);
+// a count that changes whenever the title writes, creates, renames or deletes something in those save folders
+uint64_t SaveChanges();
+// every file the title has open for writing flushed onto the storage (before the port quits)
+void FlushOpenFiles();
 
 // NTSTATUS values the kernel hands back
 enum : uint32_t {

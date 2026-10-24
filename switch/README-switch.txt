@@ -9,7 +9,8 @@ effects and voices.
   - The picture is drawn by the Switch's graphics chip (OpenGL), every frame.
     The debug menu's counter (ZL + ZR + -) shows the frame rate.
   - Sound goes through the Switch speaker/headphones.
-  - Not confirmed on a console yet: playing docked on a TV, and saving.
+  - Not confirmed on a console yet: playing docked on a TV. Saved games
+    didn't load before 0.2.3; they do now.
   - This .nro was built from YOUR copy of the game. It contains code derived
     from the game, so keep it to yourself: do not share it.
 
@@ -74,7 +75,10 @@ to find where a problem comes from:
 
 Your saves are in save/ beside the .nro: save/progress/ holds the game's
 saves, save/data/ what the game keeps for itself. Back up the save folder
-from time to time; updates don't touch it. cache/ holds the rest of the Xbox's
+from time to time; updates don't touch it. A copy is also kept in
+sdmc:/config/SpiderMan2Xbox/save/ and put back by itself if save/progress
+is ever empty at start (to start over, delete both, or choose New Game in
+the game's save menu). cache/ holds the rest of the Xbox's
 hard disk and the shader list, and can be deleted at any time. A version
 before 0.1.0 kept everything in hdd/: its saves are moved to save/ at the
 first start.

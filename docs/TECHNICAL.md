@@ -151,6 +151,7 @@ Two backends take the draws:
 | `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer, at the settings' volume; L at start turns it off. |
 | `input.cpp` | The Xbox controller from the Switch's, mapped by position; nothing while the debug menu has it. |
 | `rumble.cpp` | The game's rumble (`XInputSetState`'s two motors) on the HD rumble of a Pro Controller, two Joy-Con or the handheld Joy-Con: the heavy left motor as the low band (160 Hz), the light right one as the high band (320 Hz), at the settings' strength. A request left unchanged for 2 s fades out over 0.6 s; nothing is sent while the debug menu is open or the port is out of focus, and the motors stop at quit. |
+| `saves.cpp` | The copy of `save/` in `sdmc:/config/SpiderMan2Xbox/save/`: kept up to date a few seconds after the game saves and at quit, put back at start when `save/progress` has no saves, and the saves found listed in the log. |
 | `watch.cpp` | Two threads above the game's priority: one writes the log to the SD card every 250 ms, the only thread that does (a reset console loses cached writes), one logs a status line every 2 s with each game thread's current kernel or library function. |
 | `crash.cpp` | The exception handler: registers, the module offset of the crash, return addresses from the stack and the game thread's current function, into `logs/crash.txt` and the run's log. |
 | `pthread_detach.cpp` | `pthread_detach`, which libnx doesn't have (below). |
@@ -203,6 +204,18 @@ Things the PC test build couldn't show, found on the console or by reading libnx
 - **No `pthread_detach`.** libnx leaves newlib's detach hook unimplemented, so `std::thread::detach` throws
   `std::system_error` ("Function not implemented"). The port supplies the hook: detached threads go to a reaper
   that joins them when their kernel handle signals.
+- **Asynchronous I/O is still in progress when the call returns.** On the console a read or write to the hard
+  disk through a handle opened without `FILE_SYNCHRONOUS_IO_*` returns `STATUS_PENDING`, and the title collects the
+  result later (`GetOverlappedResult`). The port does the transfer at once but returns `STATUS_PENDING` all the same,
+  with the status block, the event and the file already set. Spider-Man 2 reads its saves (opened that way, and
+  the only files it opens that way) 512 bytes a frame, and takes a read that completes at once for the end of the
+  file: before 0.2.3 it stopped after 1 KB and called the save damaged. The disc's files, and reads with a
+  completion routine, still complete as before. A rename over an existing file removes it first, as the Switch
+  refuses to rename over one.
+- **Saves are flushed and copied.** A file written in the save folders is `fsync`ed when it closes, and the files
+  open for writing when the port quits (`kernel::FlushOpenFiles`). `switch/saves.cpp` keeps a copy of `save/` in
+  `sdmc:/config/SpiderMan2Xbox/save/`, made 4 seconds after the last change to the saves (`kernel::SaveChanges`)
+  and at quit, never while `save/progress` has no save game, and put back at start when `save/progress` has none.
 - **No second open of a file open for writing.** The Switch's file system refuses it (and a rename of an open
   file), where Windows and Linux allow it, and the game opens its packs more than once. Existing files open
   read-only unless the game asks to write (never on the disc), renames close the file around them, and resizes go

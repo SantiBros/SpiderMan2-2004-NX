@@ -5,12 +5,22 @@ builds.
 
 ## [0.2.3]
 
-**The log can no longer hold the game up**, for two reports that the game failed after updating. The logs sent in
+**Saved games load again, and the log can no longer hold the game up**, for two reports that the game failed
+after updating and one that it didn't keep its progress. The logs sent in
 are 0.2.1's: in 4:3 at 720p it held 30 frames a second, but in 16:9 the game took 45 ms a frame instead of 7.5 and
 stopped for up to 4 seconds at a time, down to 2.6 frames a second, waiting for the SD card. 0.2.2 removed the
 16:9 lines that caused it; 0.2.3 makes sure no log line can do it again.
 
 ### Fixed
+- **Saved games never loaded.** The game reads a save 512 bytes a frame with asynchronous reads, and on the Xbox
+  such a read is always still in progress when the call returns. The port's reads complete at once, and the game
+  takes a read that completes at once for the end of the file: it stopped after 1 KB of the 48 KB save, found it
+  damaged and said "UNABLE TO LOAD SPIDER-MAN 2 SAVED GAME", then started a new game. Saving always worked, so the
+  saves already on the card load now. Asynchronous reads and writes to the hard disk now say they are in progress,
+  as on the console, with the result already there (only the save files are opened that way).
+- **A rename over a file that is there replaces it**, as on the Xbox: the Switch's file system refuses it, where
+  Windows and Linux allow it, so a game that saves to a new file and renames it would have failed every save after
+  the first on the Switch only.
 - **No game thread writes to the SD card for the log any more, warnings included.** Once the port's watch thread
   runs, a line only goes into a buffer in memory, and the watch thread writes it to the card every 250 ms, without
   holding the log's lock. In 0.2.2 warnings were still written by the thread that logged them, and the watch thread
@@ -21,8 +31,17 @@ stopped for up to 4 seconds at a time, down to 2.6 frames a second, waiting for 
   camera line in 0.2.0 and 0.2.1 (over 9,000 lines in 80 seconds of 0.2.1's 16:9), can no longer fill the log.
 - A crash writes the lines still in memory to the log before its report.
 
+### Added
+- **A copy of your saves outside the port's folder**, in `sdmc:/config/SpiderMan2Xbox/save/`, brought up to date a
+  few seconds after the game saves and when the port quits. If `save/progress` has no saves at start (an update that
+  replaced the whole `SpiderMan2Xbox` folder, or the port started from another folder), the copy is put back by
+  itself, and the start screen says so. A save written is flushed onto the card when the game closes it, and every
+  file the game is writing when the port quits.
+- The log lists the saves found at start, in `save/` and in the copy.
+
 ### Changed
-- PC test build: `LOGBG=1` writes the log the way the Switch build does, from a thread of its own.
+- PC test build: `LOGBG=1` writes the log the way the Switch build does, from a thread of its own; `FILETRACE=text`
+  logs every open, read, write and query of a file whose path holds the text (`FILETRACE=UDATA` for the saves).
 
 ## [0.2.2]
 

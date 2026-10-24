@@ -37,13 +37,15 @@ around it. Bring your own copy of the game, build the port from it once, and swi
 > **Playable on the Switch.** The port has been played on a Switch Lite, in handheld mode: 0.1.0 ran smoothly at
 > 480p, at the game's own pace of 30 frames a second, with its music, sound effects and voices. 0.2.0 and 0.2.1 were
 > reported slow and freezing, above all in 16:9: their logs show the game waiting for the SD card. 0.2.2 and 0.2.3
-> fix that, and [reports](#help-wanted-testers) on how it runs are welcome, as on playing docked and saving, not
-> confirmed on a console yet.
+> fix that, and [reports](#help-wanted-testers) on how it runs are welcome, as on playing docked, not confirmed
+> on a console yet. Saved games didn't load before 0.2.3.
 
 > [!TIP]
-> **New in 0.2.3: the log never holds the game up.** A tester's logs from 0.2.1 showed 16:9 freezing for up to
-> 4 seconds while the game waited for the SD card. Now the game's threads never write to the card: one thread of
-> the port's own does it, and a message repeated too often is cut short.
+> **New in 0.2.3: saved games load, and 16:9 doesn't freeze.** Saves were written but never loaded back ("unable
+> to load saved game"): they load now, the ones already on your card too, and a copy of them is kept in
+> `sdmc:/config/SpiderMan2Xbox/save/` in case an update replaces the folder. And a tester's logs from 0.2.1
+> showed 16:9 freezing for up to 4 seconds while the game waited for the SD card to write the log: no game thread
+> writes to the card any more.
 >
 > **New in 0.2.2: 16:9 without the slowdown.** In 16:9 the port wrote a line to its log on the SD card several
 > times a frame, and the game waited for each write. That is gone, and no log line waits for the card any more.
@@ -163,7 +165,8 @@ by the Switch build's screen code, run on the PC.</sub></p>
   and a status line every 2 seconds says what each of the game's threads is doing. Crashes leave a report.
   The start screen can show the newest lines of the log too (the debug menu's start-up log).
 - **Your saves in one folder**, `save/`, apart from the cache: back it up by copying one folder, and it's kept
-  across updates.
+  across updates, with a copy in `sdmc:/config/SpiderMan2Xbox/save/` that comes back by itself if the folder is
+  ever replaced.
 - **Controls mapped by position**, so the buttons the game shows are where your fingers expect them.
 - **Fully offline.** The port doesn't use the network.
 
@@ -303,13 +306,13 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | Sound | ✅ Music, sound effects and voices, on a Switch Lite |
 | Controls | ✅ Mapped by position |
 | Docked (TV) | 🧪 Not tried yet on a console |
-| Saves | 🧪 In `save/` on the SD card, apart from the cache; saving and loading not confirmed on a console yet |
+| Saves | ✅ Saving and loading checked on the PC test build in 0.2.3 (before it, saves were written but never loaded); in `save/` on the SD card, with a copy in `sdmc:/config/SpiderMan2Xbox/save/` |
 | Language | ✅ The console's: English, Spanish, French, German or Italian texts (voices in English, as on the disc) |
 | Debug menu, frame-rate counter | ✅ On a Switch Lite; the clocks only offer rates Nintendo's own profiles use |
 | Online | ❌ None: the port doesn't use the network |
 
 **Known issues**
-- Docked play on a TV and saving haven't been confirmed on a console yet.
+- Docked play on a TV hasn't been confirmed on a console yet. Saved games didn't load before 0.2.3.
 - Reported on a console, not fixed yet: **web-swinging showing only one animation**, and **wrong reflections in
   building windows**. A short video of each, with the `logs` folder, would show what to fix (the log's `swing:`
   lines say which swing animations the game picks).
@@ -467,8 +470,11 @@ and keeping your SD card backed up is the usual advice.
 <summary><b>Where is my save, and how do I back it up?</b></summary>
 
 In `switch/SpiderMan2Xbox/save/`: the game saves into `save/progress/` as it would on the Xbox's hard disk, and
-keeps a little data of its own in `save/data/`. Copy the `save` folder somewhere safe from time to time, and
-copy it back to restore. Updates never touch it, and `cache/` beside it can be deleted at any time.
+keeps a little data of its own in `save/data/`. The port also keeps a copy in `sdmc:/config/SpiderMan2Xbox/save/`,
+up to date a few seconds after each save: if `save/progress` is ever empty at start (say, an update that replaced
+the whole folder), the copy is put back by itself. Copy the `save` folder somewhere safe from time to time too.
+`cache/` beside it can be deleted at any time. To start over from nothing, start a **New Game** in the game's
+save menu, or delete both `save/` and `sdmc:/config/SpiderMan2Xbox/`.
 </details>
 
 <details>
