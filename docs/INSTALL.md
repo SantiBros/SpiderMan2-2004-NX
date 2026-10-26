@@ -266,6 +266,7 @@ places, the one in `hdd/` stays where it is and is used, and the log says so.
 
 | What you see | What to do |
 |---|---|
+| **The builder stops while installing the tools** ("the build stopped" right after Ubuntu's packages) | It could not download devkitPro's tools; since 0.2.3 it says why, and tries three times. Check that Linux is online, then start the builder again; a VPN, antivirus or network that blocks `apt.devkitpro.org` causes it too, so try another network. By hand, in Ubuntu: `wget https://apt.devkitpro.org/install-devkitpro-pacman`, `chmod +x install-devkitpro-pacman`, `sudo ./install-devkitpro-pacman`, `sudo dkp-pacman -S switch-dev switch-mesa`, then the builder again. |
 | **Game not found** | Your game isn't in `switch/SpiderMan2Xbox/game/`, or it is in a form the port doesn't read. The screen lists the files it found and why each can't be used. See [the formats](#the-formats-the-port-reads). |
 | **The data folder is missing** | The contents of `data` are directly in `game/`. Make a folder named `data` there and move `game.ini`, `movies`, `packs` and `sound` into it. |
 | **A different release of the game** | Your copy isn't the release the port was built from. It would most likely crash: press **+** to go back. The builder normally catches this; this happens when the `.nro` was built from another copy. |

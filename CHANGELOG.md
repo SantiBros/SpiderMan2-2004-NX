@@ -30,6 +30,9 @@ stopped for up to 4 seconds at a time, down to 2.6 frames a second, waiting for 
   counted, and a line says how many were left out. Errors are always written. A line logged every frame, like 16:9's
   camera line in 0.2.0 and 0.2.1 (over 9,000 lines in 80 seconds of 0.2.1's 16:9), can no longer fill the log.
 - A crash writes the lines still in memory to the log before its report.
+- **The builder says why it could not install devkitPro's tools.** It downloaded devkitPro's installer silently, so a
+  failed download stopped it with no reason given. It now shows the download, tries three times (with `curl` if
+  `wget` fails), and names the step that failed.
 
 ### Added
 - **A copy of your saves outside the port's folder**, in `sdmc:/config/SpiderMan2Xbox/save/`, brought up to date a

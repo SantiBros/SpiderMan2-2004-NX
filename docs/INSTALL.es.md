@@ -277,6 +277,7 @@ Los mensajes de la pantalla están en inglés:
 
 | Lo que ves | Qué hacer |
 |---|---|
+| **El compilador se detiene al instalar las herramientas** ("the build stopped" justo después de los paquetes de Ubuntu) | No pudo descargar las herramientas de devkitPro; desde la 0.2.3 dice por qué, y lo intenta tres veces. Comprueba que Linux tenga internet y vuelve a abrir el compilador; una VPN, un antivirus o una red que bloquee `apt.devkitpro.org` también lo causa, así que prueba otra red. A mano, en Ubuntu: `wget https://apt.devkitpro.org/install-devkitpro-pacman`, `chmod +x install-devkitpro-pacman`, `sudo ./install-devkitpro-pacman`, `sudo dkp-pacman -S switch-dev switch-mesa`, y luego el compilador otra vez. |
 | **Game not found** | Tu juego no está en `switch/SpiderMan2Xbox/game/`, o está en una forma que el port no lee. La pantalla lista los archivos que encontró y por qué no puede usar cada uno. Mira [los formatos](#los-formatos-que-lee-el-port). |
 | **The data folder is missing** | El contenido de `data` está directamente en `game/`. Crea ahí una carpeta llamada `data` y mueve a ella `game.ini`, `movies`, `packs` y `sound`. |
 | **A different release of the game** | Tu copia no es la edición a partir de la cual se compiló el port. Lo más probable es que se cierre: pulsa **+** para volver. Normalmente el compilador lo detecta; esto pasa cuando el `.nro` se compiló a partir de otra copia. |

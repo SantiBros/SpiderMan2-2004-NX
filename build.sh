@@ -58,20 +58,38 @@ missing_tools() {
 # everything from Ubuntu's or Debian's packages and devkitPro's: once, about 10 minutes
 install_tools() {
     say "Installing the tools (once, about 10 minutes). sudo asks for your password: on WSL, the one of your Linux user"
-    sudo apt-get update
-    sudo apt-get install -y git cmake ninja-build g++ wget ca-certificates
+    sudo apt-get update || fail "Ubuntu's package list could not be updated (the lines above say why)"
+    sudo apt-get install -y git cmake ninja-build g++ wget curl ca-certificates ||
+        fail "Ubuntu's packages could not be installed (the lines above say why)"
     if ! command -v dkp-pacman > /dev/null; then
         [ -e /etc/mtab ] || sudo ln -s /proc/self/mounts /etc/mtab  # WSL may lack it, devkitPro's installer needs it
-        local tmp
+        local tmp url=https://apt.devkitpro.org/install-devkitpro-pacman
         tmp=$(mktemp -d)
-        wget -q -O "$tmp/install-devkitpro-pacman" https://apt.devkitpro.org/install-devkitpro-pacman
+        echo "  Downloading devkitPro's installer: $url"
+        fetch "$url" "$tmp/install-devkitpro-pacman" || fail "devkitPro's installer could not be downloaded from
+  $url
+  The lines above say why. Check that Linux is online (run: wget -O /dev/null $url), then start the
+  builder again. Some networks, VPNs and antivirus programs block that site: try another network if it keeps
+  failing."
         chmod +x "$tmp/install-devkitpro-pacman"
-        sudo "$tmp/install-devkitpro-pacman"
+        sudo "$tmp/install-devkitpro-pacman" || fail "devkitPro's installer stopped (the lines above say why)"
         rm -rf "$tmp"
+        command -v dkp-pacman > /dev/null || fail "devkitPro's installer finished but dkp-pacman is not there"
     fi
-    sudo dkp-pacman -Sy --noconfirm
-    sudo dkp-pacman -S --needed --noconfirm switch-dev switch-mesa
+    sudo dkp-pacman -Sy --noconfirm || fail "devkitPro's package list could not be downloaded (the lines above say why)"
+    sudo dkp-pacman -S --needed --noconfirm switch-dev switch-mesa ||
+        fail "devkitPro's Switch tools could not be installed (the lines above say why)"
     export DEVKITPRO=/opt/devkitpro
+}
+# url into file, its errors shown: wget, then curl, three times, and only a script counts (not a web page)
+fetch() {
+    local i
+    for i in 1 2 3; do
+        { wget -O "$2" "$1" || { command -v curl > /dev/null && curl -fL -o "$2" "$1"; }; } &&
+            [ "$(head -c 2 "$2" 2> /dev/null)" = "#!" ] && return 0
+        [ $i = 3 ] || { echo "  Download failed (try $i of 3), trying again in 5 seconds"; sleep 5; }
+    done
+    return 1
 }
 missing=$(missing_tools)
 if [ -n "$missing" ]; then
