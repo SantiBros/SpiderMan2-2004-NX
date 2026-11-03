@@ -10,13 +10,16 @@
 > Homebrew Menu. The community guide [switch.hacks.guide](https://switch.hacks.guide/) explains how, step by
 > step. The words used on this page are explained in the [glossary](#glossary).
 
-The port is built from **your own copy** of the game, once, on your computer: the result is a `.nro` made
-for you. Then it goes on the SD card with your game.
+The port is made with **your own copy** of the game, in one of two ways. The quick one: the
+[installer page](#the-installer-page), in the browser of your phone or computer, unlocks the release's locked `.nro`
+with your game, in a minute. The other: [build it](#building-the-port) from your game on a Windows or Linux
+computer. Either way the result is a `.nro` made with your copy, and it goes on the SD card with your game.
 
 - [Getting your game](#getting-your-game)
   - [With a modded Xbox](#with-a-modded-xbox)
   - [The formats the port reads](#the-formats-the-port-reads)
-- [Building the port](#building-the-port)
+- [The installer page](#the-installer-page)
+- [Building the port](#building-the-port) (instead of the installer page)
   - [On Windows](#on-windows)
   - [On Linux](#on-linux)
   - [Installing the tools by hand](#installing-the-tools-by-hand)
@@ -70,9 +73,31 @@ trimmed XISO or a `.cci` / `.cso` (this game fits in about 1.7 GB as an XISO, 1.
 [ConsoleMods' guide to ISO tools](https://consolemods.org/wiki/Xbox:ISO_Extraction_%26_Repacking) lists the
 tools that convert between these.
 
+## The installer page
+
+**[santibros.github.io/SpiderMan2-2004-NX](https://santibros.github.io/SpiderMan2-2004-NX/)**, on an Android phone or a computer, in any recent
+browser (Chrome, Firefox, Edge, Safari, Samsung Internet; untested on an iPhone).
+
+1. **Choose your game:** your disc image (`.iso`, `.xiso`, `.cci`, `.cso`; for a split one, select all its parts
+   at once) or only its `default.xbe`. The page reads the game's `default.xbe` from it and checks that it is the
+   supported release.
+2. **Download `SpiderMan2Xbox-SD.zip`.** The page unlocks the port with your `default.xbe` and puts it in a zip with
+   the `switch` folder for your SD card. It takes a few seconds.
+3. Go on with [Copying it to the SD card](#copying-it-to-the-sd-card).
+
+Your game is never uploaded: the page only downloads the locked port and does the rest in your browser. Without
+the supported release's `default.xbe` the locked port can't be opened, which is why it can be in the releases at
+all. On a computer, `python3 tools/lock_nro.py unlock SpiderMan2Xbox-<version>.nro.locked default.xbe
+SpiderMan2Xbox.nro` does the same.
+
+> [!TIP]
+> On a phone, the page can read the game from the phone's storage, or from the Switch's SD card in a card reader
+> (USB-C adapters work on most Android phones). If the browser can't see the file, copy it to the phone's
+> Downloads first.
+
 ## Building the port
 
-The builder makes `SpiderMan2Xbox.nro` from your own copy: it checks your copy, recompiles the game's code and
+Instead of the installer page, the port can be built from your game on a computer. The builder makes `SpiderMan2Xbox.nro` from your own copy: it checks your copy, recompiles the game's code and
 builds the port, in 10 to 30 minutes depending on the computer, plus about 10 minutes the first time to install
 its tools. It needs about 2 GB of space, and room for a copy of your game when it puts the game in the SD card
 folder too.
@@ -168,16 +193,17 @@ What `build-windows.cmd` does, step by step:
 
 ## Copying it to the SD card
 
-1. Copy the `switch` folder the builder made to the **root** of your SD card: from `SD card` on Windows, from
-   `out/sd` on Linux. It merges with the `switch` folder that is already there, and you get
-   `switch/SpiderMan2Xbox/`.
-2. If your game isn't in it yet (you built on Linux without `--copy-game`), copy it into
-   `switch/SpiderMan2Xbox/game/`: your disc image (all its parts, if it is split), or `default.xbe` and the
-   `data` folder, so you have `game/default.xbe` and `game/data/game.ini`.
+1. Copy the `switch` folder to the **root** of your SD card: from `SpiderMan2Xbox-SD.zip` (unzip it, or open it
+   and drag the folder out), or the one the builder made (`SD card` on Windows, `out/sd` on Linux). It merges with
+   the `switch` folder that is already there, and you get `switch/SpiderMan2Xbox/`.
+2. If your game isn't in it yet (from the installer page it never is; nor when you built on Linux without
+   `--copy-game`), copy it into `switch/SpiderMan2Xbox/game/`: your disc image (all its parts, if it is split),
+   or `default.xbe` and the `data` folder, so you have `game/default.xbe` and `game/data/game.ini`. The installer
+   page needs only `default.xbe`, but the game needs all of it.
 
 > [!CAUTION]
-> The `.nro` you built holds code made from your copy of the game. Keep it for yourself: don't share it,
-> post it or upload it.
+> The unlocked `.nro` holds code made from your copy of the game. Keep it for yourself: don't share it, post it
+> or upload it.
 
 ## The first start
 
@@ -257,8 +283,9 @@ were written whole, and 0.2.3 loads them.
 
 ## Updating
 
-Build the new version the same way, then copy its `out/sd/switch` folder over the old one. `game/` and
-`save/` stay as they are. Versions before 0.1.0 kept everything in `hdd/`: at the first start of 0.1.0 the saves
+Open the [installer page](#the-installer-page) again (it always has the newest version) and copy the new zip's
+`switch` folder over the old one, or build the new version the same way and copy its `out/sd/switch` folder.
+`game/` and `save/` stay as they are, and so does the shader list in `cache/`. Versions before 0.1.0 kept everything in `hdd/`: at the first start of 0.1.0 the saves
 in it are moved to `save/`, `hdd/` becomes `cache/`, and `shaders.cache` moves into it. If a save is in both
 places, the one in `hdd/` stays where it is and is used, and the log says so.
 
@@ -291,7 +318,8 @@ Atmosphère version, and what format your game is in. **Never attach game files*
 
 | Word | Meaning |
 |---|---|
-| **XBE** | The Xbox's program file format. `default.xbe` is the game's program; the port is built from it. |
+| **XBE** | The Xbox's program file format. `default.xbe` is the game's program; the port is made from it, and unlocked with it. |
+| **Locked .nro** | The release's port, encrypted (AES-256-GCM) with a key made from the supported `default.xbe`: of no use without the game. The installer page unlocks it. |
 | **XISO** | A disc image with only the game partition of an Xbox disc. |
 | **Full disc dump** | A disc image of the whole disc (the video partition first, then the game partition), as Redump's are. |
 | **CCI**, **CSO** | Compressed Xbox disc images, made by Repackinator, read by Cerbios (CCI) and StellarOS (CSO). |

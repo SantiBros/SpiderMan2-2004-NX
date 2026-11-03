@@ -9,8 +9,8 @@
 
 **Un port homebrew no oficial de la versión de *Spider-Man 2* para la Xbox original (Treyarch, 2004) a Nintendo Switch.**<br>
 El código del propio juego, recompilado de antemano para el procesador de la Switch, con el sistema de la Xbox
-reconstruido a su alrededor. Trae tu propia copia del juego, compila el port a partir de ella una vez y
-balancéate por Nueva York.
+reconstruido a su alrededor. Trae tu propia copia del juego, desbloquea el port con ella en tu navegador (también
+en tu móvil) y balancéate por Nueva York.
 
 [![Última versión](https://img.shields.io/github/v/release/SantiBros/SpiderMan2-2004-NX?include_prereleases&style=for-the-badge&label=versi%C3%B3n&color=dc1e2e&logo=github&logoColor=white)](../../releases)
 [![Descargas](https://img.shields.io/github/downloads/SantiBros/SpiderMan2-2004-NX/total?style=for-the-badge&label=descargas&color=1c2233)](../../releases)
@@ -20,15 +20,17 @@ balancéate por Nueva York.
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1c2233?style=for-the-badge)](LICENSE)
 
-[Instalar](#cómo-instalar) · [Controles](#controles) · [Menú de depuración](#menú-de-depuración) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
+**[⬇ Página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)** · [Instalar](#cómo-instalar) · [Controles](#controles) · [Menú de depuración](#menú-de-depuración) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
 
 </div>
 
 > [!IMPORTANT]
 > **No se incluye ningún archivo del juego, ni en este repositorio ni en las versiones publicadas.**
-> Necesitas tu propia copia de *Spider-Man 2* para la **Xbox original**, y compilas el port a partir de
-> ella en tu computador (un doble clic en Windows, un comando en Linux). Por favor, no pidas archivos del juego en los issues y nunca
-> los subas a ningún sitio, ni el `.nro` que compiles: contiene código hecho a partir del juego.
+> Necesitas tu propia copia de *Spider-Man 2* para la **Xbox original**. Las versiones publicadas traen el port
+> **bloqueado**: solo se abre con el `default.xbe` de tu juego, en la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) en tu
+> navegador (un móvil Android o un computador), o lo compilas a partir de tu juego en un computador. Por favor, no
+> pidas archivos del juego en los issues y nunca los subas a ningún sitio, ni el `.nro` desbloqueado: contiene
+> código hecho a partir del juego.
 >
 > Este port es **solo para la versión de la Xbox original (2004)**. Las versiones de PlayStation 2,
 > GameCube, PC, Game Boy Advance, Nintendo DS y PSP son programas distintos y no sirven, y tampoco los
@@ -40,9 +42,16 @@ balancéate por Nueva York.
 > 0.2.0 y la 0.2.1 iban lentas y se congelaban, sobre todo en 16:9: sus registros muestran al juego esperando a la
 > tarjeta SD. La 0.2.2 y la 0.2.3 lo arreglan, y los [reportes](#se-buscan-testers) sobre cómo va son bienvenidos,
 > igual que sobre jugar en el dock, que todavía no se ha comprobado en una consola. Antes de la 0.2.3 las partidas
-> guardadas no cargaban.
+> guardadas no cargaban. Desde la 0.3.0 el registro también dice cuánto tarda la GPU en cada imagen: los registros a
+> 720p y 1080p son los que más ayudan.
 
 > [!TIP]
+> **Novedades de la 0.3.0: instala desde tu móvil, y el mapa en 16:9 arreglado.** Ya no hace falta un computador:
+> la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) desbloquea el port con tu propio juego en tu navegador, en un móvil
+> Android o un computador, y te da la carpeta para tu tarjeta SD. En 16:9 los iconos del mapa de la ciudad
+> (Spider-Man, las estrellas azules, los iconos de $) ahora están en su sitio y se mueven con el mapa, y los lados
+> difuminados del 4:3 cuestan menos a 720p y 1080p.
+>
 > **Novedades de la 0.2.3: las partidas guardadas cargan, y el 16:9 no se congela.** Las partidas se guardaban pero
 > nunca se podían cargar ("unable to load saved game"): ahora cargan, también las que ya tienes en la tarjeta, y se
 > guarda una copia en `sdmc:/config/SpiderMan2Xbox/save/` por si una actualización reemplaza la carpeta. Además, los
@@ -183,7 +192,7 @@ ejecutado en el PC.</sub></p>
 |---|---|
 | **Consola** | Una Nintendo Switch, Switch OLED o Switch Lite con [Atmosphère](https://github.com/Atmosphere-NX/Atmosphere) y el Homebrew Menu. Usa emuMMC y guarda una copia de seguridad de tu tarjeta SD. |
 | **Juego** | Tu propio *Spider-Man 2* para la **Xbox original**, la edición cuyo `default.xbe` tiene el SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título `4156002B`, versión 4). Como imagen de disco o como los archivos del disco, unos 1,7 GB. `build.sh` lo comprueba por ti. |
-| **Computador** | Windows 10/11 (el compilador prepara solo WSL, el Linux que Windows puede instalar) o Linux, para compilar el port una vez. Unos 2 GB de espacio y de 10 a 30 minutos. En macOS no está probado. |
+| **Móvil o computador** | Cualquier dispositivo con un navegador reciente (Android, Windows, macOS, Linux; iPhone sin probar) para la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/), y una forma de copiar archivos a la tarjeta SD. O, para compilar el port tú mismo: Windows 10/11 (el compilador prepara solo WSL) o Linux, unos 2 GB de espacio y de 10 a 30 minutos. |
 | **Tarjeta SD** | Unos 2 GB libres. FAT32 o exFAT (en FAT32, una imagen de disco de más de 4 GB tiene que ir dividida). |
 
 ## Cómo instalar
@@ -193,24 +202,34 @@ ejecutado en el PC.</sub></p>
 > y el Homebrew Menu: la guía de la comunidad [switch.hacks.guide](https://switch.hacks.guide/) lo explica
 > paso a paso (en inglés). ¿No sabes qué significan XBE, XISO, CCI o WSL? Mira el [glosario](docs/INSTALL.es.md#glosario).
 
-<img src="docs/images/install-steps.es.png" alt="La instalación en 4 pasos: descarga el zip de Releases, compílalo con tu juego, copia la carpeta de la SD y tu juego, abre con R + cualquier juego" width="100%">
+<img src="docs/images/install-steps.es.png" alt="La instalación en 4 pasos: abre la página de instalación, elige tu juego para desbloquear el port y descarga el zip de la SD, cópialo con tu juego a la tarjeta SD, abre con R + cualquier juego" width="100%">
 
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
-2. **Compila el port.** Descarga `SpiderMan2-2004-NX-0.1.0.zip` de la página de [Releases](../../releases)
-   (en **Assets**) y descomprímelo. Luego:
-   - **En Windows:** haz doble clic en **`build-windows.cmd`** y elige tu juego. La primera vez prepara WSL y
-     las herramientas solo ([paso a paso](docs/INSTALL.es.md#en-windows)).
-   - **En Linux:** ejecuta, en la carpeta, indicando dónde está tu juego (en Ubuntu o Debian instala sus
-     herramientas la primera vez):
-     ```sh
-     bash build.sh --copy-game "/ruta/a/Spider-Man 2.iso"
-     ```
-   En los dos casos tarda de 10 a 30 minutos, más unos 10 la primera vez, y crea una carpeta con el port y tu
-   juego dentro: `SD card` en Windows, `out/sd` en Linux.
-3. **Copia a la tarjeta SD.** Copia la carpeta `switch` de esa carpeta a la raíz de tu tarjeta SD.
+2. **Abre la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)** en tu móvil o computador, elige tu juego (la imagen de
+   disco, todas sus partes si está dividida, o solo su `default.xbe`) y descarga **`SpiderMan2Xbox-SD.zip`**. Tu
+   juego no se sube a ningún sitio: la página desbloquea el port con él en tu navegador, en unos segundos.
+3. **Copia a la tarjeta SD.** Copia la carpeta `switch` del zip a la raíz de tu tarjeta SD y pon tu juego (la
+   imagen de disco, o `default.xbe` y la carpeta `data`) en `switch/SpiderMan2Xbox/game/`.
 4. **Juega.** Mantén **R** mientras abres cualquier juego para entrar al Homebrew Menu, y elige
    **Spider-Man 2 (Xbox)**.
+
+<details>
+<summary><b>O compila el port en tu computador</b></summary>
+
+Descarga `SpiderMan2-2004-NX-<versión>.zip` de la página de [Releases](../../releases) (en **Assets**) y
+descomprímelo. Luego:
+- **En Windows:** haz doble clic en **`build-windows.cmd`** y elige tu juego. La primera vez prepara WSL y
+  las herramientas solo ([paso a paso](docs/INSTALL.es.md#en-windows)).
+- **En Linux:** ejecuta, en la carpeta, indicando dónde está tu juego (en Ubuntu o Debian instala sus
+  herramientas la primera vez):
+  ```sh
+  bash build.sh --copy-game "/ruta/a/Spider-Man 2.iso"
+  ```
+
+En los dos casos tarda de 10 a 30 minutos, más unos 10 la primera vez, y crea una carpeta con el port y tu juego
+dentro (`SD card` en Windows, `out/sd` en Linux): copia su carpeta `switch` a la raíz de tu tarjeta SD.
+</details>
 
 > [!WARNING]
 > Abre siempre el Homebrew Menu con **R + un juego** (title takeover). Desde el Álbum, el homebrew solo
@@ -221,7 +240,7 @@ ejecutado en el PC.</sub></p>
 
 ```
 sd:/switch/SpiderMan2Xbox/
-├── SpiderMan2Xbox.nro    el port que compilaste (nunca lo compartas: contiene código hecho a partir del juego)
+├── SpiderMan2Xbox.nro    el port, desbloqueado o compilado con tu juego (nunca lo compartas: contiene código hecho a partir del juego)
 ├── README.txt            la guía para jugar (en inglés)
 ├── game/                 TU juego, una de estas dos cosas:
 │   ├── Spider-Man 2.iso      una imagen de disco (.iso .xiso .cci .cso), o todas las partes de una dividida
@@ -236,12 +255,13 @@ sd:/switch/SpiderMan2Xbox/
 
 </details>
 
-La [guía de instalación completa](docs/INSTALL.es.md) explica cómo conseguir tu juego, cómo compilar en Windows
-con WSL, cómo actualizar y la [solución de problemas](docs/INSTALL.es.md#solución-de-problemas).
+La [guía de instalación completa](docs/INSTALL.es.md) explica cómo conseguir tu juego, la página de instalación,
+cómo compilar en Windows con WSL, cómo actualizar y la [solución de problemas](docs/INSTALL.es.md#solución-de-problemas).
 
 ### Actualizar
 
-Compila la versión nueva igual que la anterior y copia su carpeta `out/sd/switch` encima de la vieja. Tus
+Abre otra vez la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) (siempre tiene la versión más nueva) y copia la carpeta
+`switch` del zip nuevo encima de la vieja, o compila la versión nueva y copia su carpeta `out/sd/switch`. Tus
 carpetas `game/` y `save/` se quedan como están. ¿Vienes de una versión anterior a la 0.1.0, que lo guardaba todo
 en `hdd/`? En el primer arranque tus partidas pasan solas a `save/` y el resto de `hdd/` se convierte en `cache/`.
 
@@ -309,7 +329,8 @@ Stock para que la batería dure más.
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
 | Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo: falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
-| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola |
+| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola (desde la 0.3.0 el registro tiene el tiempo de la GPU por imagen) |
+| Página de instalación | ✅ Nueva en la 0.3.0: desbloquea el port en el navegador, comprobada con todos los formatos de imagen de disco y con imágenes divididas |
 | Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |
 | Menús, cinemáticas, la ciudad | ✅ En una Switch Lite y en la versión de prueba para PC |
 | Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
@@ -368,13 +389,13 @@ OpenGL para la GPU de la Switch, con sus shaders traducidos. Mira [Cómo funcion
 </details>
 
 <details>
-<summary><b>¿Por qué no hay una descarga lista para jugar?</b></summary>
+<summary><b>¿Por qué el .nro está bloqueado? ¿Por qué no hay una descarga lista para jugar?</b></summary>
 
 Porque el `.nro` *es* el código del juego, traducido al procesador de la Switch. Compartirlo sería compartir
-el juego. Por eso las versiones publicadas traen el código del port y el compilador, y tú haces el `.nro` a
-partir de tu propia copia en tu computador. En Windows es un doble clic en `build-windows.cmd` (un comando en
-Linux), y primero comprueba tu copia. Guarda para ti
-el `.nro` que hagas.
+el juego. Por eso las versiones publicadas lo traen **bloqueado**: cifrado (AES-256-GCM) con una clave hecha del
+propio `default.xbe` del juego. Sin tu copia del juego no sirve; con ella, la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)
+lo desbloquea en tu navegador, en tu dispositivo, y nada de tu juego se sube a ningún sitio. También puedes
+compilar el `.nro` a partir de tu copia en un computador. De cualquier forma, guarda para ti el `.nro` que tengas.
 </details>
 
 <details>
@@ -568,8 +589,8 @@ forma.
 Este es un proyecto no oficial hecho por fans. No está afiliado, respaldado ni patrocinado por Activision,
 Treyarch, Marvel, Sony Pictures, Microsoft ni Nintendo. *Spider-Man* es una marca registrada de Marvel; Xbox es
 una marca registrada de Microsoft; Nintendo Switch es una marca registrada de Nintendo. Aquí no se distribuye
-ningún código ni dato del juego: necesitas tu propia copia del juego, y lo que compiles a partir de ella es solo
-para ti.
+ningún código ni dato del juego en una forma utilizable: el `.nro` de las versiones publicadas está cifrado y solo se
+abre con tu propia copia del juego, y lo que desbloquees o compiles con ella es solo para ti.
 
 Usar homebrew requiere firmware personalizado, lo que va contra las condiciones de servicio de Nintendo y puede
 hacer que una consola sea baneada de los servicios en línea; esa decisión es tuya. El software se ofrece tal

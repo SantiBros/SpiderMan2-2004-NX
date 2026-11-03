@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """make_art.py <fonts dir> <banner picture> <social picture> <out dir>: the README's art, in the style of the
-NFS Most Wanted 2012 port's.
+NFS Most Wanted 2012 port's. make_art.py steps <fonts dir> <out dir>: only the install steps.
 
   banner.jpg            2560x800, the title over a frame of the game fading into the dark
   social-preview.jpg    1280x640, for GitHub's social preview (Settings, General, Social preview)
@@ -170,24 +170,38 @@ def icon_sd(d, x, y, s, c, w):
         d.line([(xx, y + s * 0.18), (xx, y + s * 0.34)], fill=c, width=w)
 
 
+def icon_browser(d, x, y, s, c, w):
+    # a phone beside a browser window: the installer page, on either
+    d.rounded_rectangle([x + s * 0.02, y + s * 0.16, x + s * 0.72, y + s * 0.80], radius=s * 0.07, outline=c, width=w)
+    d.line([(x + s * 0.02, y + s * 0.32), (x + s * 0.72, y + s * 0.32)], fill=c, width=w)
+    d.rounded_rectangle([x + s * 0.60, y + s * 0.34, x + s * 0.98, y + s * 0.96], radius=s * 0.07, outline=c, width=w, fill=PANEL)
+    d.line([(x + s * 0.74, y + s * 0.87), (x + s * 0.84, y + s * 0.87)], fill=c, width=w)
+
+
+def icon_disc(d, x, y, s, c, w):
+    d.ellipse([x + s * 0.08, y + s * 0.08, x + s * 0.92, y + s * 0.92], outline=c, width=w)
+    d.ellipse([x + s * 0.38, y + s * 0.38, x + s * 0.62, y + s * 0.62], outline=c, width=w)
+    d.arc([x + s * 0.22, y + s * 0.22, x + s * 0.78, y + s * 0.78], 200, 250, fill=c, width=w)
+
+
 def icon_play(d, x, y, s, c, w):
     d.rounded_rectangle([x + s * 0.04, y + s * 0.16, x + s * 0.96, y + s * 0.84], radius=s * 0.16, outline=c, width=w)
     d.polygon([(x + s * 0.42, y + s * 0.34), (x + s * 0.42, y + s * 0.66), (x + s * 0.66, y + s * 0.50)], outline=c, width=w)
 
 
 STEPS = {
-    "en": [("DOWNLOAD", [("the ", 0), ("SpiderMan2-2004-NX", 1), (" zip from ", 0), ("Releases", 1)], icon_download),
-           ("BUILD", [("double-click ", 0), ("build-windows.cmd", 1), (" and choose your game", 0)], icon_build),
-           ("COPY TO SD", [("the ", 0), ("switch", 1), (" folder it made, with your game in it, to the SD card", 0)], icon_sd),
+    "en": [("OPEN", [("the ", 0), ("installer page", 1), (" on your phone or computer (the link is at the top of this page)", 0)], icon_browser),
+           ("UNLOCK", [("choose your disc image or ", 0), ("default.xbe", 1), (", then download the ", 0), ("SD zip", 1), (" the port is in", 0)], icon_disc),
+           ("COPY TO SD", [("unzip it to the SD card, and put your game in ", 0), ("switch/SpiderMan2Xbox/game", 1)], icon_sd),
            ("PLAY", [("hold ", 0), ("R", 1), (" while starting any game, then open ", 0), ("Spider-Man 2 (Xbox)", 1)], icon_play)],
-    "es": [("DESCARGA", [("el zip ", 0), ("SpiderMan2-2004-NX", 1), (" de ", 0), ("Releases", 1)], icon_download),
-           ("COMPILA", [("doble clic en ", 0), ("build-windows.cmd", 1), (" y elige tu juego", 0)], icon_build),
-           ("COPIA A LA SD", [("la carpeta ", 0), ("switch", 1), (" que creó, con tu juego dentro, a la tarjeta SD", 0)], icon_sd),
+    "es": [("ABRE", [("la ", 0), ("página de instalación", 1), (" en tu móvil o computador (el enlace está arriba en esta página)", 0)], icon_browser),
+           ("DESBLOQUEA", [("elige tu imagen de disco o ", 0), ("default.xbe", 1), (", y descarga el ", 0), ("zip de la SD", 1), (" con el port", 0)], icon_disc),
+           ("COPIA A LA SD", [("descomprímelo en la tarjeta SD y pon tu juego en ", 0), ("switch/SpiderMan2Xbox/game", 1)], icon_sd),
            ("JUEGA", [("mantén ", 0), ("R", 1), (" al abrir un juego y elige ", 0), ("Spider-Man 2 (Xbox)", 1)], icon_play)],
 }
 FOOTER = {
-    "en": "Your own copy of the original Xbox game, and a PC to build it once (on Linux, with build.sh).",
-    "es": "Tu propia copia del juego de la Xbox original, y un PC para compilarlo una vez (en Linux, con build.sh).",
+    "en": "Your own copy of the original Xbox game and a web browser. Nothing to install on a PC; or build it yourself with build.sh.",
+    "es": "Tu propia copia del juego de la Xbox original y un navegador. Nada que instalar en un PC; o compílalo tú con build.sh.",
 }
 
 
@@ -264,6 +278,12 @@ def steps(lang, out):
 PICTURE_CROP = {}
 
 if __name__ == "__main__":
+    if len(sys.argv) == 4 and sys.argv[1] == "steps":
+        FONTS, out = sys.argv[2:4]
+        os.makedirs(out, exist_ok=True)
+        for lang in STEPS:
+            steps(lang, out)
+        sys.exit(0)
     if len(sys.argv) < 5:
         sys.exit(__doc__)
     FONTS, banner_pic, social_pic, out = sys.argv[1:5]

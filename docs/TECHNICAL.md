@@ -128,8 +128,14 @@ Two backends take the draws:
   remembered by its program, buffers and range for 30 frames, as most small draws are 3D: about 0.3 ms a frame on the
   PC test build instead of 11), and one from the top to the bottom, or across the width and touching the top or
   the bottom, stays across (full screen passes, the shadows' darkening drawn in halves, fades, bars) unless it shows
-  a picture (a menu's layers, the logo); a bigger draw is narrowed vertex by vertex but for those on the left and
-  right edges; movie frames are always narrowed.
+  a picture (a menu's layers, the logo); a bigger draw is narrowed vertex by vertex but for those right on the left
+  and right edges (at 0 or the width, or half a pixel off: full screen passes), those past the edges included, so
+  text placed partly off the 4:3 screen keeps its shape; movie frames are always narrowed. What the game places at a
+  point of the world through its own world-to-screen function (`0x00343FF0`: the city map's icons, district names
+  and lines, the markers over the city in play) is drawn flat too, so it would be narrowed after the wider
+  projection had already put it nearer the middle: the hook widens that function's x by 4/3 about the middle when
+  the camera is the widened one, and the narrowing puts it back on its point. The shader list of an earlier version
+  is kept when the GLSL changes: `glsl::ListEdits()` carries the changes as text replaced in its programs.
 - The CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
   which draws into guest memory in software, register combiners and vertex programs included. It is exact enough
   to compare against and slow (seconds per city frame). The test build uses it, and the Switch falls back to it
@@ -176,6 +182,19 @@ otherwise find no file and play nothing.
 | German | 3 German |
 | Italian | 6 Italian |
 | any other | 1 English |
+
+## The locked .nro and the installer page
+
+The release's `.nro` is encrypted with AES-256-GCM ([`tools/lock_nro.py`](../tools/lock_nro.py)). The key is the
+SHA-256 of a label and the whole `default.xbe` of the supported release, so only someone with the game can make it.
+The locked file is a 64 byte header (`SM2NXLK1`, the 12 byte nonce, the `.nro`'s size, the SHA-1 of the
+`default.xbe` it needs; all of it authenticated) and the ciphertext with GCM's tag.
+
+The [installer page](../installer/index.html) is one HTML file served by GitHub Pages beside the locked `.nro` and
+`version.json`. In the browser, with no upload: it finds `default.xbe` in what the player chooses (the file
+itself, or inside an XISO, a full disc dump, a CCI or a CSO, split or not: the same formats as the port, read with
+`File.slice` so a 1.7 GB image is never loaded whole), checks its SHA-1, unlocks the `.nro` with WebCrypto and
+writes `SpiderMan2Xbox-SD.zip` (stored, no compression) with the `switch` folder for the SD card.
 
 ## Disc images
 
@@ -344,6 +363,9 @@ tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)
 tools/make_release.sh  the release zip
+tools/lock_nro.py    the release's .nro locked with the supported default.xbe (AES-256-GCM), and unlocked
+tools/make_installer_site.sh  the installer page's site (gh-pages) and the release's locked .nro and symbols
+installer/           the installer page: unlocks the .nro in the browser with the player's own game
 tools/art/           the README's banner, social preview and install steps (make_art.py), and clips
 sdk/                 Xbox XBE Recomp with the changes above (MIT, TGP482)
 docs/                this documentation

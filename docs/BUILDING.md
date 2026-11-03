@@ -115,7 +115,8 @@ frame `f - 1` is `REFAT`'s frame `f`; draws count from 1 there and from 0 in the
 | `GLPROBE="frame x y"` | Every draw of that frame that changes the pixel (x, y), with its colour, depth, stencil, textures and vertex layout. `GLPROBE_ALL=1`: every draw, changed or not. |
 | `GLPROBE_RAW=draw` | That draw again without blending, depth, stencil or alpha tests: how many samples it covers and where, its GLSL (`probe_vs.glsl`, `probe_fs.glsl`) and every vertex's position (`probe_pos.txt`). `v<count>` picks the draw by its vertex count, steadier from run to run than its number. |
 | `GLTRACECLEAR=frame` | That frame's clears. |
-| `GLSQUEEZE=frame` | In the 16:9 picture, that frame's draws and whether each was kept 4:3 or left across the screen, with its box on screen, first texture and blending. |
+| `GLSQUEEZE=frame` | In the 16:9 picture, that frame's draws and whether each was kept 4:3 or left across the screen, with its box on screen, depth range, first texture and blending. |
+| `DRAWTRACE=frame` | Every draw of that frame into `drawtrace.txt`: its vertex count and first vertex, and the return addresses into the game's code on the guest stack (which of the game's functions drew it). `DRAWTRACE_VERTS=1`: every vertex's position and texture coordinates too. |
 | `PEEK="frame address bytes; ..."` | Guest memory logged at that frame; `*address` reads the address there first. |
 | `RUMBLELOG=1`, `RANDLOG=N`, `FMODCHECK=N` | Every change of the rumble the game asks for; the first N values of the C library's `rand()`; the first N results of its x87 `fmod`, against the host's. |
 | `TRACE="x,y"`, `PROBES="x,y ..."` | In `REFAT`'s frames: every triangle over the pixel, why it was or wasn't drawn (culled, depth, stencil, alpha test) and the stencil before and after; `PROBES` the colour each draw leaves there. |
@@ -179,16 +180,27 @@ images you make are your copy of the game: keep them out of the repository.
    console.
 3. **The zip:** commit, then `bash tools/make_release.sh` writes `out/SpiderMan2-2004-NX-<version>.zip` (the
    repository at that commit) and prints its SHA-256. It refuses a zip with game files in it.
-4. **On GitHub:** tag `v<version>` on that commit, and publish a release with the zip attached, marked as a
-   pre-release while the port is an early test.
+4. **The locked .nro, the symbols and the installer page:** with the `.nro` of step 2 in `build-switch/`,
+   `bash tools/make_installer_site.sh <default.xbe>` locks it with the supported `default.xbe`
+   ([`tools/lock_nro.py`](../tools/lock_nro.py)) and writes `out/site/` (the installer page, the locked `.nro`,
+   `version.json` and the SD card folder's text files) and `out/release/`: `SpiderMan2Xbox-<version>.nro.locked`
+   and `SpiderMan2Xbox-<version>-symbols.elf` (the `.elf`'s names and debug information, checked to hold no code or
+   data). The site goes on the `gh-pages` branch, alone (an orphan commit, force-pushed), which GitHub Pages serves
+   at `https://<owner>.github.io/<repository>/` once Settings → Pages takes its source from that branch. The page
+   must be served from the same site as the locked `.nro`: GitHub's release downloads can't be read by a page.
+5. **On GitHub:** tag `v<version>` on that commit, and publish a release with the zip, the locked `.nro` and the
+   symbols attached, marked as a pre-release while the port is an early test.
 
 The release description, in English and Spanish:
 
 1. A one-line summary.
-2. **"Which file do I download?" / "¿Qué archivo descargo?"**: a table. `SpiderMan2-2004-NX-<version>.zip` is the one
-   to download: it holds the builder, which makes the `.nro` from your own copy. "Source code (zip)" and "Source
-   code (tar.gz)" are added by GitHub: the same code, without the version's folder name. There is no `.nro` to
-   download, and there never will be: it would contain the game's code.
-3. What's new (from the changelog, in players' words), how to build and install it, updating from the previous
-   version, known issues.
-4. At the end, the zip's SHA-256 (as `make_release.sh` prints it).
+2. **"Which file do I download?" / "¿Qué archivo descargo?"**: a table. Players use the installer page (it takes
+   the locked `.nro` from the site, not from the release). `SpiderMan2Xbox-<version>.nro.locked` is the same
+   locked port, for unlocking on a computer with `tools/lock_nro.py`. `SpiderMan2-2004-NX-<version>.zip` holds the
+   builder, to make the `.nro` from your own copy instead. `SpiderMan2Xbox-<version>-symbols.elf` is for developers
+   reading crash reports, not for playing. "Source code (zip)" and "Source code (tar.gz)" are added by GitHub: the
+   same code as the zip, without the version's folder name. The `.nro` itself is never published: it contains the
+   game's code.
+3. What's new (from the changelog, in players' words), how to install it, updating from the previous version,
+   known issues.
+4. At the end, the SHA-256 of the zip and of the locked `.nro`.

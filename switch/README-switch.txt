@@ -11,7 +11,11 @@ effects and voices.
   - Sound goes through the Switch speaker/headphones.
   - Not confirmed on a console yet: playing docked on a TV. Saved games
     didn't load before 0.2.3; they do now.
-  - This .nro was built from YOUR copy of the game. It contains code derived
+  - Updating: get the new SpiderMan2Xbox-SD.zip from the installer page (or
+    build the new version) and copy its switch folder over this one. Your
+    game/ and save/ folders stay as they are.
+  - This .nro was made with YOUR copy of the game (unlocked with it on the
+    installer page, or built from it on a computer). It contains code derived
     from the game, so keep it to yourself: do not share it.
 
 
@@ -45,7 +49,7 @@ Not read: .zip, .7z or .rar archives (extract the image or the folder from
 them first), Xbox 360 images, and the old zlib CSO (version 1) made for the
 PSP.
 
-It must be the same release of the game this build was made from (its
+It must be the same release of the game the .nro was made with (its
 default.xbe SHA-1 is in the log). With another release the screen says so and
 asks before starting, as it would most likely crash.
 
@@ -144,6 +148,6 @@ wrong or it stops. Every 5 seconds the log has a "perf:" line that says how
 fast it runs and where the time goes, and a "hitch:" line marks each stutter.
 cache/shaders.cache keeps the shaders the game needed, so the next start
 builds them before you need them: leave it there (a new version of the port
-starts it again by itself). If the console had to be restarted, also send the newest
+keeps it, and brings it up to date by itself). If the console had to be restarted, also send the newest
 files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
 if they are from that time.

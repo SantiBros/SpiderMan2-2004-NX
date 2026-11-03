@@ -3,6 +3,38 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.3.0]
+
+**Install from your phone, and the city map right in 16:9.** The port no longer has to be built on a computer: the
+release holds the port locked, and a web page unlocks it with your own copy of the game, on an Android phone or a
+computer. And in 16:9 the map's icons sit on their places again.
+
+### Added
+- **An installer page** (GitHub Pages, linked at the top of the README): choose your game (a disc image of any
+  format the port reads, its split parts, or just its `default.xbe`) and it gives you `SpiderMan2Xbox-SD.zip`, the
+  `switch` folder for your SD card. It works in the browser, on a phone too: nothing is uploaded, your game never
+  leaves your device. Building on a PC (`build.sh`, `build-windows.cmd`) still works as before.
+- **The release's .nro is locked** (`SpiderMan2Xbox-<version>.nro.locked`): AES-256-GCM, its key made from the
+  whole `default.xbe` of the supported release, so it is of no use without the game. The page unlocks it in your
+  browser; `tools/lock_nro.py unlock` does the same on a computer.
+- **A symbols file** with every release (`SpiderMan2Xbox-<version>-symbols.elf`): the .nro's function names and
+  debug information, without its code or data, to read the addresses in a crash report.
+- **The GPU's time in the log's performance lines** (`perf: the GPU ... ms a frame`): next to the frame's time it
+  tells whether the GPU or the CPU holds the frame rate back, for reports on 720p and 1080p.
+
+### Fixed
+- **16:9: the city map's icons moved with the map.** Spider-Man's marker, the blue stars and the $ icons were placed
+  for the wider 16:9 view and then narrowed again with the HUD: they slid towards the middle, missed their places
+  and moved more slowly than the map under them. The game's own world-to-screen function now gives positions for the
+  HUD's 4:3 middle, so they land on their places: the markers over the city in play are placed the same way.
+- **16:9: text and lines placed partly off the 4:3 screen kept their shape.** The map's district names were smeared
+  where they crossed the 4:3 picture's edge: only points right on the screen's left and right edges (full screen
+  passes) stay there now; the shader list of earlier versions is kept, its programs updated.
+
+### Changed
+- **Faster blurred sides** (4:3 with the picture blurred at the sides): the frame is copied at half its size, a
+  quarter of the bytes, before it is blurred, instead of whole with all its mipmaps. Most useful at 720p and 1080p.
+
 ## [0.2.3]
 
 **Saved games load again, and the log can no longer hold the game up**, for two reports that the game failed

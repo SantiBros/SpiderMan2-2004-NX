@@ -10,13 +10,17 @@
 > y el Homebrew Menu. La guía de la comunidad [switch.hacks.guide](https://switch.hacks.guide/) explica cómo,
 > paso a paso (en inglés). Las palabras que se usan en esta página se explican en el [glosario](#glosario).
 
-El port se compila a partir de **tu propia copia** del juego, una vez, en tu computador: el resultado es un
-`.nro` hecho para ti. Luego va a la tarjeta SD junto con tu juego.
+El port se hace con **tu propia copia** del juego, de una de dos formas. La rápida: la
+[página de instalación](#la-página-de-instalación), en el navegador de tu móvil o computador, desbloquea el `.nro`
+bloqueado de la release con tu juego, en un minuto. La otra: [compilarlo](#compilar-el-port) a partir de tu juego en
+un computador con Windows o Linux. De cualquier forma el resultado es un `.nro` hecho con tu copia, que va a la
+tarjeta SD junto con tu juego.
 
 - [Cómo conseguir tu juego](#cómo-conseguir-tu-juego)
   - [Con una Xbox modificada](#con-una-xbox-modificada)
   - [Los formatos que lee el port](#los-formatos-que-lee-el-port)
-- [Compilar el port](#compilar-el-port)
+- [La página de instalación](#la-página-de-instalación)
+- [Compilar el port](#compilar-el-port) (en lugar de la página de instalación)
   - [En Windows](#en-windows)
   - [En Linux](#en-linux)
   - [Instalar las herramientas a mano](#instalar-las-herramientas-a-mano)
@@ -70,9 +74,32 @@ tiene que ir dividido, o convertido en una XISO recortada o en un `.cci` / `.cso
 como XISO y 1,5 GB comprimido). La [guía de herramientas ISO de ConsoleMods](https://consolemods.org/wiki/Xbox:ISO_Extraction_%26_Repacking)
 (en inglés) lista las herramientas que convierten entre estos formatos.
 
+## La página de instalación
+
+**[santibros.github.io/SpiderMan2-2004-NX](https://santibros.github.io/SpiderMan2-2004-NX/)**, en un móvil Android o un computador, en cualquier
+navegador reciente (Chrome, Firefox, Edge, Safari, Samsung Internet; en iPhone no se ha probado).
+
+1. **Elige tu juego:** tu imagen de disco (`.iso`, `.xiso`, `.cci`, `.cso`; si está dividida, selecciona todas sus
+   partes a la vez) o solo su `default.xbe`. La página lee el `default.xbe` del juego y comprueba que sea la
+   edición compatible.
+2. **Descarga `SpiderMan2Xbox-SD.zip`.** La página desbloquea el port con tu `default.xbe` y lo pone en un zip con
+   la carpeta `switch` para tu tarjeta SD. Tarda unos segundos.
+3. Sigue con [Copiarlo a la tarjeta SD](#copiarlo-a-la-tarjeta-sd).
+
+Tu juego nunca se sube a ningún sitio: la página solo descarga el port bloqueado y hace el resto en tu navegador.
+Sin el `default.xbe` de la edición compatible el port bloqueado no se puede abrir, y por eso puede estar en las
+releases. En un computador, `python3 tools/lock_nro.py unlock SpiderMan2Xbox-<versión>.nro.locked default.xbe
+SpiderMan2Xbox.nro` hace lo mismo.
+
+> [!TIP]
+> En un móvil, la página puede leer el juego desde el almacenamiento del móvil, o desde la tarjeta SD de la Switch
+> en un lector de tarjetas (los adaptadores USB-C funcionan en la mayoría de móviles Android). Si el navegador no
+> ve el archivo, cópialo primero a Descargas en el móvil.
+
 ## Compilar el port
 
-El compilador crea `SpiderMan2Xbox.nro` a partir de tu propia copia: comprueba tu copia, recompila el código
+En lugar de usar la página de instalación, el port se puede compilar a partir de tu juego en un computador. El
+compilador crea `SpiderMan2Xbox.nro` a partir de tu propia copia: comprueba tu copia, recompila el código
 del juego y compila el port, en 10 a 30 minutos según el computador, más unos 10 minutos la primera vez para
 instalar sus herramientas. Necesita unos 2 GB de espacio, y sitio para una copia de tu juego cuando también lo
 pone en la carpeta de la tarjeta SD.
@@ -171,15 +198,17 @@ Los mensajes del compilador están en inglés:
 
 ## Copiarlo a la tarjeta SD
 
-1. Copia la carpeta `switch` que creó el compilador a la **raíz** de tu tarjeta SD: de `SD card` en Windows, de
-   `out/sd` en Linux. Se une a la carpeta `switch` que ya está ahí, y queda `switch/SpiderMan2Xbox/`.
-2. Si tu juego todavía no está dentro (compilaste en Linux sin `--copy-game`), cópialo en
-   `switch/SpiderMan2Xbox/game/`: tu imagen de disco (todas sus partes, si está dividida), o `default.xbe` y la
-   carpeta `data`, de forma que queden `game/default.xbe` y `game/data/game.ini`.
+1. Copia la carpeta `switch` a la **raíz** de tu tarjeta SD: la de `SpiderMan2Xbox-SD.zip` (descomprímelo, o
+   ábrelo y arrastra la carpeta), o la que creó el compilador (`SD card` en Windows, `out/sd` en Linux). Se une a
+   la carpeta `switch` que ya está ahí, y queda `switch/SpiderMan2Xbox/`.
+2. Si tu juego todavía no está dentro (con la página de instalación nunca lo está; tampoco si compilaste en Linux
+   sin `--copy-game`), cópialo en `switch/SpiderMan2Xbox/game/`: tu imagen de disco (todas sus partes, si está
+   dividida), o `default.xbe` y la carpeta `data`, de forma que queden `game/default.xbe` y `game/data/game.ini`.
+   La página de instalación solo necesita `default.xbe`, pero el juego lo necesita todo.
 
 > [!CAUTION]
-> El `.nro` que compilaste contiene código hecho a partir de tu copia del juego. Guárdalo para ti: no lo
-> compartas, no lo publiques ni lo subas a ningún sitio.
+> El `.nro` desbloqueado contiene código hecho a partir de tu copia del juego. Guárdalo para ti: no lo compartas,
+> no lo publiques ni lo subas a ningún sitio.
 
 ## La primera vez
 
@@ -266,8 +295,9 @@ Las partidas se escribían completas, y la 0.2.3 las carga.
 
 ## Actualizar
 
-Compila la versión nueva igual que la anterior y copia su carpeta `out/sd/switch` encima de la vieja. `game/` y
-`save/` se quedan como están. Las versiones anteriores a la 0.1.0 lo guardaban todo en `hdd/`: en el primer
+Abre otra vez la [página de instalación](#la-página-de-instalación) (siempre tiene la versión más nueva) y copia
+la carpeta `switch` del zip nuevo encima de la vieja, o compila la versión nueva igual que la anterior y copia su
+carpeta `out/sd/switch`. `game/` y `save/` se quedan como están, y también la lista de shaders de `cache/`. Las versiones anteriores a la 0.1.0 lo guardaban todo en `hdd/`: en el primer
 arranque de la 0.1.0 las partidas que tenga pasan a `save/`, `hdd/` se convierte en `cache/` y `shaders.cache` pasa
 a su interior. Si una partida está en los dos sitios, la de `hdd/` se queda donde está y se usa, y el registro lo dice.
 
@@ -303,7 +333,8 @@ que compilaste. Puedes escribir en español.
 
 | Palabra | Significado |
 |---|---|
-| **XBE** | El formato de los programas de la Xbox. `default.xbe` es el programa del juego; el port se compila a partir de él. |
+| **XBE** | El formato de los programas de la Xbox. `default.xbe` es el programa del juego; el port se hace a partir de él, y se desbloquea con él. |
+| **.nro bloqueado** | El port de la release, cifrado (AES-256-GCM) con una clave hecha del `default.xbe` compatible: no sirve sin el juego. La página de instalación lo desbloquea. |
 | **XISO** | Una imagen de disco con solo la partición del juego de un disco de Xbox. |
 | **Volcado completo del disco** | Una imagen de todo el disco (primero la partición de video, luego la del juego), como las de Redump. |
 | **CCI**, **CSO** | Imágenes de disco de Xbox comprimidas, hechas por Repackinator, que leen Cerbios (CCI) y StellarOS (CSO). |
