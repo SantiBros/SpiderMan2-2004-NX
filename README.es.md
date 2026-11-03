@@ -42,14 +42,15 @@ en tu móvil) y balancéate por Nueva York.
 > 0.2.0 y la 0.2.1 iban lentas y se congelaban, sobre todo en 16:9: sus registros muestran al juego esperando a la
 > tarjeta SD. La 0.2.2 y la 0.2.3 lo arreglan, y los [reportes](#se-buscan-testers) sobre cómo va son bienvenidos,
 > igual que sobre jugar en el dock, que todavía no se ha comprobado en una consola. Antes de la 0.2.3 las partidas
-> guardadas no cargaban. La 0.3.0 iba más lenta que la 0.2.3 (unas 17 imágenes por segundo con los mismos
-> ajustes); la 0.3.1 lo arregla.
+> guardadas no cargaban. Se reportó que la 0.3.0 iba mucho más lenta que la 0.2.3: su registro muestra pausas largas
+> mientras se preparaban shaders, y la 0.3.1 lo arregla.
 
 > [!TIP]
-> **Novedades de la 0.3.1: arreglada la lentitud de la 0.3.0.** Una medición que añadió la 0.3.0 (el tiempo de la
-> GPU en cada imagen) hacía que el driver gráfico de la Switch se detuviera a esperar en cada imagen: unas 17
-> imágenes por segundo donde la 0.2.3 mantenía su velocidad. Ya no está en la versión para la consola, y el filtro
-> CRT y el CRT TV ya no cuestan nada mientras están apagados.
+> **Novedades de la 0.3.1: más fluida que la 0.3.0.** Un registro de la 0.3.0 mostraba el juego detenido hasta 2
+> segundos seguidos, con el contador bajando a 1–14 imágenes por segundo, mientras se preparaban shaders: la lista
+> que guarda el port se había descartado. La 0.3.1 la conserva. También quita una medición de la GPU que la 0.3.0
+> hacía en cada imagen, que con el driver de la Switch puede hacer que el procesador espere al chip gráfico, y el
+> filtro CRT y el CRT TV no cuestan nada mientras están apagados.
 >
 > **Novedades de la 0.3.0: instala desde tu móvil, y el mapa en 16:9 arreglado.** Ya no hace falta un computador:
 > la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) desbloquea el port con tu propio juego en tu navegador, en un móvil
@@ -342,7 +343,7 @@ Stock para que la batería dure más.
 | El código del juego en el procesador de la Switch | ✅ Recompilado y compilado; funciona en una Switch Lite |
 | Leer tu copia: imágenes de disco y archivos | ✅ Todos los formatos comprobados byte a byte contra los archivos extraídos, en PC y en ARM |
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
-| Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo. La 0.3.0 iba más lenta (unas 17 imágenes por segundo, por una medición de la GPU que detenía el driver en cada imagen); la 0.3.1 la quita: falta confirmarlo en una consola |
+| Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo. Se reportó que la 0.3.0 iba mucho más lenta: su registro muestra 28–30 imágenes por segundo entre pausas largas mientras se preparaban shaders, porque su lista de shaders se había descartado; la 0.3.1 conserva la lista y quita una medición de la GPU en cada imagen: falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
 | 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola |
 | Página de instalación | ✅ Nueva en la 0.3.0: desbloquea el port en el navegador, comprobada con todos los formatos de imagen de disco y con imágenes divididas |

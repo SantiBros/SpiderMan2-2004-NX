@@ -40,13 +40,14 @@ swing through New York.
 > 480p, at the game's own pace of 30 frames a second, with its music, sound effects and voices. 0.2.0 and 0.2.1 were
 > reported slow and freezing, above all in 16:9: their logs show the game waiting for the SD card. 0.2.2 and 0.2.3
 > fix that, and [reports](#help-wanted-testers) on how it runs are welcome, as on playing docked, not confirmed
-> on a console yet. Saved games didn't load before 0.2.3. 0.3.0 ran slower than 0.2.3 (about 17 frames a second
-> with the same settings); 0.3.1 fixes that.
+> on a console yet. Saved games didn't load before 0.2.3. 0.3.0 was reported much slower than 0.2.3: its log shows
+> long pauses while shaders were built, which 0.3.1 fixes.
 
 > [!TIP]
-> **New in 0.3.1: 0.3.0's slowdown fixed.** A measurement 0.3.0 added (the GPU's time for each frame) made the
-> Switch's graphics driver stop and wait at every frame: about 17 frames a second where 0.2.3 held its speed. It is
-> gone from the console build, and the CRT filter and the CRT TV now cost nothing while they are off.
+> **New in 0.3.1: smoother than 0.3.0.** A 0.3.0 log showed the game stopping for up to 2 seconds at a time, the
+> counter dropping to 1–14 frames a second, while shaders were built: the list of them the port keeps had been
+> thrown away. 0.3.1 keeps it. It also drops a GPU measurement 0.3.0 made at every frame, which on the Switch's
+> driver can make the processor wait for the graphics chip, and the CRT filter and the CRT TV cost nothing while off.
 >
 > **New in 0.3.0: install from your phone, and the 16:9 map fixed.** No computer needed any more: the
 > [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks the port with your own game in your browser, on an Android phone or
@@ -332,7 +333,7 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | The game's code on the Switch's processor | ✅ Recompiled and compiled; runs on a Switch Lite |
 | Reading your copy: disc images and files | ✅ All formats checked byte for byte against the extracted files, on PC and ARM |
 | Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
-| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9, where their logs show the game waiting for the SD card. 0.2.2 removes 16:9's writes to the card and 0.2.3 takes every write to the card off the game's threads (Auto clocks, a lighter 16:9 and render scale came in 0.2.1); in 4:3 at 720p a tester's 0.2.1 held 30 frames a second. 0.3.0 was slower (about 17 frames a second, from a GPU measurement that stalled the driver every frame); 0.3.1 removes it: to be confirmed on a console |
+| Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9, where their logs show the game waiting for the SD card. 0.2.2 removes 16:9's writes to the card and 0.2.3 takes every write to the card off the game's threads (Auto clocks, a lighter 16:9 and render scale came in 0.2.1); in 4:3 at 720p a tester's 0.2.1 held 30 frames a second. 0.3.0 was reported much slower: its log shows 28–30 frames a second between long pauses while shaders were built, after its shader list was thrown away; 0.3.1 keeps the list and drops a per-frame GPU measurement: to be confirmed on a console |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
 | 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1, the 16:9 map right in 0.3.0: checked on the PC test build; how fast they run on a console is to be measured |
 | Installer page | ✅ New in 0.3.0: unlocks the port in the browser, checked with every disc image format and split images |

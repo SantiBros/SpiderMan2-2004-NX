@@ -5,14 +5,16 @@ builds.
 
 ## [0.3.1]
 
-**0.3.0's slowdown fixed.** With the same settings and clocks 0.3.0 ran at about 17 frames a second where 0.2.3
-held its speed, the CRT filter or not.
+**Smoother than 0.3.0.** 0.3.0 was reported much slower than 0.2.3 with the same settings. Its log shows 28–30
+frames a second between long stops: the game waited up to 2.4 s at a time, the counter dropping to 1–14 frames a
+second, while the graphics driver built shaders, because the port's list of them was empty. 0.3.1 keeps that list,
+drops a GPU measurement 0.3.0 made at every frame, and makes the CRT looks cost nothing while they are off.
 
 ### Fixed
-- **The GPU timer is gone from the console build.** 0.3.0 measured the GPU's time for each frame with a timer query,
-  and checking whether its result had arrived made the Switch's graphics driver (Mesa's nouveau) push its command
-  buffer to the GPU in the middle of the frame, every frame; the CPU and the GPU then took turns instead of working
-  side by side. The measurement is now only in the PC test build (`GLGPUTIME=1`).
+- **The GPU timer is gone from the console build.** 0.3.0 measured the GPU's time for each frame with a timer query;
+  checking whether its result had arrived makes the Switch's graphics driver (Mesa's nouveau) send its commands to
+  the GPU in the middle of the frame, and timer queries can make the GPU wait for its earlier work. The measurement
+  is now only in the PC test build (`GLGPUTIME=1`).
 - **The picture without the CRT look costs what it did in 0.2.3.** The CRT filter and the CRT TV's tube have a
   shader of their own, used only while one of them is on; otherwise the picture goes to the screen through 0.2.3's.
 - **The blurred sides are made as in 0.2.3** (the frame copied whole, then its mipmaps), the way known to hold the
