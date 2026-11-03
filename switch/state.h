@@ -21,6 +21,7 @@ inline std::atomic<uint32_t> g_resolution{480};
 inline std::atomic<int> g_screen{0};
 inline std::atomic<bool> g_sharp{false};
 inline std::atomic<uint32_t> g_anisotropy{1};
+inline std::atomic<int> g_crt{0};  // Settings::crt
 
 // log sync every 250 ms and a pulse line every 2 s, on threads of their own
 void StartWatch();

@@ -10,6 +10,8 @@ enum class Counter { Off, Fps, Full };
 // (Suit, the web in Spider-Man's suit colours, and Tv, an old CRT television, came later: the values are kept)
 enum class Screen { Black, Blur, Web, Wide, Suit, Tv };
 enum class Rumble { Off, Low, Medium, High };
+// the CRT filter over the picture: off, light, or strong (curved glass too)
+enum class Crt { Off, Light, Strong };
 // a clock setting: 0 the system's own clock, kClockAuto the port's choice for the game (ClocksFor), else Hz
 constexpr uint32_t kClockAuto = 0xFFFFFFFFu;
 
@@ -19,6 +21,7 @@ struct Settings {
     uint32_t resolution = 480; // the picture drawn this many pixels tall: 480 as the console, 720, 1080
     Screen screen = Screen::Black;
     bool sharp = false;        // the picture and the movies enlarged with a sharper filter
+    Crt crt = Crt::Off;        // a CRT television's look over the picture
     uint32_t anisotropy = 1;   // textures' anisotropic filtering: 1 none, 2, 4, 8, 16
     Rumble rumble = Rumble::Medium;
     uint32_t cpu_hz = kClockAuto;  // 0 the system's own clock, kClockAuto the port's choice

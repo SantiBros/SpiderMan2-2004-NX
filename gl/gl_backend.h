@@ -23,6 +23,9 @@ struct Picture {
     // a 4:3 picture's sides: black, the picture blurred, or a pattern; Suit: the web in the suit's colours; Tv: an old
     // CRT television's cabinet and controls, the picture with a tube's rounded corners and scanlines
     enum class Sides : uint8_t { Black, Blur, Web, Suit, Tv } sides = Sides::Black;
+    // a CRT's look over the picture: 0 off, 1 light, 2 strong (curved glass too): scanlines, an aperture grille, the
+    // glow of bright parts, darker edges
+    uint8_t crt = 0;
     // the game's movies (YUY2 frames) and the frame onto the screen upscaled with a sharper filter than bilinear
     bool sharp_movies = false;
     // mipmapped textures read with this much anisotropic filtering (1: none), sharper at grazing angles: streets,

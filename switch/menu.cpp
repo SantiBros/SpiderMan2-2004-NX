@@ -178,6 +178,16 @@ void Build() {
               "Smooth is softer, as on a TV.";
     g_items.push_back(up);
 
+    Item crt;
+    crt.label = "CRT filter";
+    crt.get = [](const Settings& s) { return uint32_t(s.crt); };
+    crt.set = [](Settings& s, uint32_t v) { s.crt = Crt(v); };
+    crt.choices = {{uint32_t(Crt::Off), "Off", ""},
+                   {uint32_t(Crt::Light), "Light", "Scanlines, the screen's red, green and blue stripes and a soft glow."},
+                   {uint32_t(Crt::Strong), "Strong", "Deeper scanlines and stripes, and the tube's curved glass."}};
+    crt.help = "The picture as on an old CRT television, with any Screen choice. Goes well with the CRT TV sides.";
+    g_items.push_back(crt);
+
     Item af;
     af.label = "Texture filtering";
     af.get = [](const Settings& s) { return s.anisotropy; };
@@ -595,6 +605,7 @@ void ApplyPicture(const Settings& s) {
     g_screen.store(int(s.screen), std::memory_order_relaxed);
     g_sharp.store(s.sharp, std::memory_order_relaxed);
     g_anisotropy.store(s.anisotropy, std::memory_order_relaxed);
+    g_crt.store(int(s.crt), std::memory_order_relaxed);
 }
 
 bool IsOpen() { return g_open; }

@@ -759,9 +759,37 @@ layout(binding = 0) uniform sampler2D img;
 layout(binding = 1) uniform sampler2D lut;
 uniform vec4 opts;  // x gamma, y filter (0 bilinear, 1 box, 2 Catmull-Rom), z box taps per axis, w 1: a CRT's tube
 uniform vec4 step;  // xy: a screen pixel in uv; z the scanlines' period in screen pixels
+uniform vec4 crt;   // x the CRT filter: 0 off, 1 light, 2 strong
 layout(location = 0) out vec4 o;
+// the CRT filter's curved glass (strong): the picture bulges out, its edges and corners bent in
+vec2 curve(vec2 u) {
+    vec2 c = u * 2.0 - 1.0;
+    c *= 1.0 + vec2(0.030, 0.042) * (c.yx * c.yx);
+    return c * 0.5 + 0.5;
+}
+// the CRT filter: the glow of bright parts, the beam's scanlines (thinner on bright lines, as a beam spreads), an
+// aperture grille's red, green and blue stripes one screen pixel each, the tube's darker edges; brightened back for
+// what the grille and the scanlines take away
+vec3 crtLook(vec3 c, vec2 t, vec2 u) {
+    bool strong = crt.x == 2.0;
+    vec2 px = 1.0 / vec2(textureSize(img, 0));
+    vec3 g = textureLod(img, t + px * vec2(1.5, 0.5), 0.0).rgb + textureLod(img, t + px * vec2(-1.5, -0.5), 0.0).rgb +
+             textureLod(img, t + px * vec2(0.5, -1.5), 0.0).rgb + textureLod(img, t + px * vec2(-0.5, 1.5), 0.0).rgb;
+    g *= 0.25;
+    c += g * g * (strong ? 0.22 : 0.12);
+    float luma = dot(c, vec3(0.299, 0.587, 0.114));
+    float ph = fract(gl_FragCoord.y / step.z), band = 1.0 - abs(ph * 2.0 - 1.0);
+    float scan = 1.0 - (strong ? 0.50 : 0.28) * band * band * (1.0 - 0.45 * clamp(luma, 0.0, 1.0));
+    int col = int(gl_FragCoord.x) % 3;
+    float m = strong ? 0.68 : 0.84;
+    vec3 grille = col == 0 ? vec3(1.0, m, m) : col == 1 ? vec3(m, 1.0, m) : vec3(m, m, 1.0);
+    vec2 e = u * 2.0 - 1.0;
+    float shade = 1.0 - (strong ? 0.32 : 0.18) * smoothstep(0.5, 1.5, length(e * vec2(0.92, 1.0)));
+    return clamp(c * scan * grille * shade * (strong ? 1.42 : 1.18), 0.0, 1.0);
+}
 // the CRT television's screen (the TV sides): the tube's rounded corners in the dark bezel, its edges darker, the
-// scanlines (one dark band every z pixels, a whole number so they stay even) and a faint glare on the glass
+// scanlines (one dark band every z pixels, a whole number so they stay even) and a faint glare on the glass; with
+// the CRT filter on, its darker edges and scanlines are left to it
 vec3 tube(vec3 c) {
     vec2 size = 1.0 / step.xy, p = uv * size;
     float r = size.y * 0.045;
@@ -771,6 +799,7 @@ vec3 tube(vec3 c) {
     float shade = 1.0 - 0.30 * smoothstep(0.45, 1.45, length(e * vec2(0.92, 1.0)));
     float phase = fract(gl_FragCoord.y / step.z);
     float scan = 1.0 - 0.16 * smoothstep(0.55, 1.0, 1.0 - abs(phase * 2.0 - 1.0));
+    if (crt.x > 0.0) shade = scan = 1.0;
     float glare = 0.045 * (1.0 - smoothstep(0.0, 0.9, length((uv - vec2(0.22, 0.86)) * vec2(1.0, 1.6))));
     c = c * shade * scan * 1.07 + glare;
     return mix(c, vec3(0.025, 0.022, 0.02), smoothstep(-1.0, 1.0, corner));
@@ -786,7 +815,8 @@ vec4 bicubic(vec2 uv) {
     return clamp(r, 0.0, 1.0);
 }
 void main() {
-    vec2 t = vec2(uv.x, 1.0 - uv.y);
+    vec2 u = crt.x == 2.0 ? curve(uv) : uv;
+    vec2 t = vec2(u.x, 1.0 - u.y);
     vec4 c;
     if (opts.y == 2.0) {
         c = bicubic(t);
@@ -803,6 +833,12 @@ void main() {
     if (opts.x > 0.0) {
         ivec3 i = clamp(ivec3(c.rgb * 255.0 + 0.5), ivec3(0), ivec3(255));
         c.rgb = vec3(texelFetch(lut, ivec2(i.r, 0), 0).r, texelFetch(lut, ivec2(i.g, 0), 0).g, texelFetch(lut, ivec2(i.b, 0), 0).b);
+    }
+    if (crt.x > 0.0) {
+        c.rgb = crtLook(c.rgb, t, u);
+        // past the curved glass's edge: the dark bezel
+        vec2 out2 = max(-u, u - 1.0) / step.xy;
+        c.rgb *= 1.0 - smoothstep(-0.5, 0.5, max(out2.x, out2.y));
     }
     if (opts.w > 0.0) c.rgb = tube(c.rgb);
     o = vec4(c.rgb, 1.0);
@@ -1126,7 +1162,7 @@ private:
     bool gpu_q_live_[kGpuQueries] = {};
     int gpu_q_at_ = -1;
     void GpuTimer();
-    GLint present_opts_ = -1, present_step_ = -1, sides_opts_ = -1, sides_screen_ = -1;
+    GLint present_opts_ = -1, present_step_ = -1, present_crt_ = -1, sides_opts_ = -1, sides_screen_ = -1;
     uint32_t sides_w_ = 0, sides_h_ = 0;
     GLuint web_tex_ = 0, web_fbo_ = 0;  // the web sides, drawn once for the screen's size
     uint32_t web_w_ = 0, web_h_ = 0;
@@ -1250,6 +1286,7 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     if (!present_) return false;
     present_opts_ = glGetUniformLocation(present_, "opts");
     present_step_ = glGetUniformLocation(present_, "step");
+    present_crt_ = glGetUniformLocation(present_, "crt");
     if (sides_) {
         sides_opts_ = glGetUniformLocation(sides_, "opts");
         sides_screen_ = glGetUniformLocation(sides_, "screen");
@@ -2806,6 +2843,7 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
     bool tube = vw < float(sw) && pic_.sides == Picture::Sides::Tv && sides_;
     glUniform4f(present_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, tube ? 1.0f : 0.0f);
     glUniform4f(present_step_, 1.0f / vw, 1.0f / vh, std::max(2.0f, std::floor(vh / 240.0f)), 0.0f);
+    glUniform4f(present_crt_, float(std::min<uint32_t>(pic_.crt, 2)), 0.0f, 0.0f, 0.0f);
     FullScreen(present_);
 }
 

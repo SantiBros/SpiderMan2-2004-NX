@@ -48,8 +48,8 @@ swing through New York.
 > [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks the port with your own game in your browser, on an Android phone or
 > a computer, and gives you the folder for your SD card. In 16:9 the city map's icons (Spider-Man, the blue stars,
 > the $ icons) now sit on their places and move with the map, and the blurred sides of 4:3 cost less at 720p and
-> 1080p. And a new 4:3 decoration: **CRT TV**, the picture on an old television, wooden cabinet, knobs and
-> scanlines included.
+> 1080p. And for the retro look: a **CRT filter** (scanlines, the screen's colour stripes, glow, curved glass), and
+> a new 4:3 decoration, **CRT TV**, the picture on an old television with its wooden cabinet and knobs.
 >
 > **New in 0.2.3: saved games load, and 16:9 doesn't freeze.** Saves were written but never loaded back ("unable
 > to load saved game"): they load now, the ones already on your card too, and a copy of them is kept in
@@ -299,6 +299,7 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 | Resolution | 480p (the console's), 720p, 1080p (docked) | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p, docked, is drawn bigger and shrunk, with smoother edges (in handheld mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises. |
 | Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 CRT TV, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. The 4:3 sides can be black, the picture blurred, a spider web, the web in the suit's red, blue and black, or an old CRT TV (a wooden cabinet with its knobs and speaker, the picture with rounded corners and scanlines). |
 | Upscaling | Smooth, Sharp | How the movies and the picture are enlarged: Sharp keeps more detail (Catmull-Rom), Smooth is the softer look of a TV. |
+| CRT filter | Off, Light, Strong | The picture as on an old CRT television, with any Screen choice: scanlines, the screen's red, green and blue stripes, a soft glow on bright parts and darker edges; Strong also curves the glass. |
 | Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. Much more work for the graphics chip in the city: if the frame rate drops, go back to Standard. |
 | Vibration | Off, Low, Medium, High | The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its own). A rumble the game leaves on stops after 2 seconds, and none runs while the menu is open or in the HOME menu. |
 | CPU clock | Auto (1785 MHz), Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | The game's translated code and the graphics driver run on the CPU. Auto keeps it at 1785 MHz while the game runs. |

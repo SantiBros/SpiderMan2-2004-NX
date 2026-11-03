@@ -102,6 +102,7 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 | `XBE_WIDESCREEN=1` | The game's own 16:9 picture (Screen: 16:9 full screen). |
 | `XBE_SIDES=1`, `2`, `3`, `4` | A 4:3 picture with blurred or spider-web sides, the web in the suit's colours, or an old CRT TV. |
 | `XBE_SHARP=1`, `XBE_ANISO=16` | The sharper upscaling, anisotropic filtering. |
+| `XBE_CRT=1`, `2` | The CRT filter, light or strong. |
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |
 | `GLDUMP=f` | Every colour target as frame `f` leaves them, as `cap/gltarget_*.tga`, and guest memory under each. |
 | `GLREC="from to"` | Those frames into `cap/rec.mp4` at 60 frames a second, through `ffmpeg`. |

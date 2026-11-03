@@ -189,9 +189,9 @@ int main(int argc, char** argv) {
     sw::menu::SetConsoleLanguage(console ? console : 1);
     kernel::g_language = settings.language ? settings.language : console ? console : 1;
     LOGI("switch: console language %s, %s", console_name.c_str(), settings.language ? "the game's set in settings.ini" : "the game follows it");
-    LOGI("switch: settings: language %u, %up, screen %d, upscaling %s, anisotropic %ux, rumble %d, clocks CPU %u GPU %u "
+    LOGI("switch: settings: language %u, %up, screen %d, upscaling %s, CRT filter %d, anisotropic %ux, rumble %d, clocks CPU %u GPU %u "
          "memory %u MHz (0 stock, 4294 auto), counter %d, volume %u%%, %s renderer, render thread %s, start-up log %s", settings.language,
-         settings.resolution, int(settings.screen), settings.sharp ? "sharp" : "smooth", settings.anisotropy, int(settings.rumble),
+         settings.resolution, int(settings.screen), settings.sharp ? "sharp" : "smooth", int(settings.crt), settings.anisotropy, int(settings.rumble),
          settings.cpu_hz / 1000000, settings.gpu_hz / 1000000, settings.mem_hz / 1000000, int(settings.counter),
          settings.volume, settings.gpu_renderer ? "GPU" : "CPU", settings.render_thread ? "on" : "off",
          settings.startup_log ? "on" : "off");

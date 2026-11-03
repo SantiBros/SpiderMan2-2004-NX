@@ -119,6 +119,9 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
                       (the game's own wide camera; the HUD, menus and movies
                       stay 4:3)
   Upscaling           smooth or sharp
+  CRT filter          off, light, strong (scanlines, the screen's colour
+                      stripes and glow, as on an old TV; strong also curves
+                      the glass)
   Texture filtering   standard, anisotropic 4x, 8x, 16x (much more work for
                       the GPU in the city)
   Vibration           off, low, medium, high (Joy-Con or a Pro Controller;

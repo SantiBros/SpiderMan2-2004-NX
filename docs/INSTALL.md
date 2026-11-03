@@ -245,6 +245,8 @@ speed). The bottom line shows the frame rate, the time of a frame and the draw c
   old CRT TV (a wooden cabinet with knobs and a speaker, the picture with rounded corners and scanlines), or
   **16:9 full screen**, the game's own hidden widescreen camera, with more of the city at the sides and the HUD,
   menus and movies kept 4:3 in the middle.
+- **CRT filter**: Off, Light or Strong, the picture as on an old CRT television (scanlines, the screen's red, green
+  and blue stripes, a soft glow, darker edges; Strong also curves the glass), with any Screen choice.
 - **Upscaling** (Smooth or Sharp) and **Texture filtering** (Standard or Anisotropic 4x to 16x; anisotropic is much
   more work for the graphics chip in the city, so try Standard first if the frame rate drops).
 - **Vibration**: Off, Low, Medium or High, on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its

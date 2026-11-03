@@ -105,6 +105,8 @@ void LoadSettings() {
                                                                                         : v == "4:3-tv"   ? Screen::Tv : Screen::Black;
         } else if (k == "upscaling") {
             s.sharp = v == "sharp";
+        } else if (k == "crt") {
+            s.crt = v == "light" ? Crt::Light : v == "strong" ? Crt::Strong : Crt::Off;
         } else if (k == "anisotropic") {
             int n = std::atoi(v.c_str());
             if (n == 2 || n == 4 || n == 8 || n == 16) s.anisotropy = uint32_t(n);
@@ -159,6 +161,7 @@ void SaveSettings() {
       << "# 480p (the console's), 720p, 1080p\n"
       << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 4:3-suit, 4:3-tv, 16:9\n"
       << "upscaling=" << (s.sharp ? "sharp" : "smooth") << "  # smooth, sharp\n"
+      << "crt=" << (s.crt == Crt::Light ? "light " : s.crt == Crt::Strong ? "strong" : "off   ") << "       # the CRT filter: off, light, strong\n"
       << "anisotropic=" << (s.anisotropy > 1 ? std::to_string(s.anisotropy) + "x" : std::string("off"))
       << "   # texture filtering: off, 2x, 4x, 8x, 16x\n"
       << "rumble=" << RumbleKey(s.rumble) << "      # off, low, medium, high\n"

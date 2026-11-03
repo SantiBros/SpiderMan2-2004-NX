@@ -19,6 +19,11 @@ computer. And in 16:9 the map's icons sit on their places again.
   browser; `tools/lock_nro.py unlock` does the same on a computer.
 - **A symbols file** with every release (`SpiderMan2Xbox-<version>-symbols.elf`): the .nro's function names and
   debug information, without its code or data, to read the addresses in a crash report.
+- **A CRT filter** (debug menu, CRT filter: Off, Light, Strong; `crt=` in `settings.ini`), with any Screen choice:
+  the picture as on an old CRT television. Scanlines (one every 3 screen pixels at 720 rows, 4 at 1080, thinner on
+  bright parts as a beam spreads), an aperture grille's red, green and blue stripes a screen pixel each, a soft glow
+  around bright parts and darker edges, brightened back for what the stripes and lines take away; Strong makes them
+  deeper and curves the glass. One pass over the screen, in the step that puts the picture on it.
 - **A new 4:3 decoration: CRT TV** (debug menu, Screen: "4:3, CRT TV"; `screen=4:3-tv` in `settings.ini`): the
   picture on an old television, a walnut cabinet around it with the speaker's cloth on the left and a metal panel
   on the right (channel and volume knobs, the power button and its red light, the speaker's slots). The picture

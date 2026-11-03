@@ -117,6 +117,7 @@ public:
                   : screen == int(sw::Screen::Tv)   ? glr::Picture::Sides::Tv
                                                     : glr::Picture::Sides::Black;
         p.sharp_movies = sw::g_sharp.load(std::memory_order_relaxed);
+        p.crt = uint8_t(sw::g_crt.load(std::memory_order_relaxed));
         p.anisotropy = sw::g_anisotropy.load(std::memory_order_relaxed);
         return p;
     }

@@ -253,6 +253,9 @@ tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en
   traje (rojo, azul y negro), en un televisor CRT antiguo (**CRT TV**: un mueble de madera con perillas y altavoz,
   la imagen con esquinas redondeadas y líneas de barrido), o **16:9 full screen**, la cámara panorámica oculta del propio juego, con más ciudad
   a los lados y el HUD, los menús y los videos en 4:3 en el centro.
+- **CRT filter** (filtro CRT): Off, Light o Strong, la imagen como en un televisor CRT antiguo (líneas de barrido,
+  las franjas roja, verde y azul de la pantalla, un brillo suave, los bordes más oscuros; Strong además curva el
+  cristal), con cualquier opción de Screen.
 - **Upscaling** (escalado: Smooth o Sharp) y **Texture filtering** (filtrado: Standard o anisotrópico de 4x a 16x;
   el anisotrópico es mucho más trabajo para el chip gráfico en la ciudad, así que prueba Standard primero si bajan
   las imágenes por segundo).
