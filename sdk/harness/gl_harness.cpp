@@ -1,7 +1,7 @@
 // GL=1: the test build draws with the GL renderer (gl/) on a headless EGL context (Mesa, llvmpipe without a GPU),
 // every frame, into a 1280x720 screen like the Switch's. Paced to 60 frames a second when it keeps up. The picture as
 // the Switch's debug menu sets it: XBE_RES=720 or 1080 drawn that tall, XBE_WIDESCREEN=1 the game's 16:9 picture,
-// XBE_SIDES=1, 2, 3 or 4 a 4:3 picture's sides blurred, a web, the web in the suit's colours or an old CRT TV,
+// XBE_SIDES=1 to 5 a 4:3 picture's sides blurred, a web, the web in the suit's colours, a 70s or a 2000s CRT TV,
 // XBE_CRT=1 or 2 the CRT filter, light or strong, XBE_SHARP=1 the sharper upscaling, XBE_ANISO=16 anisotropic
 // texture filtering.
 // GLCAP=N: every Nth frame's screen saved as cap/gl_<frame>.tga (the 4:3 picture, 960x720, or the whole screen for a
@@ -106,6 +106,7 @@ public:
                       : sides == 2 ? glr::Picture::Sides::Web
                       : sides == 3 ? glr::Picture::Sides::Suit
                       : sides == 4 ? glr::Picture::Sides::Tv
+                      : sides == 5 ? glr::Picture::Sides::Tv2000
                                    : glr::Picture::Sides::Black;
             q.sharp_movies = Env("XBE_SHARP") != 0;
             q.crt = uint8_t(std::clamp(Env("XBE_CRT"), 0L, 2L));

@@ -48,6 +48,8 @@ swing through New York.
 > counter dropping to 1–14 frames a second, while shaders were built: the list of them the port keeps had been
 > thrown away. 0.3.1 keeps it. It also drops a GPU measurement 0.3.0 made at every frame, which on the Switch's
 > driver can make the processor wait for the graphics chip, and the CRT filter and the CRT TV cost nothing while off.
+> And a new 4:3 decoration: a **2000s CRT TV**, silver, with stereo speakers, the A/V inputs and a flat-faced tube,
+> like the TVs the game was played on.
 >
 > **New in 0.3.0: install from your phone, and the 16:9 map fixed.** No computer needed any more: the
 > [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks the port with your own game in your browser, on an Android phone or
@@ -115,7 +117,13 @@ swing through New York.
     <td colspan="2" align="center"><img src="docs/images/screenshots/sides-tv.jpg" alt="The first rooftop in 4:3 inside an old CRT television: a wooden cabinet, a speaker on the left, knobs on the right, the picture with rounded corners and scanlines" width="100%"></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><sub>New in 0.3.0: 4:3 on an old CRT TV</sub></td>
+    <td colspan="2" align="center"><sub>New in 0.3.0: 4:3 on a 70s CRT TV</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/sides-tv2000.jpg" alt="The first rooftop in 4:3 inside a 2000s CRT television: silver plastic, speaker grilles on both sides, a power button, small buttons and yellow, white and red A/V inputs on the right" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>New in 0.3.1: 4:3 on a 2000s CRT TV</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="The title screen, PRESS START TO BEGIN"></td>
@@ -167,7 +175,7 @@ by the Switch build's screen code, run on the PC.</sub></p>
   sharper, movies included, with sharper upscaling and anisotropic filtering if you like.
 - **Full screen without stretching.** The game's own hidden 16:9 camera shows more of the city at the sides;
   the HUD, menus and movies stay 4:3. Or keep 4:3, with black, blurred, spider-web or suit-coloured sides, or on
-  an old CRT TV.
+  a 2000s or a 70s CRT TV.
 - **Vibration** on Joy-Con and the Pro Controller, at the strength you choose, and never left running.
 - **Your copy in the format you have.** A disc image (`.iso` or `.xiso`, a trimmed XISO or a full disc
   dump), the compressed `.cci` (Cerbios) and `.cso` (StellarOS) images that Repackinator makes, any of
@@ -302,7 +310,7 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 |---|---|---|
 | Language | Auto, English, Español, Français, Deutsch, Italiano | The game's menus and subtitles. Auto follows the console; a language the game doesn't have is English. The voices are English in every language. From the next start. |
 | Resolution | 480p (the console's), 720p, 1080p (docked) | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p, docked, is drawn bigger and shrunk, with smoother edges (in handheld mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises. |
-| Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 CRT TV, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. The 4:3 sides can be black, the picture blurred, a spider web, the web in the suit's red, blue and black, or an old CRT TV (a wooden cabinet with its knobs and speaker, the picture with rounded corners and scanlines). |
+| Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 2000s CRT TV, 4:3 70s CRT TV, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. The 4:3 sides can be black, the picture blurred, a spider web, the web in the suit's red, blue and black, a 2000s CRT TV (silver, stereo speakers, A/V inputs, a flat-faced tube) or a 70s one (a wooden cabinet with its knobs and speaker, the picture with rounded corners and scanlines). |
 | Upscaling | Smooth, Sharp | How the movies and the picture are enlarged: Sharp keeps more detail (Catmull-Rom), Smooth is the softer look of a TV. |
 | CRT filter | Off, Light, Strong | The picture as on an old CRT television, with any Screen choice: scanlines, the screen's red, green and blue stripes, a soft glow on bright parts and darker edges; Strong also curves the glass. |
 | Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. Much more work for the graphics chip in the city: if the frame rate drops, go back to Standard. |
@@ -465,7 +473,8 @@ Yes, and no. Set the debug menu's **Screen** to **16:9 full screen**. The game w
 has a 16:9 camera that Treyarch never switched on; the port turns it on and widens its view, so you see more of
 the city at the sides and nothing is stretched. What the game draws flat on the screen (the HUD, the menus, the
 text, the movies) is kept 4:3 in the middle. If you'd rather keep the original 4:3 picture, the sides can be
-black, the picture blurred, a spider web, the web in the suit's red, blue and black, or an old CRT TV around it.
+black, the picture blurred, a spider web, the web in the suit's red, blue and black, or a 2000s or 70s CRT TV
+around it.
 </details>
 
 <details>

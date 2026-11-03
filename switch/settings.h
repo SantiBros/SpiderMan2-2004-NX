@@ -7,8 +7,9 @@ namespace sw {
 
 enum class Counter { Off, Fps, Full };
 // the picture on the screen: 4:3 with black, blurred or web sides, or the game's own 16:9 across it
-// (Suit, the web in Spider-Man's suit colours, and Tv, an old CRT television, came later: the values are kept)
-enum class Screen { Black, Blur, Web, Wide, Suit, Tv };
+// (Suit, the web in Spider-Man's suit colours, Tv, a 70s CRT television, and Tv2000, a 2000s one, came later: the
+// values are kept)
+enum class Screen { Black, Blur, Web, Wide, Suit, Tv, Tv2000 };
 enum class Rumble { Off, Low, Medium, High };
 // the CRT filter over the picture: off, light, or strong (curved glass too)
 enum class Crt { Off, Light, Strong };

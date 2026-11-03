@@ -20,9 +20,10 @@ struct Picture {
     // the game's own 16:9 picture (src/game/widescreen.cpp): shown 16:9 across the screen, drawn wider when scaled,
     // what it draws flat (HUD, menus, text, movies) kept 4:3 in the middle
     bool wide = false;
-    // a 4:3 picture's sides: black, the picture blurred, or a pattern; Suit: the web in the suit's colours; Tv: an old
-    // CRT television's cabinet and controls, the picture with a tube's rounded corners and scanlines
-    enum class Sides : uint8_t { Black, Blur, Web, Suit, Tv } sides = Sides::Black;
+    // a 4:3 picture's sides: black, the picture blurred, or a pattern; Suit: the web in the suit's colours; Tv: a 70s
+    // CRT television's cabinet and controls, the picture with a tube's rounded corners and scanlines; Tv2000: a 2000s
+    // one, silver, with stereo speakers and A/V inputs, its tube flat-faced
+    enum class Sides : uint8_t { Black, Blur, Web, Suit, Tv, Tv2000 } sides = Sides::Black;
     // a CRT's look over the picture: 0 off, 1 light, 2 strong (curved glass too): scanlines, an aperture grille, the
     // glow of bright parts, darker edges
     uint8_t crt = 0;

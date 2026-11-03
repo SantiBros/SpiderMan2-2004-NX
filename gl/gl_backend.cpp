@@ -832,19 +832,22 @@ vec3 crtLook(vec3 c, vec2 t, vec2 u) {
 // the CRT television's screen (the TV sides): the tube's rounded corners in the dark bezel, its edges darker, the
 // scanlines (one dark band every z pixels, a whole number so they stay even) and a faint glare on the glass; with
 // the CRT filter on, its darker edges and scanlines are left to it
+// opts.w 1: the 70s set's round-cornered, bulging tube; 2: the 2000s set's flat-faced one, squarer and evener
 vec3 tube(vec3 c) {
+    bool flat2000 = opts.w == 2.0;
     vec2 size = 1.0 / step.xy, p = uv * size;
-    float r = size.y * 0.045;
+    float r = size.y * (flat2000 ? 0.018 : 0.045);
     vec2 q = abs(p - size * 0.5) - (size * 0.5 - r);
     float corner = length(max(q, 0.0)) - r;
     vec2 e = uv * 2.0 - 1.0;
-    float shade = 1.0 - 0.30 * smoothstep(0.45, 1.45, length(e * vec2(0.92, 1.0)));
+    float shade = 1.0 - (flat2000 ? 0.14 : 0.30) * smoothstep(0.45, 1.45, length(e * vec2(0.92, 1.0)));
     float phase = fract(gl_FragCoord.y / step.z);
-    float scan = 1.0 - 0.16 * smoothstep(0.55, 1.0, 1.0 - abs(phase * 2.0 - 1.0));
+    float scan = 1.0 - (flat2000 ? 0.10 : 0.16) * smoothstep(0.55, 1.0, 1.0 - abs(phase * 2.0 - 1.0));
     if (crt.x > 0.0) shade = scan = 1.0;
-    float glare = 0.045 * (1.0 - smoothstep(0.0, 0.9, length((uv - vec2(0.22, 0.86)) * vec2(1.0, 1.6))));
-    c = c * shade * scan * 1.07 + glare;
-    return mix(c, vec3(0.025, 0.022, 0.02), smoothstep(-1.0, 1.0, corner));
+    float glare = flat2000 ? 0.03 * (1.0 - smoothstep(0.0, 0.25, abs(uv.y - 0.93))) * smoothstep(0.1, 0.5, uv.x)
+                           : 0.045 * (1.0 - smoothstep(0.0, 0.9, length((uv - vec2(0.22, 0.86)) * vec2(1.0, 1.6))));
+    c = c * shade * scan * (flat2000 ? 1.04 : 1.07) + glare;
+    return mix(c, flat2000 ? vec3(0.015) : vec3(0.025, 0.022, 0.02), smoothstep(-1.0, 1.0, corner));
 }
 vec4 bicubic(vec2 uv) {
     vec2 size = vec2(textureSize(img, 0)), p = uv * size - 0.5, f = fract(p), c = floor(p) + 0.5;
@@ -892,7 +895,8 @@ const char* kSidesFragment = R"(#version 430 core
 in vec2 uv;
 layout(binding = 0) uniform sampler2D img;
 layout(binding = 1) uniform sampler2D lut;
-uniform vec4 opts;  // x 1 blur, 2 web, 3 the web in the suit's colours, 4 a CRT television; y the blur's mip level;
+uniform vec4 opts;  // x 1 blur, 2 web, 3 the web in the suit's colours, 4 a 70s CRT television, 5 a 2000s one; y the
+                    // blur's mip level;
                     // z the screen's aspect over the picture's; w gamma
 uniform vec4 screen;  // xy the screen in pixels
 layout(location = 0) out vec4 o;
@@ -994,9 +998,84 @@ vec3 television(vec2 p) {
     }
     return c;
 }
+// the holes of a speaker grille: a staggered grid, d apart, each r across; 1 in a hole
+float holes(vec2 p, float d, float r) {
+    vec2 q = p / d;
+    q.x += 0.5 * mod(floor(q.y), 2.0);
+    return 1.0 - smoothstep(r - 0.6, r + 0.6, length(fract(q) - 0.5) * d);
+}
+// a 2000s CRT television around the picture: silver plastic, the glossy black bezel round a flat-faced tube, a
+// stereo speaker's grille on each side, and on the right the front panel: power button with its green light, the
+// channel and volume buttons, the yellow, white and red A/V inputs a console plugged into
+vec3 television2000(vec2 p) {
+    float s = screen.y / 720.0, bar = (screen.x - screen.x / opts.z) * 0.5;
+    bool left = p.x < screen.x * 0.5;
+    float x = left ? bar - p.x : p.x - (screen.x - bar);  // from the picture's edge outwards
+    float w = bar, yn = p.y / screen.y;
+    vec2 lp = vec2(x, p.y);
+    // silver plastic, lit from above, a fine grain, a highlight where the cabinet's front turns
+    vec3 c = mix(vec3(0.70, 0.71, 0.74), vec3(0.44, 0.45, 0.48), smoothstep(0.0, 1.0, yn));
+    c *= 0.97 + 0.03 * noise(p * 0.9 / s);
+    c += 0.07 * (1.0 - smoothstep(0.0, 10.0 * s, abs(x - (w - 20.0 * s))));
+    c *= 0.72 + 0.28 * smoothstep(0.0, 12.0 * s, w - x);  // the edge curving away
+    // the bezel: glossy black, its inner edge catching the light, a thin bright trim, its shadow on the silver
+    float bez = 15.0 * s;
+    if (x < bez) {
+        c = vec3(0.025) + 0.05 * smoothstep(0.0, 3.0 * s, x) * (1.0 - smoothstep(4.0 * s, 9.0 * s, x)) +
+            0.04 * (1.0 - yn);
+    } else {
+        c *= 1.0 - 0.35 * (1.0 - smoothstep(bez + 1.5 * s, bez + 10.0 * s, x));
+        c = mix(c, vec3(0.88, 0.89, 0.91), 1.0 - smoothstep(0.5 * s, 1.5 * s, abs(x - bez - 1.0 * s)));
+    }
+    float gx0 = bez + 16.0 * s, gx1 = w - 26.0 * s, cx = (gx0 + gx1) * 0.5, hw = (gx1 - gx0) * 0.5;
+    // the speaker: a dark, perforated grille in a recess
+    float top = screen.y * 0.10, bottom = screen.y * (left ? 0.90 : 0.56);
+    vec2 gc = vec2(cx, (top + bottom) * 0.5), gh = vec2(hw, (bottom - top) * 0.5);
+    float recess = box(lp, gc, gh + 3.0 * s, 10.0 * s);
+    c = mix(c, c * 0.62, recess);
+    float grille = box(lp, gc, gh, 8.0 * s);
+    vec3 metal = vec3(0.24, 0.25, 0.27) * (1.05 - 0.25 * (lp.y - top) / (bottom - top));
+    metal = mix(metal, vec3(0.04, 0.04, 0.05), holes(lp - gc, 6.0 * s, 1.7 * s));
+    c = mix(c, metal, grille);
+    if (!left) {
+        // the power button, round, and its green light
+        vec2 pc = vec2(cx - hw * 0.25, screen.y * 0.645);
+        float pr = 11.0 * s, pd = length(lp - pc);
+        c *= 1.0 - 0.4 * (1.0 - smoothstep(pr, pr + 5.0 * s, length(lp - pc - vec2(1.5, 2.5) * s)));
+        vec3 btn = vec3(0.55, 0.56, 0.59) + 0.18 * (1.0 - smoothstep(0.0, pr, length(lp - pc + vec2(3.0, 4.0) * s)));
+        c = mix(c, btn, 1.0 - smoothstep(pr - 0.75, pr + 0.75, pd));
+        c = mix(c, vec3(0.30, 0.31, 0.33), (1.0 - smoothstep(0.5, 1.5, abs(pd - pr * 0.45))) * 0.8);  // the power mark's ring
+        vec2 lc = vec2(cx + hw * 0.55, screen.y * 0.645);
+        float led = length(lp - lc);
+        c = mix(c, vec3(0.15, 1.0, 0.35), 1.0 - smoothstep(2.5 * s, 3.5 * s, led));
+        c += vec3(0.05, 0.45, 0.12) * (1.0 - smoothstep(3.0 * s, 12.0 * s, led)) * 0.6;
+        // channel and volume: four small buttons
+        for (int i = 0; i < 4; i++) {
+            vec2 bc = vec2(cx + (float(i % 2) - 0.5) * hw * 1.0, screen.y * (0.725 + 0.045 * float(i / 2)));
+            vec2 bh = vec2(hw * 0.38, 7.0 * s);
+            c = mix(c, c * 0.6, box(lp - vec2(1.0, 2.0) * s, bc, bh, 4.0 * s) * 0.6);
+            c = mix(c, vec3(0.50, 0.51, 0.54) + 0.06 * (1.0 - (lp.y - bc.y + bh.y) / (2.0 * bh.y)), box(lp, bc, bh, 4.0 * s));
+        }
+        // the A/V inputs: yellow (video), white and red (sound), in a dark strip
+        float jy = screen.y * 0.86;
+        c = mix(c, vec3(0.10, 0.10, 0.11), box(lp, vec2(cx, jy), vec2(hw, 13.0 * s), 6.0 * s));
+        for (int i = 0; i < 3; i++) {
+            vec2 jc = vec2(cx + (float(i) - 1.0) * hw * 0.62, jy);
+            float jd = length(lp - jc), jr = 7.5 * s;
+            vec3 ring = i == 0 ? vec3(0.95, 0.78, 0.10) : i == 1 ? vec3(0.92, 0.92, 0.90) : vec3(0.80, 0.10, 0.10);
+            c = mix(c, ring * (0.85 + 0.25 * (1.0 - smoothstep(0.0, jr, length(lp - jc + vec2(2.0, 2.0) * s)))),
+                    1.0 - smoothstep(jr - 0.75, jr + 0.75, jd));
+            c = mix(c, vec3(0.75, 0.74, 0.70), 1.0 - smoothstep(jr * 0.5 - 0.75, jr * 0.5 + 0.75, jd));  // the metal sleeve
+            c = mix(c, vec3(0.02), 1.0 - smoothstep(jr * 0.26 - 0.75, jr * 0.26 + 0.75, jd));
+        }
+    }
+    return c;
+}
 void main() {
     vec3 c;
-    if (opts.x == 4.0) {
+    if (opts.x == 5.0) {
+        c = television2000(vec2(uv.x, 1.0 - uv.y) * screen.xy);
+    } else if (opts.x == 4.0) {
         c = television(vec2(uv.x, 1.0 - uv.y) * screen.xy);
     } else if (opts.x == 1.0) {
         vec2 t = vec2(uv.x, 0.5 - (uv.y - 0.5) / opts.z);
@@ -2820,7 +2899,11 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
     glBindSampler(0, 0);
     if (vw < float(sw) && pic_.sides != Picture::Sides::Black && sides_) {
         bool blur = pic_.sides == Picture::Sides::Blur;
-        float mode = blur ? 1.0f : pic_.sides == Picture::Sides::Suit ? 3.0f : pic_.sides == Picture::Sides::Tv ? 4.0f : 2.0f;
+        float mode = blur                                   ? 1.0f
+                     : pic_.sides == Picture::Sides::Suit   ? 3.0f
+                     : pic_.sides == Picture::Sides::Tv     ? 4.0f
+                     : pic_.sides == Picture::Sides::Tv2000 ? 5.0f
+                                                            : 2.0f;
         float lod = 0;
         if (blur) {
             // the frame with its mipmaps, for a small level of it
@@ -2894,11 +2977,12 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
     glViewport(GLint((float(sw) - vw) / 2), GLint((float(sh) - vh) / 2), GLsizei(vw), GLsizei(vh));
     // the TV sides: the picture as on its tube, the scanlines every 3 screen pixels at 720 rows (about one per two of
     // the game's lines), 4 at 1080. With the CRT filter or the tube, the CRT program; else the plain one
-    bool tube = vw < float(sw) && pic_.sides == Picture::Sides::Tv && sides_;
+    bool tube = vw < float(sw) && (pic_.sides == Picture::Sides::Tv || pic_.sides == Picture::Sides::Tv2000) && sides_;
+    float tube_kind = pic_.sides == Picture::Sides::Tv2000 ? 2.0f : 1.0f;
     uint32_t crt = std::min<uint32_t>(pic_.crt, 2);
     if ((tube || crt) && present_crt_prog_) {
         glUseProgram(present_crt_prog_);
-        glUniform4f(crt_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, tube ? 1.0f : 0.0f);
+        glUniform4f(crt_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, tube ? tube_kind : 0.0f);
         glUniform4f(crt_step_, 1.0f / vw, 1.0f / vh, std::max(2.0f, std::floor(vh / 240.0f)), 0.0f);
         glUniform4f(crt_crt_, float(crt), 0.0f, 0.0f, 0.0f);
         FullScreen(present_crt_prog_);

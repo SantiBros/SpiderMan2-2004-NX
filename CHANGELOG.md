@@ -8,7 +8,8 @@ builds.
 **Smoother than 0.3.0.** 0.3.0 was reported much slower than 0.2.3 with the same settings. Its log shows 28–30
 frames a second between long stops: the game waited up to 2.4 s at a time, the counter dropping to 1–14 frames a
 second, while the graphics driver built shaders, because the port's list of them was empty. 0.3.1 keeps that list,
-drops a GPU measurement 0.3.0 made at every frame, and makes the CRT looks cost nothing while they are off.
+drops a GPU measurement 0.3.0 made at every frame, and makes the CRT looks cost nothing while they are off. And a
+second CRT TV for 4:3, from the 2000s.
 
 ### Fixed
 - **The GPU timer is gone from the console build.** 0.3.0 measured the GPU's time for each frame with a timer query;
@@ -26,6 +27,13 @@ drops a GPU measurement 0.3.0 made at every frame, and makes the CRT looks cost 
   the list is now named by the shader generator alone, and the lists of earlier versions are kept whatever driver
   they came from.
 - The test build's draw trace (`DRAWTRACE`) no longer works anything out for each draw while it is off.
+
+### Added
+- **A 2000s CRT TV for 4:3** (debug menu, Screen: "4:3, 2000s CRT TV"; `screen=4:3-tv2000`): the TVs the game was
+  played on in its time. Silver plastic, the glossy black bezel round a flat-faced tube (squarer corners, evener
+  edges and lighter scanlines than the 70s set's), a stereo speaker's perforated grille on each side, and on the
+  right the front panel: a round power button and its green light, the channel and volume buttons, and the yellow,
+  white and red A/V inputs. 0.3.0's CRT TV is now "4:3, 70s CRT TV" (its `settings.ini` value unchanged).
 
 ### Added (test builds)
 - `FENCETRACE=frame`: from that frame, the game's fences (where it waits for the GPU, and on what) in the log. The

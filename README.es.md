@@ -50,7 +50,9 @@ en tu móvil) y balancéate por Nueva York.
 > segundos seguidos, con el contador bajando a 1–14 imágenes por segundo, mientras se preparaban shaders: la lista
 > que guarda el port se había descartado. La 0.3.1 la conserva. También quita una medición de la GPU que la 0.3.0
 > hacía en cada imagen, que con el driver de la Switch puede hacer que el procesador espere al chip gráfico, y el
-> filtro CRT y el CRT TV no cuestan nada mientras están apagados.
+> filtro CRT y el CRT TV no cuestan nada mientras están apagados. Y una decoración nueva para el 4:3: un **televisor
+> CRT de los 2000**, plateado, con altavoces estéreo, las entradas A/V y un tubo de pantalla plana, como los
+> televisores en los que se jugaba el juego.
 >
 > **Novedades de la 0.3.0: instala desde tu móvil, y el mapa en 16:9 arreglado.** Ya no hace falta un computador:
 > la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) desbloquea el port con tu propio juego en tu navegador, en un móvil
@@ -121,7 +123,13 @@ en tu móvil) y balancéate por Nueva York.
     <td colspan="2" align="center"><img src="docs/images/screenshots/sides-tv.jpg" alt="La primera azotea en 4:3 dentro de un televisor CRT antiguo: un mueble de madera, un altavoz a la izquierda, perillas a la derecha, la imagen con esquinas redondeadas y líneas de barrido" width="100%"></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><sub>Nuevo en la 0.3.0: 4:3 en un televisor CRT antiguo</sub></td>
+    <td colspan="2" align="center"><sub>Nuevo en la 0.3.0: 4:3 en un televisor CRT de los 70</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/sides-tv2000.jpg" alt="La primera azotea en 4:3 dentro de un televisor CRT de los 2000: plástico plateado, rejillas de altavoz a los dos lados, un botón de encendido, botones pequeños y entradas A/V amarilla, blanca y roja a la derecha" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Nuevo en la 0.3.1: 4:3 en un televisor CRT de los 2000</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
@@ -173,7 +181,7 @@ ejecutado en el PC.</sub></p>
 - **A 480p, 720p o 1080p.** Todas las superficies que dibuja el juego se agrandan por igual, así que toda la
   imagen es más nítida, videos incluidos, con escalado más nítido y filtrado anisotrópico si quieres.
 - **Pantalla completa sin estirar.** La cámara 16:9 oculta del propio juego muestra más ciudad a los lados; el
-  HUD, los menús y los videos se quedan en 4:3. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje, o en un televisor CRT antiguo.
+  HUD, los menús y los videos se quedan en 4:3. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje, o en un televisor CRT de los 2000 o de los 70.
 - **Vibración** en los Joy-Con y el Pro Controller, con la fuerza que elijas, y nunca se queda encendida.
 - **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
   volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
@@ -310,7 +318,7 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 |---|---|---|
 | Language (idioma) | Auto, English, Español, Français, Deutsch, Italiano | Los menús y subtítulos del juego. Auto sigue a la consola; un idioma que el juego no tiene es inglés. Las voces son en inglés en todos. Desde el siguiente arranque. |
 | Resolution (resolución) | 480p (la de la consola), 720p, 1080p (docked: en el dock) | Con cuántos píxeles se dibujan el juego y sus videos. 720p llena la pantalla portátil píxel a píxel; 1080p, en el dock, se dibuja más grande y se reduce, con bordes más suaves (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU sube. |
-| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 CRT TV, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada, una telaraña o la telaraña con los colores del traje (rojo, azul y negro). |
+| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 2000s CRT TV, 4:3 70s CRT TV, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro), un televisor CRT de los 2000 (plateado, altavoces estéreo, entradas A/V, tubo de pantalla plana) o uno de los 70 (mueble de madera con perillas y altavoz, la imagen con esquinas redondeadas y líneas de barrido). |
 | Upscaling (escalado) | Smooth, Sharp | Cómo se agrandan los videos y la imagen: Sharp conserva más detalle (Catmull-Rom), Smooth es el aspecto más suave de una TV. |
 | CRT filter (filtro CRT) | Off, Light, Strong | La imagen como en un televisor CRT antiguo, con cualquier opción de Screen: líneas de barrido, las franjas roja, verde y azul de la pantalla, un brillo suave en las partes claras y los bordes más oscuros; Strong además curva el cristal. |
 | Texture filtering (filtrado) | Standard, Anisotropic 4x, 8x, 16x | Las calles y fachadas vistas de lado se ven nítidas a lo lejos. Mucho más trabajo para el chip gráfico en la ciudad: si bajan las imágenes por segundo, vuelve a Standard. |
@@ -479,8 +487,8 @@ Sí, y no. Pon **Screen** en **16:9 full screen** en el menú de depuración. El
 código tiene una cámara 16:9 que Treyarch nunca activó; el port la enciende y amplía su vista, así que ves más ciudad
 a los lados y nada se estira. Lo que el juego dibuja plano en la pantalla (el HUD, los menús, los textos, los videos)
 se queda en 4:3 en el centro. Si prefieres la imagen 4:3 original, los lados pueden ser negros, la imagen
-desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro) o un televisor CRT antiguo
-alrededor.
+desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro) o un televisor CRT de los 2000
+o de los 70 alrededor.
 </details>
 
 <details>

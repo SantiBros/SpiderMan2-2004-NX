@@ -159,7 +159,10 @@ void Build() {
                       {uint32_t(Screen::Blur), "4:3, blurred sides", ""},
                       {uint32_t(Screen::Web), "4:3, web sides", ""},
                       {uint32_t(Screen::Suit), "4:3, suit sides", ""},  // the web in the suit's colours
-                      {uint32_t(Screen::Tv), "4:3, CRT TV",
+                      {uint32_t(Screen::Tv2000), "4:3, 2000s CRT TV",
+                       "A TV from the game's own years: silver, with speakers at the sides, the A/V inputs and a "
+                       "flat-faced tube."},
+                      {uint32_t(Screen::Tv), "4:3, 70s CRT TV",
                        "An old television: a wooden cabinet with its knobs and speaker, the picture with a tube's "
                        "rounded corners and scanlines."},
                       {uint32_t(Screen::Wide), "16:9 full screen",

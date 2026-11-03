@@ -50,6 +50,7 @@ const char* ScreenKey(Screen v) {
         case Screen::Web: return "4:3-web";
         case Screen::Suit: return "4:3-suit";
         case Screen::Tv: return "4:3-tv";
+        case Screen::Tv2000: return "4:3-tv2000";
         case Screen::Wide: return "16:9";
         default: return "4:3";
     }
@@ -102,7 +103,8 @@ void LoadSettings() {
         } else if (k == "screen") {
             s.screen = v == "16:9" ? Screen::Wide : v == "4:3-blur" ? Screen::Blur : v == "4:3-web" ? Screen::Web
                                                                                         : v == "4:3-suit" ? Screen::Suit
-                                                                                        : v == "4:3-tv"   ? Screen::Tv : Screen::Black;
+                                                                                        : v == "4:3-tv"   ? Screen::Tv
+                                                                                        : v == "4:3-tv2000" ? Screen::Tv2000 : Screen::Black;
         } else if (k == "upscaling") {
             s.sharp = v == "sharp";
         } else if (k == "crt") {
@@ -159,7 +161,7 @@ void SaveSettings() {
       << "language=" << lang << "        # auto (the console's), en, es, fr, de, it\n"
       << "resolution=" << s.resolution << "p" << (s.resolution < 1000 ? "      " : "     ")
       << "# 480p (the console's), 720p, 1080p\n"
-      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 4:3-suit, 4:3-tv, 16:9\n"
+      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 4:3-suit, 4:3-tv2000, 4:3-tv (70s), 16:9\n"
       << "upscaling=" << (s.sharp ? "sharp" : "smooth") << "  # smooth, sharp\n"
       << "crt=" << (s.crt == Crt::Light ? "light " : s.crt == Crt::Strong ? "strong" : "off   ") << "       # the CRT filter: off, light, strong\n"
       << "anisotropic=" << (s.anisotropy > 1 ? std::to_string(s.anisotropy) + "x" : std::string("off"))

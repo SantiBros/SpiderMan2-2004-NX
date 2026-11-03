@@ -100,7 +100,7 @@ cd out/run && GL=1 RT=1 ../harness_gl/sm2 "/path/to/your/game"
 | `GLCAP=N`, `GLCAP_AT="f f ..."` | Every Nth frame, or those frames, saved as `cap/gl_<frame>.tga` (the 4:3 picture, or the whole 1280×720 screen for a 16:9 picture or 4:3 with sides). |
 | `XBE_RES=720`, `XBE_RES=1080` | The picture drawn that tall, as the debug menu's Resolution sets it on the Switch. |
 | `XBE_WIDESCREEN=1` | The game's own 16:9 picture (Screen: 16:9 full screen). |
-| `XBE_SIDES=1`, `2`, `3`, `4` | A 4:3 picture with blurred or spider-web sides, the web in the suit's colours, or an old CRT TV. |
+| `XBE_SIDES=1` to `5` | A 4:3 picture with blurred or spider-web sides, the web in the suit's colours, or a 70s (4) or 2000s (5) CRT TV. |
 | `XBE_SHARP=1`, `XBE_ANISO=16` | The sharper upscaling, anisotropic filtering. |
 | `XBE_CRT=1`, `2` | The CRT filter, light or strong. |
 | `REFAT="f f ..."` | Those frames drawn by the CPU renderer too, as `cap/ref_<frame>.tga`, to compare the two. |

@@ -115,6 +115,7 @@ public:
                   : screen == int(sw::Screen::Web) ? glr::Picture::Sides::Web
                   : screen == int(sw::Screen::Suit) ? glr::Picture::Sides::Suit
                   : screen == int(sw::Screen::Tv)   ? glr::Picture::Sides::Tv
+                  : screen == int(sw::Screen::Tv2000) ? glr::Picture::Sides::Tv2000
                                                     : glr::Picture::Sides::Black;
         p.sharp_movies = sw::g_sharp.load(std::memory_order_relaxed);
         p.crt = uint8_t(sw::g_crt.load(std::memory_order_relaxed));
