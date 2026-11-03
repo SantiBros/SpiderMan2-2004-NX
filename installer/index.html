@@ -30,6 +30,9 @@ code { background: #0b0f1a; border: 1px solid var(--line); border-radius: 4px; p
 .pick { display: block; margin: 12px 0 6px; }
 input[type=file] { width: 100%; color: var(--muted); font: inherit; }
 input[type=file]::file-selector-button { background: var(--blue); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; margin-right: 12px; font: inherit; cursor: pointer; }
+.ver { display: block; margin: 14px 0 0; font-weight: 600; font-size: .95rem; }
+select { display: block; width: 100%; margin-top: 6px; background: #0b0f1a; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; }
+#vernote { margin: 6px 0 0; }
 .go { display: inline-block; width: 100%; margin-top: 14px; background: var(--red); color: #fff; border: 0; border-radius: 10px; padding: 14px; font: inherit; font-weight: 600; font-size: 1.05rem; cursor: pointer; }
 .go:disabled { background: #3a4058; color: #8b91a6; cursor: default; }
 .status { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #0b0f1a; border: 1px solid var(--line); font-size: .95rem; white-space: pre-line; display: none; }
@@ -70,6 +73,9 @@ a { color: #8fb0ff; }
     <p class="en">Your own <b>Spider-Man 2 for the original Xbox</b> (not PS2, GameCube or PC): a disc image (<code>.iso</code>, <code>.xiso</code>, <code>.cci</code>, <code>.cso</code>), or <code>default.xbe</code> from the disc's files. For a split image, choose <b>all</b> its parts (<code>name.1.iso</code>, <code>name.2.iso</code>…).</p>
     <p class="es">Tu propio <b>Spider-Man 2 para la Xbox original</b> (no el de PS2, GameCube ni PC): una imagen de disco (<code>.iso</code>, <code>.xiso</code>, <code>.cci</code>, <code>.cso</code>) o el <code>default.xbe</code> de los archivos del disco. Si la imagen está dividida, elige <b>todas</b> sus partes (<code>nombre.1.iso</code>, <code>nombre.2.iso</code>…).</p>
     <label class="pick"><input id="game" type="file" multiple></label>
+    <label class="ver" for="version"><span class="en">Version</span><span class="es">Versión</span></label>
+    <select id="version"></select>
+    <p id="vernote" class="muted"></p>
     <button id="make" class="go" type="button" disabled><span class="en">Make SpiderMan2Xbox-SD.zip</span><span class="es">Crear SpiderMan2Xbox-SD.zip</span></button>
     <div id="bar" class="bar"><div></div></div>
     <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -326,24 +332,62 @@ async function fetchBytes(url, onProgress) {
   return out;
 }
 
+// ---- the versions: versions.json, newest first; each one's locked port and text files in its own folder ----
 let meta = null;
 const gameInput = document.getElementById('game'), makeBtn = document.getElementById('make');
-fetch('version.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
+const verSel = document.getElementById('version'), verNote = document.getElementById('vernote');
+const RELEASES = 'https://github.com/SantiBros/SpiderMan2-2004-NX/releases/tag/v';
+const chosen = () => (meta ? meta.versions.find((v) => v.version === verSel.value) || meta.versions[0] : null);
+function showVersions() {
+  if (!meta) return;
+  const keep = verSel.value;
+  verSel.textContent = '';
+  meta.versions.forEach((v, i) => {
+    const o = document.createElement('option');
+    o.value = v.version;
+    o.textContent = v.version + (i === 0 ? T(' (newest)', ' (la más reciente)') : '');
+    verSel.appendChild(o);
+  });
+  if (keep) verSel.value = keep;
+  noteVersion();
+}
+function noteVersion() {
+  const v = chosen();
+  if (!v) return;
+  verNote.textContent = '';
+  const a = document.createElement('a');
+  a.href = RELEASES + v.version; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = T('What\'s in ' + v.version, 'Qué trae la ' + v.version);
+  if (v[L.lang]) { const b = document.createElement('b'); b.textContent = v[L.lang]; verNote.append(b, document.createElement('br')); }
+  if (v.date) verNote.append(v.date + ' · ');
+  verNote.append(a);
+  if (v !== meta.versions[0]) verNote.append(T('. An older version: the newer ones fix its known problems.', '. Una versión anterior: las más nuevas arreglan sus problemas conocidos.'));
+}
+const loadMeta = () => fetch('versions.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
+  if (!m.versions || !m.versions.length) throw new Error('no versions');
   meta = m;
-  document.getElementById('ver').textContent = 'Port ' + m.version;
-}).catch(() => {});
+  const asked = new URLSearchParams(location.search).get('v');
+  showVersions();
+  if (asked && m.versions.some((v) => v.version === asked)) { verSel.value = asked; noteVersion(); }
+  document.getElementById('ver').textContent = 'Port ' + m.versions[0].version;
+  return m;
+});
+loadMeta().catch(() => {});
+document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', showVersions));
+verSel.addEventListener('change', () => { noteVersion(); statusEl.className = 'status'; });
 gameInput.addEventListener('change', () => { makeBtn.disabled = !gameInput.files.length; statusEl.className = 'status'; });
 
 makeBtn.addEventListener('click', async () => {
   makeBtn.disabled = true;
   try {
-    if (!meta) meta = await (await fetch('version.json', { cache: 'no-cache' })).json();
+    if (!meta) await loadMeta();
+    const v = chosen();
     say(T('Reading default.xbe from your game…', 'Leyendo default.xbe de tu juego…'));
     const xbe = await readXbe([...gameInput.files]);
     const sha1 = [...new Uint8Array(await crypto.subtle.digest('SHA-1', xbe))].map((b) => b.toString(16).padStart(2, '0')).join('');
     if (sha1 !== meta.xbe_sha1) fail('This default.xbe is not the release the port supports.\nSupported: Spider-Man 2 for the original Xbox, default.xbe SHA-1 ' + meta.xbe_sha1 + '\nYours: ' + sha1, 'Este default.xbe no es la edición que el port admite.\nAdmitida: Spider-Man 2 para la Xbox original, default.xbe con SHA-1 ' + meta.xbe_sha1 + '\nEl tuyo: ' + sha1);
-    say(T('Your game is the supported release. Downloading the locked port…', 'Tu juego es la edición admitida. Descargando el port bloqueado…'));
-    const locked = await fetchBytes(meta.locked, progress);
+    say(T('Your game is the supported release. Downloading the locked port ' + v.version + '…', 'Tu juego es la edición admitida. Descargando el port bloqueado ' + v.version + '…'));
+    const locked = await fetchBytes(v.path + 'SpiderMan2Xbox.nro.locked', progress);
     progress(null);
     say(T('Unlocking the port with your default.xbe…', 'Desbloqueando el port con tu default.xbe…'));
     const label = new TextEncoder().encode('SpiderMan2-2004-NX lock 1\0'), material = new Uint8Array(label.length + xbe.length);
@@ -353,7 +397,7 @@ makeBtn.addEventListener('click', async () => {
     let nro;
     try { nro = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: header.subarray(8, 20), additionalData: header }, key, locked.subarray(64))); }
     catch (e) { fail('The port could not be unlocked with this default.xbe.', 'No se pudo desbloquear el port con este default.xbe.'); }
-    const [readme, gameReadme, licenses] = await Promise.all(['README.txt', 'PUT_YOUR_GAME_HERE.txt', 'LICENSES.txt'].map((n) => fetchBytes(n, () => {})));
+    const [readme, gameReadme, licenses] = await Promise.all(['README.txt', 'PUT_YOUR_GAME_HERE.txt', 'LICENSES.txt'].map((n) => fetchBytes(v.path + n, () => {})));
     const dir = 'switch/SpiderMan2Xbox/';
     const blob = zip([
       { name: 'switch/' }, { name: dir }, { name: dir + 'game/' },
@@ -366,7 +410,7 @@ makeBtn.addEventListener('click', async () => {
     a.href = URL.createObjectURL(blob); a.download = 'SpiderMan2Xbox-SD.zip';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-    say(T('Done: SpiderMan2Xbox-SD.zip (port ' + meta.version + ') is downloading. Now step 2.', 'Listo: se está descargando SpiderMan2Xbox-SD.zip (port ' + meta.version + '). Ahora el paso 2.'), 'ok');
+    say(T('Done: SpiderMan2Xbox-SD.zip (port ' + v.version + ') is downloading. Now step 2.', 'Listo: se está descargando SpiderMan2Xbox-SD.zip (port ' + v.version + '). Ahora el paso 2.'), 'ok');
   } catch (e) {
     progress(null);
     say(e instanceof Problem ? e.message : T('Something went wrong: ', 'Algo salió mal: ') + (e && e.message ? e.message : String(e)), 'err');

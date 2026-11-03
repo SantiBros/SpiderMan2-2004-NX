@@ -192,8 +192,10 @@ SHA-256 of a label and the whole `default.xbe` of the supported release, so only
 The locked file is a 64 byte header (`SM2NXLK1`, the 12 byte nonce, the `.nro`'s size, the SHA-1 of the
 `default.xbe` it needs; all of it authenticated) and the ciphertext with GCM's tag.
 
-The [installer page](../installer/index.html) is one HTML file served by GitHub Pages beside the locked `.nro` and
-`version.json`. In the browser, with no upload: it finds `default.xbe` in what the player chooses (the file
+The [installer page](../installer/index.html) is one HTML file served by GitHub Pages beside a folder for each
+version (its locked `.nro` and the SD card folder's text files) and `versions.json`, which lists them. The player
+picks the version, the newest unless they choose another (or the address names one: `?v=0.2.3`). In the browser,
+with no upload: it finds `default.xbe` in what the player chooses (the file
 itself, or inside an XISO, a full disc dump, a CCI or a CSO, split or not: the same formats as the port, read with
 `File.slice` so a 1.7 GB image is never loaded whole), checks its SHA-1, unlocks the `.nro` with WebCrypto and
 writes `SpiderMan2Xbox-SD.zip` (stored, no compression) with the `switch` folder for the SD card.

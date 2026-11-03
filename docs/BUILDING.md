@@ -185,10 +185,13 @@ images you make are your copy of the game: keep them out of the repository.
    repository at that commit) and prints its SHA-256. It refuses a zip with game files in it.
 4. **The locked .nro, the symbols and the installer page:** with the `.nro` of step 2 in `build-switch/`,
    `bash tools/make_installer_site.sh <default.xbe>` locks it with the supported `default.xbe`
-   ([`tools/lock_nro.py`](../tools/lock_nro.py)) and writes `out/site/` (the installer page, the locked `.nro`,
-   `version.json` and the SD card folder's text files) and `out/release/`: `SpiderMan2Xbox-<version>.nro.locked`
-   and `SpiderMan2Xbox-<version>-symbols.elf` (the `.elf`'s names and debug information, checked to hold no code or
-   data). The site goes on the `gh-pages` branch, alone (an orphan commit, force-pushed), which GitHub Pages serves
+   ([`tools/lock_nro.py`](../tools/lock_nro.py)) and writes `out/site/<version>/` (the locked `.nro` and the SD card
+   folder's text files), the installer page and `versions.json` (the versions in `out/site/`, newest first, titled
+   from [`installer/versions.json`](../installer/versions.json): add the new one there), and `out/release/`:
+   `SpiderMan2Xbox-<version>.nro.locked` and `SpiderMan2Xbox-<version>-symbols.elf` (the `.elf`'s names and debug
+   information, checked to hold no code or data). Without `out/site/` it starts from the `gh-pages` branch, so the
+   page keeps offering every earlier version. `TREE=<an older version's checkout, built with its switch/build.sh>`
+   adds that version instead. The site goes on the `gh-pages` branch, alone (an orphan commit, force-pushed), which GitHub Pages serves
    at `https://<owner>.github.io/<repository>/` once Settings → Pages takes its source from that branch. The page
    must be served from the same site as the locked `.nro`: GitHub's release downloads can't be read by a page.
 5. **On GitHub:** tag `v<version>` on that commit, and publish a release with the zip, the locked `.nro` and the
