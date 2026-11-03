@@ -5,9 +5,10 @@ builds.
 
 ## [0.3.0]
 
-**Install from your phone, and the city map right in 16:9.** The port no longer has to be built on a computer: the
+**Install from your phone, the city map right in 16:9, and a CRT look.** The port no longer has to be built on a computer: the
 release holds the port locked, and a web page unlocks it with your own copy of the game, on an Android phone or a
-computer. And in 16:9 the map's icons sit on their places again.
+computer. In 16:9 the map's icons sit on their places again. And for the retro look, a CRT filter and a CRT TV
+around the 4:3 picture.
 
 ### Added
 - **An installer page** (GitHub Pages, linked at the top of the README): choose your game (a disc image of any
