@@ -7,8 +7,8 @@ namespace sw {
 
 enum class Counter { Off, Fps, Full };
 // the picture on the screen: 4:3 with black, blurred or web sides, or the game's own 16:9 across it
-// (Suit, the web in Spider-Man's suit colours, came last: the values are kept)
-enum class Screen { Black, Blur, Web, Wide, Suit };
+// (Suit, the web in Spider-Man's suit colours, and Tv, an old CRT television, came later: the values are kept)
+enum class Screen { Black, Blur, Web, Wide, Suit, Tv };
 enum class Rumble { Off, Low, Medium, High };
 // a clock setting: 0 the system's own clock, kClockAuto the port's choice for the game (ClocksFor), else Hz
 constexpr uint32_t kClockAuto = 0xFFFFFFFFu;

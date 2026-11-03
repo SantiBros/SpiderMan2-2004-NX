@@ -250,7 +250,8 @@ tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en
   reduce (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU
   sube: si bajan las imágenes por segundo, baja un paso.
 - **Screen** (pantalla): 4:3 con los lados negros, desenfocados, con telaraña o con la telaraña en los colores del
-  traje (rojo, azul y negro), o **16:9 full screen**, la cámara panorámica oculta del propio juego, con más ciudad
+  traje (rojo, azul y negro), en un televisor CRT antiguo (**CRT TV**: un mueble de madera con perillas y altavoz,
+  la imagen con esquinas redondeadas y líneas de barrido), o **16:9 full screen**, la cámara panorámica oculta del propio juego, con más ciudad
   a los lados y el HUD, los menús y los videos en 4:3 en el centro.
 - **Upscaling** (escalado: Smooth o Sharp) y **Texture filtering** (filtrado: Standard o anisotrópico de 4x a 16x;
   el anisotrópico es mucho más trabajo para el chip gráfico en la ciudad, así que prueba Standard primero si bajan

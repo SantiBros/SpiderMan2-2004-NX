@@ -19,6 +19,11 @@ computer. And in 16:9 the map's icons sit on their places again.
   browser; `tools/lock_nro.py unlock` does the same on a computer.
 - **A symbols file** with every release (`SpiderMan2Xbox-<version>-symbols.elf`): the .nro's function names and
   debug information, without its code or data, to read the addresses in a crash report.
+- **A new 4:3 decoration: CRT TV** (debug menu, Screen: "4:3, CRT TV"; `screen=4:3-tv` in `settings.ini`): the
+  picture on an old television, a walnut cabinet around it with the speaker's cloth on the left and a metal panel
+  on the right (channel and volume knobs, the power button and its red light, the speaker's slots). The picture
+  gets the tube's rounded corners, darker edges, a faint glare and scanlines, one every 3 screen pixels at 720 rows
+  (4 at 1080), so they stay even. The cabinet is drawn once, like the web.
 - **The GPU's time in the log's performance lines** (`perf: the GPU ... ms a frame`): next to the frame's time it
   tells whether the GPU or the CPU holds the frame rate back, for reports on 720p and 1080p.
 

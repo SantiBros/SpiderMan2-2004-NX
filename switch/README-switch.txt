@@ -114,7 +114,8 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
                       handheld mode) - the whole picture and the movies;
                       more work for the GPU
   Screen              4:3 with black, blurred, web or suit sides (the web in
-                      the suit's red, blue and black), or 16:9 full screen
+                      the suit's red, blue and black), on an old CRT TV,
+                      or 16:9 full screen
                       (the game's own wide camera; the HUD, menus and movies
                       stay 4:3)
   Upscaling           smooth or sharp

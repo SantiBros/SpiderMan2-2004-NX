@@ -50,7 +50,8 @@ en tu móvil) y balancéate por Nueva York.
 > la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) desbloquea el port con tu propio juego en tu navegador, en un móvil
 > Android o un computador, y te da la carpeta para tu tarjeta SD. En 16:9 los iconos del mapa de la ciudad
 > (Spider-Man, las estrellas azules, los iconos de $) ahora están en su sitio y se mueven con el mapa, y los lados
-> difuminados del 4:3 cuestan menos a 720p y 1080p.
+> difuminados del 4:3 cuestan menos a 720p y 1080p. Y una decoración nueva para el 4:3: **CRT TV**, la imagen en
+> un televisor antiguo, con su mueble de madera, sus perillas y sus líneas de barrido.
 >
 > **Novedades de la 0.2.3: las partidas guardadas cargan, y el 16:9 no se congela.** Las partidas se guardaban pero
 > nunca se podían cargar ("unable to load saved game"): ahora cargan, también las que ya tienes en la tarjeta, y se
@@ -110,6 +111,12 @@ en tu móvil) y balancéate por Nueva York.
     <td colspan="2" align="center"><sub>Nuevo en la 0.2.2: 4:3 con la telaraña con los colores del traje a los lados</sub></td>
   </tr>
   <tr>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/sides-tv.jpg" alt="La primera azotea en 4:3 dentro de un televisor CRT antiguo: un mueble de madera, un altavoz a la izquierda, perillas a la derecha, la imagen con esquinas redondeadas y líneas de barrido" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Nuevo en la 0.3.0: 4:3 en un televisor CRT antiguo</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="La pantalla de título, PRESS START TO BEGIN"></td>
     <td width="50%"><img src="docs/images/screenshots/title-es.jpg" alt="La pantalla de título en español, PRESIONAR START PARA EMPEZAR"></td>
   </tr>
@@ -159,14 +166,15 @@ ejecutado en el PC.</sub></p>
 - **A 480p, 720p o 1080p.** Todas las superficies que dibuja el juego se agrandan por igual, así que toda la
   imagen es más nítida, videos incluidos, con escalado más nítido y filtrado anisotrópico si quieres.
 - **Pantalla completa sin estirar.** La cámara 16:9 oculta del propio juego muestra más ciudad a los lados; el
-  HUD, los menús y los videos se quedan en 4:3. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje.
+  HUD, los menús y los videos se quedan en 4:3. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje, o en un televisor CRT antiguo.
 - **Vibración** en los Joy-Con y el Pro Controller, con la fuerza que elijas, y nunca se queda encendida.
 - **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
   volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
-- **Se compila a partir de tu copia con un doble clic.** En Windows, `build-windows.cmd` prepara todo lo que
-  necesita y te pide tu juego; en Linux es un solo comando. Comprueba que tu copia sea la edición compatible, la
-  recompila, compila el `.nro` y arma la carpeta de la tarjeta SD con tu juego dentro.
+- **Se instala desde tu móvil.** La [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)
+  desbloquea el port con tu propia copia en tu navegador y te da la carpeta para la tarjeta SD. O compílalo a
+  partir de tu copia en un computador: en Windows `build-windows.cmd` prepara todo lo que necesita y te pide tu
+  juego; en Linux es un solo comando.
 - **En tu idioma.** El juego toma el idioma de la consola: menús y subtítulos en inglés, español, francés,
   alemán o italiano, con los textos de tu disco.
 - **Un menú de depuración** (**ZL + ZR + −**) con la resolución, la forma de la pantalla, la vibración, un
@@ -295,7 +303,7 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 |---|---|---|
 | Language (idioma) | Auto, English, Español, Français, Deutsch, Italiano | Los menús y subtítulos del juego. Auto sigue a la consola; un idioma que el juego no tiene es inglés. Las voces son en inglés en todos. Desde el siguiente arranque. |
 | Resolution (resolución) | 480p (la de la consola), 720p, 1080p (docked: en el dock) | Con cuántos píxeles se dibujan el juego y sus videos. 720p llena la pantalla portátil píxel a píxel; 1080p, en el dock, se dibuja más grande y se reduce, con bordes más suaves (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU sube. |
-| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada, una telaraña o la telaraña con los colores del traje (rojo, azul y negro). |
+| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 CRT TV, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada, una telaraña o la telaraña con los colores del traje (rojo, azul y negro). |
 | Upscaling (escalado) | Smooth, Sharp | Cómo se agrandan los videos y la imagen: Sharp conserva más detalle (Catmull-Rom), Smooth es el aspecto más suave de una TV. |
 | Texture filtering (filtrado) | Standard, Anisotropic 4x, 8x, 16x | Las calles y fachadas vistas de lado se ven nítidas a lo lejos. Mucho más trabajo para el chip gráfico en la ciudad: si bajan las imágenes por segundo, vuelve a Standard. |
 | Vibration (vibración) | Off, Low, Medium, High | La vibración del juego en los Joy-Con o un Pro Controller (la Switch Lite no tiene motor propio). Si el juego deja una vibración encendida, se apaga a los 2 segundos, y no vibra con el menú abierto ni en el menú HOME. |
@@ -463,7 +471,8 @@ Sí, y no. Pon **Screen** en **16:9 full screen** en el menú de depuración. El
 código tiene una cámara 16:9 que Treyarch nunca activó; el port la enciende y amplía su vista, así que ves más ciudad
 a los lados y nada se estira. Lo que el juego dibuja plano en la pantalla (el HUD, los menús, los textos, los videos)
 se queda en 4:3 en el centro. Si prefieres la imagen 4:3 original, los lados pueden ser negros, la imagen
-desenfocada, una telaraña o la telaraña con los colores del traje: rojo, azul y negro.
+desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro) o un televisor CRT antiguo
+alrededor.
 </details>
 
 <details>

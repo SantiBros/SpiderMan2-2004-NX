@@ -241,7 +241,8 @@ speed). The bottom line shows the frame rate, the time of a frame and the draw c
   720p fills the handheld screen pixel for pixel; 1080p, for docked play, is drawn bigger and shrunk (in handheld
   mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises: if the frame rate
   drops, go back a step.
-- **Screen**: 4:3 with black, blurred, spider-web or suit sides (the web in the suit's red, blue and black), or
+- **Screen**: 4:3 with black, blurred, spider-web or suit sides (the web in the suit's red, blue and black), on an
+  old CRT TV (a wooden cabinet with knobs and a speaker, the picture with rounded corners and scanlines), or
   **16:9 full screen**, the game's own hidden widescreen camera, with more of the city at the sides and the HUD,
   menus and movies kept 4:3 in the middle.
 - **Upscaling** (Smooth or Sharp) and **Texture filtering** (Standard or Anisotropic 4x to 16x; anisotropic is much

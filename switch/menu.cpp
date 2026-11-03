@@ -159,6 +159,9 @@ void Build() {
                       {uint32_t(Screen::Blur), "4:3, blurred sides", ""},
                       {uint32_t(Screen::Web), "4:3, web sides", ""},
                       {uint32_t(Screen::Suit), "4:3, suit sides", ""},  // the web in the suit's colours
+                      {uint32_t(Screen::Tv), "4:3, CRT TV",
+                       "An old television: a wooden cabinet with its knobs and speaker, the picture with a tube's "
+                       "rounded corners and scanlines."},
                       {uint32_t(Screen::Wide), "16:9 full screen",
                        "The game's own wide camera: more of the city at the sides, nothing stretched. The HUD, menus "
                        "and movies stay 4:3 in the middle."}};

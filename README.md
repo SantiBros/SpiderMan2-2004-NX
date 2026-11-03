@@ -48,7 +48,8 @@ swing through New York.
 > [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks the port with your own game in your browser, on an Android phone or
 > a computer, and gives you the folder for your SD card. In 16:9 the city map's icons (Spider-Man, the blue stars,
 > the $ icons) now sit on their places and move with the map, and the blurred sides of 4:3 cost less at 720p and
-> 1080p.
+> 1080p. And a new 4:3 decoration: **CRT TV**, the picture on an old television, wooden cabinet, knobs and
+> scanlines included.
 >
 > **New in 0.2.3: saved games load, and 16:9 doesn't freeze.** Saves were written but never loaded back ("unable
 > to load saved game"): they load now, the ones already on your card too, and a copy of them is kept in
@@ -106,6 +107,12 @@ swing through New York.
     <td colspan="2" align="center"><sub>New in 0.2.2: 4:3 with the web in the suit's colours at the sides</sub></td>
   </tr>
   <tr>
+    <td colspan="2" align="center"><img src="docs/images/screenshots/sides-tv.jpg" alt="The first rooftop in 4:3 inside an old CRT television: a wooden cabinet, a speaker on the left, knobs on the right, the picture with rounded corners and scanlines" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>New in 0.3.0: 4:3 on an old CRT TV</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/images/screenshots/title.jpg" alt="The title screen, PRESS START TO BEGIN"></td>
     <td width="50%"><img src="docs/images/screenshots/title-es.jpg" alt="The title screen in Spanish, PRESIONAR START PARA EMPEZAR"></td>
   </tr>
@@ -154,14 +161,16 @@ by the Switch build's screen code, run on the PC.</sub></p>
 - **At 480p, 720p or 1080p.** Every surface the game draws is made bigger alike, so the whole picture is
   sharper, movies included, with sharper upscaling and anisotropic filtering if you like.
 - **Full screen without stretching.** The game's own hidden 16:9 camera shows more of the city at the sides;
-  the HUD, menus and movies stay 4:3. Or keep 4:3, with black, blurred, spider-web or suit-coloured sides.
+  the HUD, menus and movies stay 4:3. Or keep 4:3, with black, blurred, spider-web or suit-coloured sides, or on
+  an old CRT TV.
 - **Vibration** on Joy-Con and the Pro Controller, at the strength you choose, and never left running.
 - **Your copy in the format you have.** A disc image (`.iso` or `.xiso`, a trimmed XISO or a full disc
   dump), the compressed `.cci` (Cerbios) and `.cso` (StellarOS) images that Repackinator makes, any of
   them split into parts for a FAT32 card, or the files from the disc.
-- **Built from your copy with a double-click.** On Windows, `build-windows.cmd` sets up everything it needs
-  and asks for your game; on Linux it's one command. It checks that your copy is the supported release,
-  recompiles it, builds the `.nro`, and lays out the SD card folder with your game in it.
+- **Installed from your phone.** The [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks
+  the port with your own copy in your browser and gives you the SD card folder. Or build it from your copy on a
+  computer: on Windows `build-windows.cmd` sets up everything it needs and asks for your game; on Linux it's one
+  command.
 - **In your language.** The game takes the console's language: English, Spanish, French, German or
   Italian menus and subtitles, from the texts on your disc.
 - **A debug menu** (**ZL + ZR + −**) with the resolution, the screen shape, the vibration, a frame-rate
@@ -288,7 +297,7 @@ game gets no input (press **+** first if you want the game paused). Changes are 
 |---|---|---|
 | Language | Auto, English, Español, Français, Deutsch, Italiano | The game's menus and subtitles. Auto follows the console; a language the game doesn't have is English. The voices are English in every language. From the next start. |
 | Resolution | 480p (the console's), 720p, 1080p (docked) | How many pixels the game and its movies are drawn with. 720p fills the handheld screen pixel for pixel; 1080p, docked, is drawn bigger and shrunk, with smoother edges (in handheld mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises. |
-| Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. The 4:3 sides can be black, the picture blurred, a spider web, or the web in the suit's red, blue and black. |
+| Screen | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 CRT TV, 16:9 full screen | The picture keeps its shape. 16:9 uses the game's own wide camera (more of the city at the sides); the HUD, menus and movies stay 4:3 in the middle. The 4:3 sides can be black, the picture blurred, a spider web, the web in the suit's red, blue and black, or an old CRT TV (a wooden cabinet with its knobs and speaker, the picture with rounded corners and scanlines). |
 | Upscaling | Smooth, Sharp | How the movies and the picture are enlarged: Sharp keeps more detail (Catmull-Rom), Smooth is the softer look of a TV. |
 | Texture filtering | Standard, Anisotropic 4x, 8x, 16x | Streets and building fronts seen at a slant stay sharp in the distance. Much more work for the graphics chip in the city: if the frame rate drops, go back to Standard. |
 | Vibration | Off, Low, Medium, High | The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has no rumble of its own). A rumble the game leaves on stops after 2 seconds, and none runs while the menu is open or in the HOME menu. |
@@ -450,7 +459,7 @@ Yes, and no. Set the debug menu's **Screen** to **16:9 full screen**. The game w
 has a 16:9 camera that Treyarch never switched on; the port turns it on and widens its view, so you see more of
 the city at the sides and nothing is stretched. What the game draws flat on the screen (the HUD, the menus, the
 text, the movies) is kept 4:3 in the middle. If you'd rather keep the original 4:3 picture, the sides can be
-black, the picture blurred, a spider web, or the web in the suit's red, blue and black.
+black, the picture blurred, a spider web, the web in the suit's red, blue and black, or an old CRT TV around it.
 </details>
 
 <details>

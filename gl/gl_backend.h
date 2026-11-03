@@ -20,8 +20,9 @@ struct Picture {
     // the game's own 16:9 picture (src/game/widescreen.cpp): shown 16:9 across the screen, drawn wider when scaled,
     // what it draws flat (HUD, menus, text, movies) kept 4:3 in the middle
     bool wide = false;
-    // a 4:3 picture's sides: black, the picture blurred, or a pattern
-    enum class Sides : uint8_t { Black, Blur, Web, Suit } sides = Sides::Black;  // Suit: the web in the suit's colours
+    // a 4:3 picture's sides: black, the picture blurred, or a pattern; Suit: the web in the suit's colours; Tv: an old
+    // CRT television's cabinet and controls, the picture with a tube's rounded corners and scanlines
+    enum class Sides : uint8_t { Black, Blur, Web, Suit, Tv } sides = Sides::Black;
     // the game's movies (YUY2 frames) and the frame onto the screen upscaled with a sharper filter than bilinear
     bool sharp_movies = false;
     // mipmapped textures read with this much anisotropic filtering (1: none), sharper at grazing angles: streets,
