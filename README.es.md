@@ -92,6 +92,12 @@ en tu móvil) y balancéate por Nueva York.
 
 ## Capturas
 
+<p align="center">
+  <img src="docs/images/clips/rooftop.webp" alt="Unos segundos de juego: Spider-Man cae en una azotea de noche, corre y trepa por un edificio de vidrio" width="720">
+</p>
+<p align="center"><sub>Unos segundos de juego en las primeras azoteas, grabados cuadro por cuadro con la versión de
+prueba para PC del port. Muestra cómo se ve el juego, no los FPS de la consola.</sub></p>
+
 <table>
   <tr>
     <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man en una azotea al atardecer, con el HUD" width="100%"></td>

@@ -86,6 +86,12 @@ swing through New York.
 
 ## Screenshots
 
+<p align="center">
+  <img src="docs/images/clips/rooftop.webp" alt="A few seconds of play: Spider-Man lands on a rooftop at night, runs and climbs a glass building" width="720">
+</p>
+<p align="center"><sub>A few seconds of play on the first rooftops, recorded frame by frame on the port's PC test
+build. It shows how the game looks, not the console's frame rate.</sub></p>
+
 <table>
   <tr>
     <td colspan="2" align="center"><img src="docs/images/screenshots/city.jpg" alt="Spider-Man on a rooftop at dusk, with the HUD" width="100%"></td>
