@@ -1124,10 +1124,16 @@ HLE_STDCALL(D3DDevice_SetPixelShaderConstant, 3) {
 
 // drawing
 
+namespace {
+void TraceDraw(const char* kind, const void* vertex, uint32_t stride, uint32_t count);
+}
+
 HLE_STDCALL(D3DDevice_DrawVertices, 3) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
     Walk(Dev(kDevPush));  // a visibility test begun since the last draw counts this one
     SyncDeferred();
+    if (g_state.streams[0].vb && g_state.streams[0].stride)
+        TraceDraw("vb", HostPtr(mem::VirtualFromPhysical(R32(g_state.streams[0].vb + 4)) + a[1] * g_state.streams[0].stride), g_state.streams[0].stride, a[2]);
     if (g_backend) g_backend->Draw(g_state, a[0], a[1], a[2], nullptr);
     return 0;
 }
@@ -1169,8 +1175,47 @@ uint32_t UpVertices(const void* src, uint32_t bytes) {
     return g_up_header;
 }
 
+// DRAWTRACE=n: every draw of the n-th frame (counted by Swap) into drawtrace.txt, with its first vertex's first two
+// numbers and the return addresses into the game's code on the guest stack: which of the game's functions drew what
+void TraceDraw(const char* kind, const void* vertex, uint32_t stride, uint32_t count) {
+    static const long at = std::getenv("DRAWTRACE") ? std::atol(std::getenv("DRAWTRACE")) : -1;
+    if (at < 0 || long(g_presents.load()) != at) return;
+    static uint32_t n = 0;
+    float xy[2] = {};
+    if (vertex && stride >= 8) std::memcpy(xy, vertex, 8);
+    X86Context& ctx = kernel::CurrentContext();
+    std::string callers;
+    char buf[12];
+    for (uint32_t i = 0, found = 0; i < 128 && found < 10; i++) {
+        uint32_t v = R32(ctx.esp + i * 4);
+        if (v >= X86CodeBase && v < X86CodeEnd) {
+            std::snprintf(buf, sizeof buf, " %08X", v);
+            callers += buf;
+            found++;
+        }
+    }
+    // into a file of its own: a frame has hundreds of draws, more than the log lets through
+    static FILE* out = std::fopen("drawtrace.txt", "w");
+    if (out) {
+        std::fprintf(out, "%u %s %u vertices stride %u first %.1f %.1f callers%s\n", n++, kind, count, stride, xy[0], xy[1], callers.c_str());
+        // DRAWTRACE_VERTS=1: every vertex's first two floats and last two (position, texture coordinates)
+        static const bool verts = std::getenv("DRAWTRACE_VERTS") != nullptr;
+        if (verts && vertex && stride >= 16 && count <= 512) {
+            const uint8_t* v = static_cast<const uint8_t*>(vertex);
+            for (uint32_t i = 0; i < count; i++) {
+                float f[4];
+                std::memcpy(f, v + size_t(i) * stride, 8);
+                std::memcpy(f + 2, v + size_t(i) * stride + stride - 8, 8);
+                std::fprintf(out, "    %.1f %.1f  %.4f %.4f\n", f[0], f[1], f[2], f[3]);
+            }
+        }
+        std::fflush(out);
+    }
+}
+
 void DrawUp(uint32_t prim, uint32_t count, const void* vertices, uint32_t stride) {
     if (!g_backend || !count || !stride) return;
+    TraceDraw("up", vertices, stride, count);
     SyncDeferred();
     auto stream = g_state.streams[0];
     g_state.streams[0] = {UpVertices(vertices, count * stride), stride};

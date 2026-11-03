@@ -1131,7 +1131,7 @@ void Copy(const Surface& src, const Surface& dst, uint32_t count, uint32_t rects
 }
 
 bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, uint32_t max_vertices,
-               float box[4], bool& flat, float* uv) {
+               float box[4], bool& flat, float* uv, float* z) {
     if (count > max_vertices * 3) return false;
     static thread_local Assembled as;  // its buffers kept from draw to draw (Assemble resets the rest)
     if (!Assemble(s, prim, start, count, indices, as) || as.topology != Topology::Triangles || !as.vertex_count ||
@@ -1143,6 +1143,7 @@ bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, co
     box[0] = box[1] = INFINITY;
     box[2] = box[3] = -INFINITY;
     if (uv) uv[0] = uv[1] = INFINITY, uv[2] = uv[3] = -INFINITY;
+    if (z) z[0] = INFINITY, z[1] = -INFINITY;
     flat = true;
     for (uint32_t vi = 0; vi < as.vertex_count; vi++) {
         VertexProgram vp{s};
@@ -1150,13 +1151,13 @@ bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, co
             const float* p = slot[r] >= 0 ? &as.vertices[(size_t(vi) * regs + slot[r]) * 4] : nullptr;
             vp.in[r] = p ? V(p[0], p[1], p[2], p[3]) : r == 3 ? V(1, 1, 1, 1) : V(0, 0, 0, 1);
         }
-        float x, y, w;
+        float x, y, w, depth = 0;
         if (program) {
             vp.Run(s.vs->program);
-            x = vp.out[0][0], y = vp.out[0][1], w = vp.out[0][3];
+            x = vp.out[0][0], y = vp.out[0][1], w = vp.out[0][3], depth = vp.out[0][2];
         } else if (as.pretransformed) {
             const Vec& q = vp.in[0];
-            x = q[0], y = q[1], w = q[3] == 0 || q[3] == 1 ? 1.0f : 1 / q[3];
+            x = q[0], y = q[1], w = q[3] == 0 || q[3] == 1 ? 1.0f : 1 / q[3], depth = q[2];
         } else {
             const Vec& q = vp.in[0];
             float wv[16], wvp[16], cp[4];
@@ -1176,6 +1177,7 @@ bool ScreenBox(const State& s, uint32_t prim, uint32_t start, uint32_t count, co
         }
         flat &= w == 1.0f;
         if (!flat) break;  // one vertex in perspective: the draw is not flat, its box does not matter
+        if (z) z[0] = std::min(z[0], depth), z[1] = std::max(z[1], depth);
         if (uv) {
             const Vec& t = program ? vp.out[9] : vp.in[9];
             uv[0] = std::min(uv[0], t[0]), uv[1] = std::min(uv[1], t[1]);

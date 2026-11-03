@@ -44,7 +44,7 @@ namespace {
 constexpr uint64_t kStaleFrames = 8;  // frames a target may go unused and still be read back
 // the GLSL this renderer and gl/glsl.cpp make: a new name whenever any program's text changes (the shader list keeps
 // the programs of the last one); "2" is 0.2.0's
-constexpr const char* kShaderGenerator = "2";
+constexpr const char* kShaderGenerator = "3";
 constexpr float kDepth24Max = 16777215.0f;
 constexpr float kUpscaledMin = 1.01f;   // host texels per console texel past rounding: the target is upscaled
 constexpr float kGlowBoxTexels = 3.0f;  // console texels across the box each wide tap averages, as d3d12.cpp's
@@ -577,6 +577,8 @@ struct Perf {
     uint64_t feedbacks = 0;
     uint64_t draws = 0, verts = 0, texups = 0, texup_bytes = 0, newtex = 0, programs = 0, syncs = 0, targets = 0, reports = 0;
     uint64_t hitches = 0, warmed = 0, zcolours = 0, boxes = 0, box_hits = 0;
+    double gpu = 0;          // the GPU's own time for the frames measured (timer queries), and how many
+    uint64_t gpu_frames = 0;
 };
 
 GLuint Compile(GLenum type, const std::string& src) {
@@ -621,13 +623,14 @@ GLuint Link(GLuint vs, GLuint fs) {
 // Mesa has no binary shader cache, and a program built in the middle of play is a stutter.
 class ShaderList {
 public:
-    // driver: the GL renderer and version, and the shader generator's version; also: an older header whose
-    // programs are the same (a port version that made the same GLSL), whose list is kept under the new header
-    void Open(const std::string& path, const std::string& driver, const std::string& also = std::string()) {
+    // driver: the GL renderer and version, and the shader generator's version; also: older headers (earlier port
+    // versions' GLSL), whose lists are kept under the new header with their programs' text changed by edits (what
+    // the GLSL changed since: each from in a program replaced by its to)
+    void Open(const std::string& path, const std::string& driver, const std::vector<std::string>& also = {},
+              const std::vector<std::pair<std::string, std::string>>& edits = {}) {
         if (path.empty()) return;
         path_ = path;
         const std::string head = "sm2nx glsl list 1 " + driver + "\n";
-        const std::string old_head = also.empty() ? std::string() : "sm2nx glsl list 1 " + also + "\n";
         std::string all;
         if (FILE* f = std::fopen(path.c_str(), "rb")) {
             char buf[65536];
@@ -635,11 +638,35 @@ public:
             while ((n = std::fread(buf, 1, sizeof buf, f)) > 0) all.append(buf, n);
             std::fclose(f);
         }
-        bool same = all.compare(0, head.size(), head) == 0;
-        bool older = !same && !old_head.empty() && all.compare(0, old_head.size(), old_head) == 0;
-        if (older) {
-            all = head + all.substr(old_head.size());
-            LOGI("gl: the shader list of the previous version is kept: its programs are the same");
+        bool same = all.compare(0, head.size(), head) == 0, older = false;
+        for (const std::string& a : also) {
+            const std::string old_head = "sm2nx glsl list 1 " + a + "\n";
+            if (same || all.compare(0, old_head.size(), old_head) != 0) continue;
+            older = true;
+            std::string kept = head;
+            size_t at = old_head.size(), changed = 0, programs = 0;
+            for (;;) {
+                size_t vl = 0, fl = 0;
+                int used = 0;
+                if (at >= all.size() || std::sscanf(all.c_str() + at, "@program %zu %zu\n%n", &vl, &fl, &used) != 2 || !used) break;
+                at += size_t(used);
+                if (at + vl + fl > all.size()) break;
+                std::string vs = all.substr(at, vl), fs = all.substr(at + vl, fl);
+                for (const auto& [from, to] : edits) {
+                    for (size_t p = vs.find(from); p != std::string::npos; p = vs.find(from, p + to.size()))
+                        vs.replace(p, from.size(), to), changed++;
+                    for (size_t p = fs.find(from); p != std::string::npos; p = fs.find(from, p + to.size()))
+                        fs.replace(p, from.size(), to), changed++;
+                }
+                char h[64];
+                std::snprintf(h, sizeof h, "@program %zu %zu\n", vs.size(), fs.size());
+                kept += h + vs + fs;
+                programs++;
+                at += vl + fl;
+            }
+            all = std::move(kept);
+            LOGI("gl: the shader list of an earlier version is kept: %zu programs, %zu changes for this one", programs, changed);
+            break;
         }
         if (same || older) {
             size_t at = head.size();
@@ -977,7 +1004,13 @@ private:
     GLuint scratch_tex_ = 0, scratch_fbo_ = 0;
     uint32_t scratch_w_ = 0, scratch_h_ = 0;
     // the present: programs, and the frame with mipmaps for blurred sides
-    GLuint present_ = 0, sides_ = 0, sides_tex_ = 0;
+    GLuint present_ = 0, sides_ = 0, sides_tex_ = 0, sides_fbo_ = 0;
+    // the GPU's time a frame: a timer query from one swap to the next, read a few frames later (never waited for)
+    static constexpr int kGpuQueries = 4;
+    GLuint gpu_q_[kGpuQueries] = {};
+    bool gpu_q_live_[kGpuQueries] = {};
+    int gpu_q_at_ = -1;
+    void GpuTimer();
     GLint present_opts_ = -1, present_step_ = -1, sides_opts_ = -1, sides_screen_ = -1;
     uint32_t sides_w_ = 0, sides_h_ = 0;
     GLuint web_tex_ = 0, web_fbo_ = 0;  // the web sides, drawn once for the screen's size
@@ -1113,7 +1146,8 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     // changes only when the GLSL does (kShaderGenerator), so a new port version keeps the list; 0.2.0 named itself
     const std::string driver = std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + ", " +
                                reinterpret_cast<const char*>(glGetString(GL_VERSION));
-    shader_list_.Open(host_->CachePath(), driver + ", shaders " + kShaderGenerator, driver + ", port 0.2.0");
+    shader_list_.Open(host_->CachePath(), driver + ", shaders " + kShaderGenerator, {driver + ", shaders 2", driver + ", port 0.2.0"},
+                      glsl::ListEdits());
     // the first call from whichever thread draws takes the context
     glFinish();
     host_->Release();
@@ -1733,7 +1767,7 @@ void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t 
     float box[4];
     bool flat = false;
     static const long trace0 = std::getenv("GLSQUEEZE") ? std::atol(std::getenv("GLSQUEEZE")) : -1;
-    float uv[4] = {};
+    float uv[4] = {}, zr[2] = {};
     auto t0 = Clock::now();
     bool boxed = false;
     const Assembled& a = asm_;
@@ -1751,7 +1785,7 @@ void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t 
             flat = false;
             perf_.box_hits++;
         } else {
-            boxed = reference::ScreenBox(s, prim, start, count, indices, kSmallDraw, box, flat, uv);
+            boxed = reference::ScreenBox(s, prim, start, count, indices, kSmallDraw, box, flat, uv, zr);
             if (boxed && !flat) {
                 if (not_flat_.size() > 16384) not_flat_.clear();
                 not_flat_[key] = frame_;
@@ -1783,10 +1817,10 @@ void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t 
     if (long(frame_) == trace) {
         bool tex = s.textures[0] && Describe(s.textures[0], d);
         LOGI("gl: squeeze draw %llu box %.1f %.1f %.1f %.1f: %s; t0 %08X %ux%u format %X%s uv %.3f %.3f %.3f %.3f address %u %u, "
-             "blend %u %X %X", (unsigned long long)frame_draws_, box[0], box[1], box[2], box[3], squeeze_ ? "4:3" : "across",
+             "blend %u %X %X, z %.4f..%.4f zenable %u zwrite %u vs %08X", (unsigned long long)frame_draws_, box[0], box[1], box[2], box[3], squeeze_ ? "4:3" : "across",
              tex ? d.data : 0, tex ? d.width : 0, tex ? d.height : 0, tex ? d.format : 0, st.rt[0] ? " (target)" : "", uv[0], uv[1],
              uv[2], uv[3], s.tss[0][kTssAddressU], s.tss[0][kTssAddressV], SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend),
-             SimpleState(s, kMDestBlend));
+             SimpleState(s, kMDestBlend), zr[0], zr[1], s.rs[kRsZEnable], SimpleState(s, kMZWriteEnable), s.vs_handle);
     }
 }
 
@@ -2384,6 +2418,8 @@ void GlBackend::LogPerf() {
     if (p.boxes)
         LOGI("perf: 16:9 picture: %.2f ms a frame for %.0f small draws' boxes (%.0f known in perspective)", p.squeeze / n,
              double(p.boxes) / n, double(p.box_hits) / n);
+    if (p.gpu_frames)
+        LOGI("perf: the GPU %.1f ms a frame (from swap to swap, its waits for the CPU's commands counted)", p.gpu / double(p.gpu_frames));
     LOGI("perf: %.1f fps, %.1f ms/frame: draws %.1f (assemble %.1f, textures %.1f, shaders %.1f, submit %.1f), clear %.1f, "
          "sync %.1f, reports %.1f, present %.1f, swap %.1f, warm-up %.1f | per frame %.0f draws %.0fk verts %.1f tex uploads "
          "%.2f MB %.1f reports | %llu new textures %llu programs (%llu built ahead) %llu targets %llu read-backs %llu hitches "
@@ -2506,6 +2542,7 @@ void GlBackend::Present(const Surface& front) {
     host_->Presented(uint32_t(frame_draws_));
     cache_.Forget();  // the host may have drawn too
     perf_.present += Ms(t0);
+    GpuTimer();
     auto ts = Clock::now();
     host_->Swap();
     perf_.swap += Ms(ts);
@@ -2526,6 +2563,36 @@ void GlBackend::Present(const Surface& front) {
     frame_end_ = Clock::now();
 }
 
+// The GPU's time for a frame, for the perf lines: a GL_TIME_ELAPSED query from one swap to the next. Its result is
+// read once the GPU has it, a few frames on, never waited for. It counts the GPU's waits for the CPU's commands too:
+// near the whole frame's time, the GPU is the one holding the frame rate back, else the CPU is.
+void GlBackend::GpuTimer() {
+    if (!gpu_q_[0]) glGenQueries(kGpuQueries, gpu_q_);
+    if (gpu_q_at_ >= 0) {
+        glEndQuery(GL_TIME_ELAPSED);
+        gpu_q_live_[gpu_q_at_] = true;
+    }
+    for (int i = 0; i < kGpuQueries; i++) {
+        if (!gpu_q_live_[i] || i == gpu_q_at_) continue;
+        GLuint ready = 0;
+        glGetQueryObjectuiv(gpu_q_[i], GL_QUERY_RESULT_AVAILABLE, &ready);
+        if (!ready) continue;
+        GLuint ns = 0;
+        glGetQueryObjectuiv(gpu_q_[i], GL_QUERY_RESULT, &ns);
+        gpu_q_live_[i] = false;
+        perf_.gpu += double(ns) / 1e6;
+        perf_.gpu_frames++;
+    }
+    // the next query, unless its last result is still on its way (this frame then goes unmeasured)
+    int next = (gpu_q_at_ + 1) % kGpuQueries;
+    if (gpu_q_live_[next]) {
+        gpu_q_at_ = -1;
+        return;
+    }
+    glBeginQuery(GL_TIME_ELAPSED, gpu_q_[next]);
+    gpu_q_at_ = next;
+}
+
 // 4:3 at the screen's height (its sides black, the picture blurred or a web), or the game's 16:9 picture across it
 void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
     float aspect = pic_.wide ? 16.0f / 9.0f : 4.0f / 3.0f;
@@ -2541,25 +2608,33 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
         float mode = blur ? 1.0f : pic_.sides == Picture::Sides::Suit ? 3.0f : 2.0f;
         float lod = 0;
         if (blur) {
-            // the frame with its mipmaps, for a small level of it
-            uint32_t levels = 1;
-            while ((std::max(t.w, t.h) >> levels) > 0) levels++;
-            if (!sides_tex_ || sides_w_ != t.w || sides_h_ != t.h) {
+            // the frame at half its size (a filtered blit: each pixel the mean of four) with its mipmaps, for a small
+            // level of it; a quarter of the bytes of a whole copy, the mipmaps a quarter of the work
+            uint32_t hw = std::max(1u, t.w / 2), hh = std::max(1u, t.h / 2), levels = 1;
+            while ((std::max(hw, hh) >> levels) > 0) levels++;
+            if (!sides_tex_ || sides_w_ != hw || sides_h_ != hh) {
                 if (sides_tex_) glDeleteTextures(1, &sides_tex_);
                 glGenTextures(1, &sides_tex_);
                 glBindTexture(GL_TEXTURE_2D, sides_tex_);
-                glTexStorage2D(GL_TEXTURE_2D, GLsizei(levels), GL_RGBA8, GLsizei(t.w), GLsizei(t.h));
+                glTexStorage2D(GL_TEXTURE_2D, GLsizei(levels), GL_RGBA8, GLsizei(hw), GLsizei(hh));
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                sides_w_ = t.w;
-                sides_h_ = t.h;
+                if (!sides_fbo_) glGenFramebuffers(1, &sides_fbo_);
+                glBindFramebuffer(GL_FRAMEBUFFER, sides_fbo_);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sides_tex_, 0);
+                sides_w_ = hw;
+                sides_h_ = hh;
             }
-            glCopyImageSubData(t.tex, GL_TEXTURE_2D, 0, 0, 0, 0, sides_tex_, GL_TEXTURE_2D, 0, 0, 0, 0, GLsizei(t.w), GLsizei(t.h), 1);
+            const GLuint screen = host_->ScreenFramebuffer();
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, Framebuffer(&t, nullptr));
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, sides_fbo_);
+            glBlitFramebuffer(0, 0, GLint(t.w), GLint(t.h), 0, 0, GLint(hw), GLint(hh), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            glBindFramebuffer(GL_FRAMEBUFFER, screen);
             glBindTexture(GL_TEXTURE_2D, sides_tex_);
             glGenerateMipmap(GL_TEXTURE_2D);
-            lod = std::max(0.0f, std::log2(float(t.h) / 22.0f));
+            lod = std::max(0.0f, std::log2(float(hh) / 22.0f));
         }
         // only the bars beside the picture are drawn; the web, the same every frame, is drawn once and copied
         GLint bar = GLint((float(sw) - vw) / 2) + 1;

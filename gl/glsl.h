@@ -5,6 +5,7 @@
 // as gpu::DrawConstants.
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gpu/shaders.h"
@@ -15,7 +16,7 @@ namespace glsl {
 // magnified). gl_backend.cpp sets it, with kTexWide for upscaled targets shrunk (spread taps) and ext's constants:
 // ext.xy host pixels per console pixel on the bound target, ext.z the 16:9 picture's squeeze of what the game draws
 // flat (0 off), ext.w 1 when every flat vertex is squeezed (movie frames, small draws inside the screen), 0 when those
-// on the left and right edges stay there.
+// on the left and right edges stay there (those past the edges are squeezed).
 constexpr uint8_t kTexSharp = 1;
 
 // a vertex program's microcode; regs: the v registers the draw supplies, bit per register; decode: Assembled::decode
@@ -24,6 +25,9 @@ std::string VertexProgram(const std::vector<uint32_t>& program, uint16_t regs, u
 std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, const gpu::FixedKey& f, bool quad);
 // the combiners or the fixed function stages, per the key
 std::string Pixel(const gpu::PixelKey& k);
+
+// the GLSL's changes since the shader list's earlier versions, as (from, to) text in their programs
+std::vector<std::pair<std::string, std::string>> ListEdits();
 
 // a full screen pass's vertex shader: uv over the triangle covering the target (gl_VertexID 0 to 2)
 extern const char* kFullScreenVertex;

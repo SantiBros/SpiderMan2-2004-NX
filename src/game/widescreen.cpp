@@ -14,6 +14,7 @@
 
 X86_EXTERN_FUNC(__imp__sub_00343930);
 X86_EXTERN_FUNC(__imp__sub_003438E0);
+X86_EXTERN_FUNC(__imp__sub_00343FF0);
 
 namespace {
 
@@ -80,4 +81,23 @@ X86_FUNC(sub_003438E0) {
     uint32_t fov = X86_MEM32(ctx.esp + 4);
     __imp__sub_003438E0(ctx, base);
     if (fov && g_wide > 0 && GetF(base, fov) == g_wide) SetF(base, fov, g_set);
+}
+
+// WorldToScreen(float out[4], const float in[3]): a point of the world on the 640x480 screen, through the camera's
+// projection. What is placed with it is drawn flat (the city map's icons and lines, markers over the world) and so
+// narrowed to 4:3 in the middle (gl/gl_backend.cpp), while the point it marks is in the 16:9 picture: narrowed twice,
+// the icons slid towards the middle and moved more slowly than the map under them. The x is widened here by what the
+// picture narrows, so it lands back on its point.
+X86_FUNC(sub_00343FF0) {
+    uint32_t out = X86_MEM32(ctx.esp + 4);
+    __imp__sub_00343FF0(ctx, base);
+    uint32_t view = X86_MEM32(kView);
+    if (!out || !view || !app::Widescreen() || !X86_MEM32(view + kPerspective)) return;
+    if (std::fabs(GetF(base, view + kAspect) - kAspect169) > 1e-4f) return;
+    // the screen's width as the game takes it (640, or its render target's): only the 640 wide frame is narrowed
+    uint32_t target = X86_MEM32(view + 0x128), flags = X86_MEM32(0x50C2B8);
+    uint32_t width = flags && X86_MEM8(flags + 0x34) && target && (X86_MEM8(target + 0x1C) & 8) ? 640 : target ? X86_MEM32(target + 8) : 0;
+    if (width != 640) return;
+    float x = GetF(base, out);
+    SetF(base, out, 320.0f + (x - 320.0f) * (kAspect169 / kAspect43));
 }

@@ -74,7 +74,17 @@ std::string Varyings(const char* dir, bool quad) {
 
 // vertex programs
 
-const char* kVsHelpers = R"(
+// the 16:9 picture's test for a flat point right on a frame's left or right edge, a full screen pass's (VsEpilogue),
+// after fogfactor in kVsHelpers (also put there in the shader list's programs of earlier versions, ListEdits)
+const char* kOnEdgeAfter = "    if (fogp.w == 2.0) return exp(-(d * fogp.z) * (d * fogp.z));\n    return 1.0;\n}\n";
+const char* kOnEdge =
+    "// a flat point right on a frame's left or right edge: at 0 or the width w, or half a pixel off\n"
+    "bool onedge(float x, float w) {\n"
+    "    float e = min(min(abs(x), abs(x + 0.5)), abs(x - 0.5));\n"
+    "    return min(e, min(min(abs(x - w), abs(x - w + 0.5)), abs(x - w - 0.5))) < 0.01;\n"
+    "}\n";
+
+const std::string kVsHelpers = std::string(R"(
 vec4 mac_mul(vec4 a, vec4 b) { return mix(a * b, vec4(0.0), bvec4(vec4(equal(a, vec4(0.0))) + vec4(equal(b, vec4(0.0))))); }
 int mac_arl(float v) { return int(floor(v + 1e-3)); }
 // magnitude clamped between 1 / 2^64 and 2^64, sign kept
@@ -105,7 +115,7 @@ float fogfactor(float d) {
     if (fogp.w == 2.0) return exp(-(d * fogp.z) * (d * fogp.z));
     return 1.0;
 }
-)";
+)") + kOnEdge;
 
 struct Tok {
     const uint32_t* t;
@@ -249,8 +259,10 @@ std::string VsEpilogue(bool quad) {
 )";
     if (quad) s += "    o.e.zw = p.xy;\n";
     s += R"(    // the game's 16:9 picture: what it draws flat (w exactly 1: HUD, menus, text) kept 4:3 in the middle (ext.z),
-    // but for points on the left and right edges (full screen passes, fades) unless ext.w (movie frames)
-    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || (p.x > 1.0 && p.x < surf.x - 1.0))) p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
+    // but for points right on the left and right edges (full screen passes, fades: at 0 or the width, or half a pixel
+    // off) unless ext.w (movie frames). Others near or past the edges are narrowed too: text and lines placed partly
+    // off the 4:3 screen (the city map's) keep their shape.
+    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))) p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
     q.x = p.x * 2.0 / surf.x - 1.0;
     q.y = 1.0 - p.y * 2.0 / surf.y;
     q.z = p.z * surf.z;
@@ -722,7 +734,7 @@ std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, con
 )";
     if (quad) s += "    o.e = vec4(sp, (vec2(cp.x, -cp.y) / cp.w + 1.0) * 0.5 * surf.xy);\n";
     s += R"(    // the 16:9 picture's squeeze of what is drawn flat, as for screen space vertices
-    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || (sp.x > 1.0 && sp.x < surf.x - 1.0))) cp.x *= ext.z;
+    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))) cp.x *= ext.z;
     gl_Position = vec4(cp.x, -cp.y, 2.0 * cp.z - cp.w, cp.w);
     o.d0 = saturate(oD0);
     o.d1 = saturate(oD1);
@@ -736,6 +748,20 @@ std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, con
 }
 )";
     return s;
+}
+
+// what the GLSL changed since the shader list's earlier versions (gl_backend.cpp's ShaderList), as text to replace
+// in their programs: version 3, points past the screen's left and right edges narrowed in the 16:9 picture
+std::vector<std::pair<std::string, std::string>> ListEdits() {
+    return {
+        {"p.w == 1.0 && (ext.w > 0.0 || (p.x > 1.0 && p.x < surf.x - 1.0))", "p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))"},
+        {"cp.w == 1.0 && (ext.w > 0.0 || (sp.x > 1.0 && sp.x < surf.x - 1.0))", "cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))"},
+        {"    // but for points on the left and right edges (full screen passes, fades) unless ext.w (movie frames)\n",
+         "    // but for points right on the left and right edges (full screen passes, fades: at 0 or the width, or half a pixel\n"
+         "    // off) unless ext.w (movie frames). Others near or past the edges are narrowed too: text and lines placed partly\n"
+         "    // off the 4:3 screen (the city map's) keep their shape.\n"},
+        {kOnEdgeAfter, std::string(kOnEdgeAfter) + kOnEdge},
+    };
 }
 
 std::string Pixel(const PixelKey& k) {
