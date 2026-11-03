@@ -757,6 +757,47 @@ const char* kPresentFragment = R"(#version 430 core
 in vec2 uv;
 layout(binding = 0) uniform sampler2D img;
 layout(binding = 1) uniform sampler2D lut;
+uniform vec4 opts;  // x gamma, y filter (0 bilinear, 1 box, 2 Catmull-Rom), z box taps per axis
+uniform vec4 step;  // xy: a screen pixel in uv
+layout(location = 0) out vec4 o;
+vec4 bicubic(vec2 uv) {
+    vec2 size = vec2(textureSize(img, 0)), p = uv * size - 0.5, f = fract(p), c = floor(p) + 0.5;
+    vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f)), w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f)), w3 = f * f * (-0.5 + 0.5 * f), w12 = w1 + w2;
+    vec2 a = (c - 1.0) / size, b = (c + w2 / w12) / size, d = (c + 2.0) / size;
+    vec4 r = (textureLod(img, vec2(a.x, a.y), 0.0) * w0.x + textureLod(img, vec2(b.x, a.y), 0.0) * w12.x + textureLod(img, vec2(d.x, a.y), 0.0) * w3.x) * w0.y;
+    r += (textureLod(img, vec2(a.x, b.y), 0.0) * w0.x + textureLod(img, vec2(b.x, b.y), 0.0) * w12.x + textureLod(img, vec2(d.x, b.y), 0.0) * w3.x) * w12.y;
+    r += (textureLod(img, vec2(a.x, d.y), 0.0) * w0.x + textureLod(img, vec2(b.x, d.y), 0.0) * w12.x + textureLod(img, vec2(d.x, d.y), 0.0) * w3.x) * w3.y;
+    return clamp(r, 0.0, 1.0);
+}
+void main() {
+    vec2 t = vec2(uv.x, 1.0 - uv.y);
+    vec4 c;
+    if (opts.y == 2.0) {
+        c = bicubic(t);
+    } else if (opts.y == 1.0) {
+        int n = int(opts.z);
+        c = vec4(0.0);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++) c += textureLod(img, t + step.xy * ((vec2(x, y) + 0.5) / float(n) - 0.5), 0.0);
+        c /= float(n * n);
+    } else {
+        c = textureLod(img, t, 0.0);
+    }
+    // the gamma ramp's entry for each channel's 8 bit value, read exactly (sampled at 1.0 the ramp would wrap)
+    if (opts.x > 0.0) {
+        ivec3 i = clamp(ivec3(c.rgb * 255.0 + 0.5), ivec3(0), ivec3(255));
+        c.rgb = vec3(texelFetch(lut, ivec2(i.r, 0), 0).r, texelFetch(lut, ivec2(i.g, 0), 0).g, texelFetch(lut, ivec2(i.b, 0), 0).b);
+    }
+    o = vec4(c.rgb, 1.0);
+}
+)";
+// the same with a CRT's look: the CRT filter (crt.x 1 light, 2 strong) and the TV sides' tube (opts.w); a program of its
+// own, so the picture without them costs what it did before
+const char* kPresentCrtFragment = R"(#version 430 core
+in vec2 uv;
+layout(binding = 0) uniform sampler2D img;
+layout(binding = 1) uniform sampler2D lut;
 uniform vec4 opts;  // x gamma, y filter (0 bilinear, 1 box, 2 Catmull-Rom), z box taps per axis, w 1: a CRT's tube
 uniform vec4 step;  // xy: a screen pixel in uv; z the scanlines' period in screen pixels
 uniform vec4 crt;   // x the CRT filter: 0 off, 1 light, 2 strong
@@ -1155,14 +1196,16 @@ private:
     GLuint scratch_tex_ = 0, scratch_fbo_ = 0;
     uint32_t scratch_w_ = 0, scratch_h_ = 0;
     // the present: programs, and the frame with mipmaps for blurred sides
-    GLuint present_ = 0, sides_ = 0, sides_tex_ = 0, sides_fbo_ = 0;
+    GLuint present_ = 0, sides_ = 0, sides_tex_ = 0;
     // the GPU's time a frame: a timer query from one swap to the next, read a few frames later (never waited for)
     static constexpr int kGpuQueries = 4;
     GLuint gpu_q_[kGpuQueries] = {};
     bool gpu_q_live_[kGpuQueries] = {};
     int gpu_q_at_ = -1;
     void GpuTimer();
-    GLint present_opts_ = -1, present_step_ = -1, present_crt_ = -1, sides_opts_ = -1, sides_screen_ = -1;
+    GLuint present_crt_prog_ = 0;
+    GLint present_opts_ = -1, present_step_ = -1, sides_opts_ = -1, sides_screen_ = -1;
+    GLint crt_opts_ = -1, crt_step_ = -1, crt_crt_ = -1;
     uint32_t sides_w_ = 0, sides_h_ = 0;
     GLuint web_tex_ = 0, web_fbo_ = 0;  // the web sides, drawn once for the screen's size
     uint32_t web_w_ = 0, web_h_ = 0;
@@ -1282,11 +1325,16 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     if (!blit_) return false;
     blit_opts_ = glGetUniformLocation(blit_, "opts");
     present_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kPresentFragment));
+    present_crt_prog_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kPresentCrtFragment));
     sides_ = Link(fsv, Compile(GL_FRAGMENT_SHADER, kSidesFragment));
     if (!present_) return false;
     present_opts_ = glGetUniformLocation(present_, "opts");
     present_step_ = glGetUniformLocation(present_, "step");
-    present_crt_ = glGetUniformLocation(present_, "crt");
+    if (present_crt_prog_) {
+        crt_opts_ = glGetUniformLocation(present_crt_prog_, "opts");
+        crt_step_ = glGetUniformLocation(present_crt_prog_, "step");
+        crt_crt_ = glGetUniformLocation(present_crt_prog_, "crt");
+    }
     if (sides_) {
         sides_opts_ = glGetUniformLocation(sides_, "opts");
         sides_screen_ = glGetUniformLocation(sides_, "screen");
@@ -2694,7 +2742,10 @@ void GlBackend::Present(const Surface& front) {
     host_->Presented(uint32_t(frame_draws_));
     cache_.Forget();  // the host may have drawn too
     perf_.present += Ms(t0);
-    GpuTimer();
+    // GLGPUTIME=1 (test builds): the GPU's time a frame. Not on the Switch: there, checking a query's result makes
+    // Mesa's nouveau driver kick the GPU's command buffer in the middle of the frame
+    static const bool gpu_time = std::getenv("GLGPUTIME") != nullptr;
+    if (gpu_time) GpuTimer();
     auto ts = Clock::now();
     host_->Swap();
     perf_.swap += Ms(ts);
@@ -2715,8 +2766,8 @@ void GlBackend::Present(const Surface& front) {
     frame_end_ = Clock::now();
 }
 
-// The GPU's time for a frame, for the perf lines: a GL_TIME_ELAPSED query from one swap to the next. Its result is
-// read once the GPU has it, a few frames on, never waited for. It counts the GPU's waits for the CPU's commands too:
+// The GPU's time for a frame, for the perf lines (GLGPUTIME=1): a GL_TIME_ELAPSED query from one swap to the next.
+// Its result is read once the GPU has it, a few frames on, never waited for. It counts the GPU's waits for the CPU's commands too:
 // near the whole frame's time, the GPU is the one holding the frame rate back, else the CPU is.
 void GlBackend::GpuTimer() {
     if (!gpu_q_[0]) glGenQueries(kGpuQueries, gpu_q_);
@@ -2760,33 +2811,25 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
         float mode = blur ? 1.0f : pic_.sides == Picture::Sides::Suit ? 3.0f : pic_.sides == Picture::Sides::Tv ? 4.0f : 2.0f;
         float lod = 0;
         if (blur) {
-            // the frame at half its size (a filtered blit: each pixel the mean of four) with its mipmaps, for a small
-            // level of it; a quarter of the bytes of a whole copy, the mipmaps a quarter of the work
-            uint32_t hw = std::max(1u, t.w / 2), hh = std::max(1u, t.h / 2), levels = 1;
-            while ((std::max(hw, hh) >> levels) > 0) levels++;
-            if (!sides_tex_ || sides_w_ != hw || sides_h_ != hh) {
+            // the frame with its mipmaps, for a small level of it
+            uint32_t levels = 1;
+            while ((std::max(t.w, t.h) >> levels) > 0) levels++;
+            if (!sides_tex_ || sides_w_ != t.w || sides_h_ != t.h) {
                 if (sides_tex_) glDeleteTextures(1, &sides_tex_);
                 glGenTextures(1, &sides_tex_);
                 glBindTexture(GL_TEXTURE_2D, sides_tex_);
-                glTexStorage2D(GL_TEXTURE_2D, GLsizei(levels), GL_RGBA8, GLsizei(hw), GLsizei(hh));
+                glTexStorage2D(GL_TEXTURE_2D, GLsizei(levels), GL_RGBA8, GLsizei(t.w), GLsizei(t.h));
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                if (!sides_fbo_) glGenFramebuffers(1, &sides_fbo_);
-                glBindFramebuffer(GL_FRAMEBUFFER, sides_fbo_);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sides_tex_, 0);
-                sides_w_ = hw;
-                sides_h_ = hh;
+                sides_w_ = t.w;
+                sides_h_ = t.h;
             }
-            const GLuint screen = host_->ScreenFramebuffer();
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, Framebuffer(&t, nullptr));
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, sides_fbo_);
-            glBlitFramebuffer(0, 0, GLint(t.w), GLint(t.h), 0, 0, GLint(hw), GLint(hh), GL_COLOR_BUFFER_BIT, GL_LINEAR);
-            glBindFramebuffer(GL_FRAMEBUFFER, screen);
+            glCopyImageSubData(t.tex, GL_TEXTURE_2D, 0, 0, 0, 0, sides_tex_, GL_TEXTURE_2D, 0, 0, 0, 0, GLsizei(t.w), GLsizei(t.h), 1);
             glBindTexture(GL_TEXTURE_2D, sides_tex_);
             glGenerateMipmap(GL_TEXTURE_2D);
-            lod = std::max(0.0f, std::log2(float(hh) / 22.0f));
+            lod = std::max(0.0f, std::log2(float(t.h) / 22.0f));
         }
         // only the bars beside the picture are drawn; the web, the same every frame, is drawn once and copied
         GLint bar = GLint((float(sw) - vw) / 2) + 1;
@@ -2837,13 +2880,21 @@ void GlBackend::PresentFrame(Target& t, uint32_t sw, uint32_t sh) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glViewport(GLint((float(sw) - vw) / 2), GLint((float(sh) - vh) / 2), GLsizei(vw), GLsizei(vh));
-    glUseProgram(present_);
     // the TV sides: the picture as on its tube, the scanlines every 3 screen pixels at 720 rows (about one per two of
-    // the game's lines), 4 at 1080
+    // the game's lines), 4 at 1080. With the CRT filter or the tube, the CRT program; else the plain one
     bool tube = vw < float(sw) && pic_.sides == Picture::Sides::Tv && sides_;
-    glUniform4f(present_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, tube ? 1.0f : 0.0f);
-    glUniform4f(present_step_, 1.0f / vw, 1.0f / vh, std::max(2.0f, std::floor(vh / 240.0f)), 0.0f);
-    glUniform4f(present_crt_, float(std::min<uint32_t>(pic_.crt, 2)), 0.0f, 0.0f, 0.0f);
+    uint32_t crt = std::min<uint32_t>(pic_.crt, 2);
+    if ((tube || crt) && present_crt_prog_) {
+        glUseProgram(present_crt_prog_);
+        glUniform4f(crt_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, tube ? 1.0f : 0.0f);
+        glUniform4f(crt_step_, 1.0f / vw, 1.0f / vh, std::max(2.0f, std::floor(vh / 240.0f)), 0.0f);
+        glUniform4f(crt_crt_, float(crt), 0.0f, 0.0f, 0.0f);
+        FullScreen(present_crt_prog_);
+        return;
+    }
+    glUseProgram(present_);
+    glUniform4f(present_opts_, gamma_ ? 1.0f : 0.0f, filter, taps, 0.0f);
+    glUniform4f(present_step_, 1.0f / vw, 1.0f / vh, 0.0f, 0.0f);
     FullScreen(present_);
 }
 

@@ -3,6 +3,27 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.3.1]
+
+**0.3.0's slowdown fixed.** With the same settings and clocks 0.3.0 ran at about 17 frames a second where 0.2.3
+held its speed, the CRT filter or not.
+
+### Fixed
+- **The GPU timer is gone from the console build.** 0.3.0 measured the GPU's time for each frame with a timer query,
+  and checking whether its result had arrived made the Switch's graphics driver (Mesa's nouveau) push its command
+  buffer to the GPU in the middle of the frame, every frame; the CPU and the GPU then took turns instead of working
+  side by side. The measurement is now only in the PC test build (`GLGPUTIME=1`).
+- **The picture without the CRT look costs what it did in 0.2.3.** The CRT filter and the CRT TV's tube have a
+  shader of their own, used only while one of them is on; otherwise the picture goes to the screen through 0.2.3's.
+- **The blurred sides are made as in 0.2.3** (the frame copied whole, then its mipmaps), the way known to hold the
+  game's speed on a console; 0.3.0's half-size copy is back out until it is measured on one.
+- The test build's draw trace (`DRAWTRACE`) no longer works anything out for each draw while it is off.
+
+### Added (test builds)
+- `FENCETRACE=frame`: from that frame, the game's fences (where it waits for the GPU, and on what) in the log. The
+  game waits for the frame before the one it just made, so it already works on the next frame while the last one
+  is drawn.
+
 ## [0.3.0]
 
 **Install from your phone, the city map right in 16:9, and a CRT look.** The port no longer has to be built on a computer: the

@@ -117,6 +117,8 @@ frame `f - 1` is `REFAT`'s frame `f`; draws count from 1 there and from 0 in the
 | `GLPROBE_RAW=draw` | That draw again without blending, depth, stencil or alpha tests: how many samples it covers and where, its GLSL (`probe_vs.glsl`, `probe_fs.glsl`) and every vertex's position (`probe_pos.txt`). `v<count>` picks the draw by its vertex count, steadier from run to run than its number. |
 | `GLTRACECLEAR=frame` | That frame's clears. |
 | `GLSQUEEZE=frame` | In the 16:9 picture, that frame's draws and whether each was kept 4:3 or left across the screen, with its box on screen, depth range, first texture and blending. |
+| `GLGPUTIME=1` | The GPU's time for each frame in the `perf:` lines, from timer queries. Test builds only: on the Switch it stalls the driver. |
+| `FENCETRACE=frame` | From that frame, each fence the game inserts and waits for, with the caller, in the log. |
 | `DRAWTRACE=frame` | Every draw of that frame into `drawtrace.txt`: its vertex count and first vertex, and the return addresses into the game's code on the guest stack (which of the game's functions drew it). `DRAWTRACE_VERTS=1`: every vertex's position and texture coordinates too. |
 | `PEEK="frame address bytes; ..."` | Guest memory logged at that frame; `*address` reads the address there first. |
 | `RUMBLELOG=1`, `RANDLOG=N`, `FMODCHECK=N` | Every change of the rumble the game asks for; the first N values of the C library's `rand()`; the first N results of its x87 `fmod`, against the host's. |

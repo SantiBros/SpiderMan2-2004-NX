@@ -411,13 +411,22 @@ HLE_STDCALL(D3DResource_IsBusy, 1) {
     return g_backend && g_backend->Busy(res) ? 1 : 0;
 }
 HLE_STDCALL(D3D_BlockOnTime, 2) { return 0; }
+namespace {
+std::atomic<uint32_t> g_presents{0};  // frames presented, for the traces
+}  // namespace
 HLE_STDCALL(D3DDevice_BlockOnFence, 1) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
+    static const long trace = std::getenv("FENCETRACE") ? std::atol(std::getenv("FENCETRACE")) : -1;
+    if (trace >= 0 && long(g_presents.load()) >= trace && g_backend)
+        LOG_FIRST(200, "fencetrace: frame %u block on %u (now %u) from %08X %08X", unsigned(g_presents.load()), a[0],
+                  g_backend->Fence(), R32(ctx.esp), R32(ctx.esp + 4 + 4 * 1));
     if (g_backend) g_backend->WaitFence(a[0]);
     return 0;
 }
 HLE_STDCALL(D3DDevice_InsertFence, 0) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
+    static const long trace = std::getenv("FENCETRACE") ? std::atol(std::getenv("FENCETRACE")) : -1;
+    if (trace >= 0 && long(g_presents.load()) >= trace && g_backend) LOG_FIRST(200, "fencetrace: frame %u insert %u from %08X", unsigned(g_presents.load()), g_backend->Fence(), R32(ctx.esp));
     return g_backend ? g_backend->Fence() : 0;
 }
 HLE_STDCALL(D3DDevice_IsFencePending, 1) {
@@ -515,10 +524,6 @@ HLE_STDCALL(D3DDevice_GetDepthStencilSurface2, 0) {
     if (s) W32(s, R32(s) + 1);
     return s;
 }
-
-namespace {
-std::atomic<uint32_t> g_presents{0};
-}  // namespace
 
 HLE_STDCALL(D3DDevice_Swap, 1) {
     app::SplashFirstFrame();
@@ -1126,13 +1131,15 @@ HLE_STDCALL(D3DDevice_SetPixelShaderConstant, 3) {
 
 namespace {
 void TraceDraw(const char* kind, const void* vertex, uint32_t stride, uint32_t count);
+// DRAWTRACE set: the draws are traced (test builds), else nothing is worked out for it
+const bool g_drawtrace = std::getenv("DRAWTRACE") != nullptr;
 }
 
 HLE_STDCALL(D3DDevice_DrawVertices, 3) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
     Walk(Dev(kDevPush));  // a visibility test begun since the last draw counts this one
     SyncDeferred();
-    if (g_state.streams[0].vb && g_state.streams[0].stride)
+    if (g_drawtrace && g_state.streams[0].vb && g_state.streams[0].stride)
         TraceDraw("vb", HostPtr(mem::VirtualFromPhysical(R32(g_state.streams[0].vb + 4)) + a[1] * g_state.streams[0].stride), g_state.streams[0].stride, a[2]);
     if (g_backend) g_backend->Draw(g_state, a[0], a[1], a[2], nullptr);
     return 0;
@@ -1215,7 +1222,7 @@ void TraceDraw(const char* kind, const void* vertex, uint32_t stride, uint32_t c
 
 void DrawUp(uint32_t prim, uint32_t count, const void* vertices, uint32_t stride) {
     if (!g_backend || !count || !stride) return;
-    TraceDraw("up", vertices, stride, count);
+    if (g_drawtrace) TraceDraw("up", vertices, stride, count);
     SyncDeferred();
     auto stream = g_state.streams[0];
     g_state.streams[0] = {UpVertices(vertices, count * stride), stride};
