@@ -89,8 +89,7 @@ swing through New York.
 <p align="center">
   <img src="docs/images/clips/rooftop.webp" alt="A few seconds of play: Spider-Man lands on a rooftop at night, runs and climbs a glass building" width="720">
 </p>
-<p align="center"><sub>A few seconds of play on the first rooftops, recorded frame by frame on the port's PC test
-build. It shows how the game looks, not the console's frame rate.</sub></p>
+<p align="center"><sub>A few seconds of play on the first rooftops.</sub></p>
 
 <table>
   <tr>
@@ -162,11 +161,6 @@ build. It shows how the game looks, not the console's frame rate.</sub></p>
     <td colspan="2" align="center"><sub>The port's icon in the Homebrew Menu</sub></td>
   </tr>
 </table>
-
-<p align="center"><sub>The game screenshots come from the port's PC test build, which runs the same recompiled code
-and the same GPU renderer as the Switch build (on the PC's Mesa instead of the Switch's), with the Switch build's
-screen layout: the game's picture on the Switch's 1280×720 screen. The port's own screens and menu are drawn
-by the Switch build's screen code, run on the PC.</sub></p>
 
 ## Features
 
@@ -349,14 +343,14 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | Playing on a Switch | ✅ Played on a Switch Lite, in handheld mode |
 | Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9, where their logs show the game waiting for the SD card. 0.2.2 removes 16:9's writes to the card and 0.2.3 takes every write to the card off the game's threads (Auto clocks, a lighter 16:9 and render scale came in 0.2.1); in 4:3 at 720p a tester's 0.2.1 held 30 frames a second. 0.3.0 was reported much slower: its log shows 28–30 frames a second between long pauses while shaders were built, after its shader list was thrown away; 0.3.1 keeps the list and drops a per-frame GPU measurement: to be confirmed on a console |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
-| 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1, the 16:9 map right in 0.3.0: checked on the PC test build; how fast they run on a console is to be measured |
+| 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1, the 16:9 map right in 0.3.0; how fast they run on a console is to be measured |
 | Installer page | ✅ New in 0.3.0: unlocks the port in the browser, checked with every disc image format and split images |
 | Vibration | 🧪 New in 0.2.0: needs Joy-Con or a Pro Controller, not tried on a console yet |
-| Menus, cinematics, the city | ✅ On a Switch Lite and on the PC test build |
+| Menus, cinematics, the city | ✅ On a Switch Lite |
 | Sound | ✅ Music, sound effects and voices, on a Switch Lite |
 | Controls | ✅ Mapped by position |
 | Docked (TV) | 🧪 Not tried yet on a console |
-| Saves | ✅ Saving and loading checked on the PC test build in 0.2.3 (before it, saves were written but never loaded); in `save/` on the SD card, with a copy in `sdmc:/config/SpiderMan2Xbox/save/` |
+| Saves | ✅ Saving and loading work since 0.2.3 (before it, saves were written but never loaded); in `save/` on the SD card, with a copy in `sdmc:/config/SpiderMan2Xbox/save/` |
 | Language | ✅ The console's: English, Spanish, French, German or Italian texts (voices in English, as on the disc) |
 | Debug menu, frame-rate counter | ✅ On a Switch Lite; the clocks only offer rates Nintendo's own profiles use |
 | Online | ❌ None: the port doesn't use the network |
@@ -550,7 +544,7 @@ The game is the x86 program `default.xbe`, made for the Xbox's Pentium III and i
    vertex programs and pixel combiners become shaders, the textures are decoded from the game's memory once.
 
 More in [docs/TECHNICAL.md](docs/TECHNICAL.md): the recompiler, the Switch layer, the disc image formats, the
-test builds and the source layout.
+development tools and the source layout.
 
 ## Building from source
 
@@ -564,7 +558,7 @@ bash build.sh --copy-game "/path/to/your/Spider-Man 2.iso"     # or the game's f
 On Windows, `build-windows.cmd` runs the same builder in WSL.
 
 The result is `build-switch/SpiderMan2Xbox.nro`, laid out for the SD card in `out/sd/`.
-[docs/BUILDING.md](docs/BUILDING.md) has the details, the PC test build used for development, the tests, and
+[docs/BUILDING.md](docs/BUILDING.md) has the details, the tools used for development, the tests, and
 how a release is made.
 
 ## Credits

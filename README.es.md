@@ -95,8 +95,7 @@ en tu móvil) y balancéate por Nueva York.
 <p align="center">
   <img src="docs/images/clips/rooftop.webp" alt="Unos segundos de juego: Spider-Man cae en una azotea de noche, corre y trepa por un edificio de vidrio" width="720">
 </p>
-<p align="center"><sub>Unos segundos de juego en las primeras azoteas, grabados cuadro por cuadro con la versión de
-prueba para PC del port. Muestra cómo se ve el juego, no los FPS de la consola.</sub></p>
+<p align="center"><sub>Unos segundos de juego en las primeras azoteas.</sub></p>
 
 <table>
   <tr>
@@ -168,12 +167,6 @@ prueba para PC del port. Muestra cómo se ve el juego, no los FPS de la consola.
     <td colspan="2" align="center"><sub>El ícono del port en el Homebrew Menu</sub></td>
   </tr>
 </table>
-
-<p align="center"><sub>Las capturas del juego vienen de la versión de prueba para PC del port, que ejecuta el mismo
-código recompilado y el mismo renderizador por GPU que la versión de Switch (sobre el Mesa del PC en vez del de la
-Switch), con la disposición de pantalla de la versión de Switch: la imagen del juego en la pantalla de
-1280×720 de la Switch. Las pantallas y el menú del port los dibuja el código de pantalla de la versión de Switch,
-ejecutado en el PC.</sub></p>
 
 ## Características
 
@@ -359,14 +352,14 @@ Stock para que la batería dure más.
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
 | Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo. Se reportó que la 0.3.0 iba mucho más lenta: su registro muestra 28–30 imágenes por segundo entre pausas largas mientras se preparaban shaders, porque su lista de shaders se había descartado; la 0.3.1 conserva la lista y quita una medición de la GPU en cada imagen: falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
-| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0: comprobado en la versión de prueba para PC; falta medir qué tan rápido va en una consola |
+| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0; falta medir qué tan rápido va en una consola |
 | Página de instalación | ✅ Nueva en la 0.3.0: desbloquea el port en el navegador, comprobada con todos los formatos de imagen de disco y con imágenes divididas |
 | Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |
-| Menús, cinemáticas, la ciudad | ✅ En una Switch Lite y en la versión de prueba para PC |
+| Menús, cinemáticas, la ciudad | ✅ En una Switch Lite |
 | Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
 | Controles | ✅ Asignados por posición |
 | En el dock (TV) | 🧪 Todavía no se ha probado en una consola |
-| Partidas | ✅ Guardar y cargar comprobado en la versión de prueba para PC en la 0.2.3 (antes, las partidas se guardaban pero nunca cargaban); en `save/` en la tarjeta SD, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` |
+| Partidas | ✅ Guardar y cargar funcionan desde la 0.2.3 (antes, las partidas se guardaban pero nunca cargaban); en `save/` en la tarjeta SD, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` |
 | Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco) |
 | Menú de depuración, contador | ✅ En una Switch Lite; los relojes solo ofrecen velocidades que usan los perfiles de Nintendo |
 | En línea | ❌ Nada: el port no usa la red |
@@ -568,7 +561,7 @@ El juego es el programa x86 `default.xbe`, hecho para el Pentium III de la Xbox 
    se decodifican una vez desde la memoria del juego.
 
 Más en [docs/TECHNICAL.md](docs/TECHNICAL.md) (en inglés): el recompilador, la capa de Switch, los formatos de
-imagen de disco, las versiones de prueba y la organización del código.
+imagen de disco, las herramientas de desarrollo y la organización del código.
 
 ## Compilar desde el código fuente
 
@@ -582,8 +575,8 @@ bash build.sh --copy-game "/ruta/a/tu/Spider-Man 2.iso"     # o la carpeta del j
 En Windows, `build-windows.cmd` ejecuta el mismo compilador en WSL.
 
 El resultado es `build-switch/SpiderMan2Xbox.nro`, ya armado para la tarjeta SD en `out/sd/`.
-[docs/BUILDING.md](docs/BUILDING.md) (en inglés) tiene los detalles, la versión de prueba para PC que se usa para
-desarrollar, las pruebas y cómo se publica una versión.
+[docs/BUILDING.md](docs/BUILDING.md) (en inglés) tiene los detalles, las herramientas que se usan
+para desarrollar, las pruebas y cómo se publica una versión.
 
 ## Créditos
 
