@@ -135,7 +135,9 @@ Two backends take the draws:
   and lines, the markers over the city in play) is drawn flat too, so it would be narrowed after the wider
   projection had already put it nearer the middle: the hook widens that function's x by 4/3 about the middle when
   the camera is the widened one, and the narrowing puts it back on its point. The shader list of an earlier version
-  is kept when the GLSL changes: `glsl::ListEdits()` carries the changes as text replaced in its programs.
+  is kept when the GLSL changes: `glsl::ListEdits()` carries the changes as text replaced in its programs. The list
+  is named by the shader generator's version only (`sm2nx glsl list 2, shaders N`): the GLSL is the same whatever the
+  driver, so a port built with another Mesa keeps it.
 - The CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
   which draws into guest memory in software, register combiners and vertex programs included. It is exact enough
   to compare against and slow (seconds per city frame). The test build uses it, and the Switch falls back to it

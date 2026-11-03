@@ -17,6 +17,12 @@ held its speed, the CRT filter or not.
   shader of their own, used only while one of them is on; otherwise the picture goes to the screen through 0.2.3's.
 - **The blurred sides are made as in 0.2.3** (the frame copied whole, then its mipmaps), the way known to hold the
   game's speed on a console; 0.3.0's half-size copy is back out until it is measured on one.
+- **The shader list is kept whatever Mesa built the port.** The list (`cache/shaders.cache`, the shaders built at
+  start so they don't stall the game the first time it needs them) was named by the graphics driver's exact version
+  too, and a list from any other build was thrown away and started over: every new effect then stalled the game
+  while its shader was built (up to 2 s at a time in a 0.3.0 log). The shaders are the same whatever the driver, so
+  the list is now named by the shader generator alone, and the lists of earlier versions are kept whatever driver
+  they came from.
 - The test build's draw trace (`DRAWTRACE`) no longer works anything out for each draw while it is off.
 
 ### Added (test builds)

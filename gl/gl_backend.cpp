@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <cstdlib>
 #include <deque>
 #include <map>
@@ -623,14 +624,14 @@ GLuint Link(GLuint vs, GLuint fs) {
 // Mesa has no binary shader cache, and a program built in the middle of play is a stutter.
 class ShaderList {
 public:
-    // driver: the GL renderer and version, and the shader generator's version; also: older headers (earlier port
-    // versions' GLSL), whose lists are kept under the new header with their programs' text changed by edits (what
-    // the GLSL changed since: each from in a program replaced by its to)
-    void Open(const std::string& path, const std::string& driver, const std::vector<std::string>& also = {},
+    // name: the list's header line (the shader generator's version). older(line): what an earlier header line is,
+    // 0 a list to start over, 1 programs as this generator makes them (kept as they are), 2 programs of an earlier
+    // generator, kept with their text changed by edits (what the GLSL changed since: each from replaced by its to)
+    void Open(const std::string& path, const std::string& name, const std::function<int(const std::string&)>& older_kind,
               const std::vector<std::pair<std::string, std::string>>& edits = {}) {
         if (path.empty()) return;
         path_ = path;
-        const std::string head = "sm2nx glsl list 1 " + driver + "\n";
+        const std::string head = name + "\n";
         std::string all;
         if (FILE* f = std::fopen(path.c_str(), "rb")) {
             char buf[65536];
@@ -639,9 +640,10 @@ public:
             std::fclose(f);
         }
         bool same = all.compare(0, head.size(), head) == 0, older = false;
-        for (const std::string& a : also) {
-            const std::string old_head = "sm2nx glsl list 1 " + a + "\n";
-            if (same || all.compare(0, old_head.size(), old_head) != 0) continue;
+        size_t eol = all.find('\n');
+        int kind = same || eol == std::string::npos ? 0 : older_kind(all.substr(0, eol));
+        if (kind) {
+            const std::string old_head = all.substr(0, eol + 1);
             older = true;
             std::string kept = head;
             size_t at = old_head.size(), changed = 0, programs = 0;
@@ -652,7 +654,7 @@ public:
                 at += size_t(used);
                 if (at + vl + fl > all.size()) break;
                 std::string vs = all.substr(at, vl), fs = all.substr(at + vl, fl);
-                for (const auto& [from, to] : edits) {
+                for (const auto& [from, to] : kind == 2 ? edits : std::vector<std::pair<std::string, std::string>>{}) {
                     for (size_t p = vs.find(from); p != std::string::npos; p = vs.find(from, p + to.size()))
                         vs.replace(p, from.size(), to), changed++;
                     for (size_t p = fs.find(from); p != std::string::npos; p = fs.find(from, p + to.size()))
@@ -665,8 +667,7 @@ public:
                 at += vl + fl;
             }
             all = std::move(kept);
-            LOGI("gl: the shader list of an earlier version is kept: %zu programs, %zu changes for this one", programs, changed);
-            break;
+            LOGI("gl: the shader list of an earlier version or driver is kept: %zu programs, %zu changes for this one", programs, changed);
         }
         if (same || older) {
             size_t at = head.size();
@@ -1342,12 +1343,23 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     ApplyPicture();
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    // the shader generator's version too: another one's programs differ, and would only be built for nothing. It
-    // changes only when the GLSL does (kShaderGenerator), so a new port version keeps the list; 0.2.0 named itself
-    const std::string driver = std::string(reinterpret_cast<const char*>(glGetString(GL_RENDERER))) + ", " +
-                               reinterpret_cast<const char*>(glGetString(GL_VERSION));
-    shader_list_.Open(host_->CachePath(), driver + ", shaders " + kShaderGenerator, {driver + ", shaders 2", driver + ", port 0.2.0"},
-                      glsl::ListEdits());
+    // the list is the GLSL, the same whatever the driver: named by the shader generator's version only (it changes
+    // only when the GLSL does, kShaderGenerator), so a new port version, or a port built with another Mesa, keeps it.
+    // Lists before 0.3.1 were named by the driver too ("sm2nx glsl list 1 <renderer>, <version>, shaders N", 0.2.0's
+    // "..., port 0.2.0"): kept whatever their driver, the GLSL of generator 2 (and 0.2.0's, the same) updated
+    shader_list_.Open(
+        host_->CachePath(), std::string("sm2nx glsl list 2, shaders ") + kShaderGenerator,
+        [](const std::string& line) {
+            auto ends = [&](const char* tail) {
+                size_t n = std::strlen(tail);
+                return line.size() >= n && line.compare(line.size() - n, n, tail) == 0;
+            };
+            if (line.rfind("sm2nx glsl list 1 ", 0) != 0) return 0;
+            if (ends((std::string(", shaders ") + kShaderGenerator).c_str())) return 1;
+            if (ends(", shaders 2") || ends(", port 0.2.0")) return 2;
+            return 0;
+        },
+        glsl::ListEdits());
     // the first call from whichever thread draws takes the context
     glFinish();
     host_->Release();
