@@ -46,6 +46,11 @@ en tu móvil) y balancéate por Nueva York.
 > mientras se preparaban shaders, y la 0.3.1 lo arregla.
 
 > [!TIP]
+> **Nuevo en la página de instalación: todas las versiones para elegir.** Su menú de versiones tiene todas desde
+> la 0.0.8 hasta la 0.3.1, con la más reciente ya elegida. Cada una dice si es la recomendada, si funciona con
+> problemas conocidos o si es una prueba temprana que no arranca en una Switch, sus cambios principales y qué tener
+> en cuenta. Y el paso 1 ahora detalla todos los tipos de archivo que acepta.
+>
 > **Novedades de la 0.3.1: más fluida que la 0.3.0.** Un registro de la 0.3.0 mostraba el juego detenido hasta 2
 > segundos seguidos, con el contador bajando a 1–14 imágenes por segundo, mientras se preparaban shaders: la lista
 > que guarda el port se había descartado. La 0.3.1 la conserva. También quita una medición de la GPU que la 0.3.0
@@ -186,7 +191,8 @@ en tu móvil) y balancéate por Nueva York.
   volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
 - **Se instala desde tu móvil.** La [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)
-  desbloquea el port con tu propia copia en tu navegador y te da la carpeta para la tarjeta SD. O compílalo a
+  desbloquea el port con tu propia copia en tu navegador y te da la carpeta para la tarjeta SD, de la versión más
+  reciente o de cualquier anterior. O compílalo a
   partir de tu copia en un computador: en Windows `build-windows.cmd` prepara todo lo que necesita y te pide tu
   juego; en Linux es un solo comando.
 - **En tu idioma.** El juego toma el idioma de la consola: menús y subtítulos en inglés, español, francés,
@@ -229,7 +235,8 @@ en tu móvil) y balancéate por Nueva York.
 1. **Ten tu juego como archivos.** Una imagen de tu propio disco, o los archivos del disco. Las unidades de
    DVD de PC no leen los discos de la Xbox original: [cómo conseguirlos](docs/INSTALL.es.md#cómo-conseguir-tu-juego).
 2. **Abre la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)** en tu móvil o computador, elige tu juego (la imagen de
-   disco, todas sus partes si está dividida, o solo su `default.xbe`) y descarga **`SpiderMan2Xbox-SD.zip`**. Tu
+   disco, todas sus partes si está dividida, o solo su `default.xbe`), deja elegida la versión más reciente (o
+   elige otra) y descarga **`SpiderMan2Xbox-SD.zip`**. Tu
    juego no se sube a ningún sitio: la página desbloquea el port con él en tu navegador, en unos segundos.
 3. **Copia a la tarjeta SD.** Copia la carpeta `switch` del zip a la raíz de tu tarjeta SD y pon tu juego (la
    imagen de disco, o `default.xbe` y la carpeta `data`) en `switch/SpiderMan2Xbox/game/`.
@@ -282,10 +289,15 @@ cómo compilar en Windows con WSL, cómo actualizar y la [solución de problemas
 
 ### Actualizar
 
-Abre otra vez la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) (siempre tiene la versión más nueva) y copia la carpeta
+Abre otra vez la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) (siempre tiene la versión más nueva, y todas las anteriores en su menú de versiones) y copia la carpeta
 `switch` del zip nuevo encima de la vieja, o compila la versión nueva y copia su carpeta `out/sd/switch`. Tus
 carpetas `game/` y `save/` se quedan como están. ¿Vienes de una versión anterior a la 0.1.0, que lo guardaba todo
 en `hdd/`? En el primer arranque tus partidas pasan solas a `save/` y el resto de `hdd/` se convierte en `cache/`.
+
+¿Quieres volver a una versión anterior? Elígela en el menú de versiones de la página y copia la carpeta `switch` de
+su zip encima de la misma forma. Antes de la 0.2.3 las partidas guardadas no cargan, así que primero haz una copia
+de `save/`. Las pruebas tempranas 0.0.8 a 0.0.10 van en una carpeta propia, `switch/SpiderMan2Xbox-<versión>`, con
+tu juego copiado también en su `game/`, para que nunca toquen tus partidas.
 
 ## Controles
 
@@ -353,7 +365,7 @@ Stock para que la batería dure más.
 | Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo. Se reportó que la 0.3.0 iba mucho más lenta: su registro muestra 28–30 imágenes por segundo entre pausas largas mientras se preparaban shaders, porque su lista de shaders se había descartado; la 0.3.1 conserva la lista y quita una medición de la GPU en cada imagen: falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
 | 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0; falta medir qué tan rápido va en una consola |
-| Página de instalación | ✅ Nueva en la 0.3.0: desbloquea el port en el navegador, comprobada con todos los formatos de imagen de disco y con imágenes divididas |
+| Página de instalación | ✅ Nueva en la 0.3.0: desbloquea el port en el navegador, comprobada con todos los formatos de imagen de disco y con imágenes divididas; todas las versiones de la 0.0.8 a la 0.3.1 en su menú |
 | Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |
 | Menús, cinemáticas, la ciudad | ✅ En una Switch Lite |
 | Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
@@ -458,7 +470,7 @@ hacer una copia de tu propio disco.
   todas las partes en la carpeta.
 - O los **archivos** del disco: `default.xbe` y la carpeta `data`.
 
-No se leen: archivos comprimidos `.zip`, `.7z` o `.rar` (extráelos primero), imágenes de Xbox 360, ni el CSO
+Todas las versiones del port, desde la 0.0.8, leen los mismos formatos. No se leen: archivos comprimidos `.zip`, `.7z` o `.rar` (extráelos primero), imágenes de Xbox 360, ni el CSO
 viejo con zlib (versión 1) hecho para la PSP.
 </details>
 

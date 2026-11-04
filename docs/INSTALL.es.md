@@ -81,10 +81,16 @@ navegador reciente (Chrome, Firefox, Edge, Safari, Samsung Internet; en iPhone n
 
 1. **Elige tu juego:** tu imagen de disco (`.iso`, `.xiso`, `.cci`, `.cso`; si está dividida, selecciona todas sus
    partes a la vez) o solo su `default.xbe`. La página lee el `default.xbe` del juego y comprueba que sea la
-   edición compatible.
-2. **Descarga `SpiderMan2Xbox-SD.zip`.** La página desbloquea el port con tu `default.xbe` y lo pone en un zip con
+   edición compatible. Todas las versiones aceptan los mismos archivos.
+2. **Elige la versión**, o deja la más reciente, que ya está elegida. El menú tiene todas desde la 0.0.8 y dice cuál
+   es la recomendada (la más reciente), cuáles funcionan en una Switch con problemas conocidos (0.1.0 a 0.3.0) y
+   cuáles son pruebas tempranas que no arrancan en ella (0.0.8 a 0.0.10). Debajo están los cambios principales de
+   la versión, un enlace a todas sus notas y qué tener en cuenta: antes de la 0.2.3 las partidas guardadas no
+   cargan, y las pruebas tempranas van en una carpeta propia, `switch/SpiderMan2Xbox-<versión>`, para que nunca
+   toquen tus partidas. `?v=0.2.3` al final de la dirección de la página la abre con esa versión elegida.
+3. **Descarga `SpiderMan2Xbox-SD.zip`.** La página desbloquea el port con tu `default.xbe` y lo pone en un zip con
    la carpeta `switch` para tu tarjeta SD. Tarda unos segundos.
-3. Sigue con [Copiarlo a la tarjeta SD](#copiarlo-a-la-tarjeta-sd).
+4. Sigue con [Copiarlo a la tarjeta SD](#copiarlo-a-la-tarjeta-sd).
 
 Tu juego nunca se sube a ningún sitio: la página solo descarga el port bloqueado y hace el resto en tu navegador.
 Sin el `default.xbe` de la edición compatible el port bloqueado no se puede abrir, y por eso puede estar en las
@@ -300,11 +306,17 @@ Las partidas se escribían completas, y la 0.2.3 las carga.
 
 ## Actualizar
 
-Abre otra vez la [página de instalación](#la-página-de-instalación) (siempre tiene la versión más nueva) y copia
+Abre otra vez la [página de instalación](#la-página-de-instalación) (siempre tiene la versión más nueva, y todas las anteriores en su menú de versiones) y copia
 la carpeta `switch` del zip nuevo encima de la vieja, o compila la versión nueva igual que la anterior y copia su
 carpeta `out/sd/switch`. `game/` y `save/` se quedan como están, y también la lista de shaders de `cache/`. Las versiones anteriores a la 0.1.0 lo guardaban todo en `hdd/`: en el primer
 arranque de la 0.1.0 las partidas que tenga pasan a `save/`, `hdd/` se convierte en `cache/` y `shaders.cache` pasa
 a su interior. Si una partida está en los dos sitios, la de `hdd/` se queda donde está y se usa, y el registro lo dice.
+
+Para volver a una versión anterior, elígela en el menú de versiones de la página de instalación y copia la carpeta
+`switch` de su zip encima de la misma forma. Antes de la 0.2.3 las partidas guardadas no cargan: primero haz una
+copia de `save/`. Las pruebas tempranas 0.0.8 a 0.0.10 vienen en una carpeta propia, `switch/SpiderMan2Xbox-<versión>`,
+que también necesita tu juego en su `game/`: en la carpeta principal su `hdd/` quedaría junto a tu `save/`, y una
+versión más nueva podría seguir usando la partida de `hdd/`.
 
 ## Solución de problemas
 

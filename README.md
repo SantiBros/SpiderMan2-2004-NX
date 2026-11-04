@@ -44,6 +44,11 @@ swing through New York.
 > long pauses while shaders were built, which 0.3.1 fixes.
 
 > [!TIP]
+> **New on the installer page: every version to choose from.** Its version menu has every release from 0.0.8 to
+> 0.3.1, with the newest already picked. Each one shows whether it is recommended, runs with known problems or is
+> an early test that doesn't start on a Switch, its main changes and what to watch out for. And step 1 now lists
+> every kind of file it takes.
+>
 > **New in 0.3.1: smoother than 0.3.0.** A 0.3.0 log showed the game stopping for up to 2 seconds at a time, the
 > counter dropping to 1–14 frames a second, while shaders were built: the list of them the port keeps had been
 > thrown away. 0.3.1 keeps it. It also drops a GPU measurement 0.3.0 made at every frame, which on the Switch's
@@ -181,7 +186,8 @@ swing through New York.
   dump), the compressed `.cci` (Cerbios) and `.cso` (StellarOS) images that Repackinator makes, any of
   them split into parts for a FAT32 card, or the files from the disc.
 - **Installed from your phone.** The [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks
-  the port with your own copy in your browser and gives you the SD card folder. Or build it from your copy on a
+  the port with your own copy in your browser and gives you the SD card folder, for the newest version or any
+  earlier one. Or build it from your copy on a
   computer: on Windows `build-windows.cmd` sets up everything it needs and asks for your game; on Linux it's one
   command.
 - **In your language.** The game takes the console's language: English, Spanish, French, German or
@@ -222,7 +228,8 @@ swing through New York.
 1. **Get your game as files.** A disc image of your own disc, or the files from it. PC DVD drives can't
    read original Xbox discs: [how to get them](docs/INSTALL.md#getting-your-game).
 2. **Open the [installer page](https://santibros.github.io/SpiderMan2-2004-NX/)** on your phone or computer, choose your game (the disc image, all
-   its parts if it is split, or just its `default.xbe`) and download **`SpiderMan2Xbox-SD.zip`**. Your game is not
+   its parts if it is split, or just its `default.xbe`), leave the newest version picked (or choose another) and
+   download **`SpiderMan2Xbox-SD.zip`**. Your game is not
    uploaded anywhere: the page unlocks the port with it in your browser, in a few seconds.
 3. **Copy to the SD card.** Copy the `switch` folder from the zip to the root of your SD card, then put your game
    (the disc image, or `default.xbe` and the `data` folder) in `switch/SpiderMan2Xbox/game/`.
@@ -275,10 +282,15 @@ WSL, updating and [troubleshooting](docs/INSTALL.md#troubleshooting).
 
 ### Updating
 
-Open the [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) again (it always has the newest version) and copy the new zip's
+Open the [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) again (it always has the newest version, and every earlier one in its version menu) and copy the new zip's
 `switch` folder over the old one, or build the new version and copy its `out/sd/switch` folder. Your `game/` and
 `save/` folders stay as they are. Coming from a version before 0.1.0, which kept everything in `hdd/`? At the
 first start your saves are moved to `save/` and the rest of `hdd/` becomes `cache/`, by themselves.
+
+Going back to an older version? Choose it in the page's version menu and copy its zip's `switch` folder over the
+same way. Saved games don't load before 0.2.3, so back up `save/` first. The early tests 0.0.8 to 0.0.10 go in a
+folder of their own, `switch/SpiderMan2Xbox-<version>`, with your game copied into its `game/` too, so they never
+touch your saves.
 
 ## Controls
 
@@ -344,7 +356,7 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | Speed | 🧪 0.1.0 played smoothly on a Switch Lite at 480p; 0.2.0 and 0.2.1 were reported slow, above all in 16:9, where their logs show the game waiting for the SD card. 0.2.2 removes 16:9's writes to the card and 0.2.3 takes every write to the card off the game's threads (Auto clocks, a lighter 16:9 and render scale came in 0.2.1); in 4:3 at 720p a tester's 0.2.1 held 30 frames a second. 0.3.0 was reported much slower: its log shows 28–30 frames a second between long pauses while shaders were built, after its shader list was thrown away; 0.3.1 keeps the list and drops a per-frame GPU measurement: to be confirmed on a console |
 | Picture | ✅ The Switch's GPU through OpenGL, every frame |
 | 720p, 1080p, 16:9 | 🧪 New in 0.2.0, lighter in 0.2.1, the 16:9 map right in 0.3.0; how fast they run on a console is to be measured |
-| Installer page | ✅ New in 0.3.0: unlocks the port in the browser, checked with every disc image format and split images |
+| Installer page | ✅ New in 0.3.0: unlocks the port in the browser, checked with every disc image format and split images; every version from 0.0.8 to 0.3.1 in its menu |
 | Vibration | 🧪 New in 0.2.0: needs Joy-Con or a Pro Controller, not tried on a console yet |
 | Menus, cinematics, the city | ✅ On a Switch Lite |
 | Sound | ✅ Music, sound effects and voices, on a Switch Lite |
@@ -446,7 +458,7 @@ From your own disc. This project can't help with that, and issues asking for gam
   in the folder.
 - Or the **files** from the disc: `default.xbe` and the `data` folder.
 
-Not read: `.zip`, `.7z` or `.rar` archives (extract them first), Xbox 360 images, and the old zlib CSO
+Every version of the port, from 0.0.8 on, reads the same formats. Not read: `.zip`, `.7z` or `.rar` archives (extract them first), Xbox 360 images, and the old zlib CSO
 (version 1) made for the PSP.
 </details>
 

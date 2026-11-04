@@ -80,10 +80,16 @@ browser (Chrome, Firefox, Edge, Safari, Samsung Internet; untested on an iPhone)
 
 1. **Choose your game:** your disc image (`.iso`, `.xiso`, `.cci`, `.cso`; for a split one, select all its parts
    at once) or only its `default.xbe`. The page reads the game's `default.xbe` from it and checks that it is the
-   supported release.
-2. **Download `SpiderMan2Xbox-SD.zip`.** The page unlocks the port with your `default.xbe` and puts it in a zip with
+   supported release. Every version takes the same files.
+2. **Choose the version**, or leave the newest, which is already picked. The menu has every release from 0.0.8 on
+   and says which is recommended (the newest), which run on a Switch with known problems (0.1.0 to 0.3.0) and which
+   are early tests that don't start on one (0.0.8 to 0.0.10). Under it are the version's main changes, a link to
+   all its notes and what to watch out for: saved games don't load before 0.2.3, and the early tests go in a folder
+   of their own, `switch/SpiderMan2Xbox-<version>`, so they never touch your saves. `?v=0.2.3` at the end of the
+   page's address opens it with that version picked.
+3. **Download `SpiderMan2Xbox-SD.zip`.** The page unlocks the port with your `default.xbe` and puts it in a zip with
    the `switch` folder for your SD card. It takes a few seconds.
-3. Go on with [Copying it to the SD card](#copying-it-to-the-sd-card).
+4. Go on with [Copying it to the SD card](#copying-it-to-the-sd-card).
 
 Your game is never uploaded: the page only downloads the locked port and does the rest in your browser. Without
 the supported release's `default.xbe` the locked port can't be opened, which is why it can be in the releases at
@@ -287,11 +293,16 @@ were written whole, and 0.2.3 loads them.
 
 ## Updating
 
-Open the [installer page](#the-installer-page) again (it always has the newest version) and copy the new zip's
+Open the [installer page](#the-installer-page) again (it always has the newest version, and every earlier one in its version menu) and copy the new zip's
 `switch` folder over the old one, or build the new version the same way and copy its `out/sd/switch` folder.
 `game/` and `save/` stay as they are, and so does the shader list in `cache/`. Versions before 0.1.0 kept everything in `hdd/`: at the first start of 0.1.0 the saves
 in it are moved to `save/`, `hdd/` becomes `cache/`, and `shaders.cache` moves into it. If a save is in both
 places, the one in `hdd/` stays where it is and is used, and the log says so.
+
+To go back to an older version, choose it in the installer page's version menu and copy its zip's `switch` folder
+over the same way. Saved games don't load before 0.2.3: back up `save/` first. The early tests 0.0.8 to 0.0.10 come
+in a folder of their own, `switch/SpiderMan2Xbox-<version>`, which needs your game in its `game/` too: in the main
+folder their `hdd/` would sit beside your `save/`, and a newer version could go on using the save in `hdd/`.
 
 ## Troubleshooting
 

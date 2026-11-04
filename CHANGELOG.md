@@ -3,6 +3,28 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## Installer page, 2026-11-03
+
+Changes to the [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) only: no new version of the port.
+
+### Added
+- **Every version to choose from.** A version menu with every release from 0.0.8 to 0.3.1, the newest picked by
+  default (`?v=<version>` in the address picks another). The older ones were built from their own releases' code
+  and locked like 0.3.x.
+- **Each version's status and changes** under the menu: recommended (the newest), runs on a Switch with known
+  problems (0.1.0 to 0.3.0) or early test that doesn't start on a Switch (0.0.8 to 0.0.10); its main changes in
+  English and Spanish, with a link to all its notes; and what to watch out for: 0.3.0's pauses, 0.2.0 and 0.2.1's
+  slow 16:9, saved games not loading before 0.2.3.
+- **The early tests in a folder of their own** (`switch/SpiderMan2Xbox-<version>`). They keep their saves in
+  `hdd/`, and a newer version that finds `hdd/` beside `save/` with the same save in both goes on using the one in
+  `hdd/`: in the main folder they could hide your saves.
+
+### Changed
+- **Step 1 lists the files it takes:** a disc image (`.iso`, an Xbox ISO or a full disc dump, `.xiso`, `.cci`,
+  `.cso`), all the parts of a split one, or only `default.xbe` from the game's files; and what it doesn't take
+  (`.zip`, `.rar`, `.7z`, Xbox 360 and other consoles' versions). Every version reads the same files.
+- **Step 2 says that with `default.xbe`, the `data` folder beside it goes into `game/` too.**
+
 ## [0.3.1]
 
 **Smoother than 0.3.0.** 0.3.0 was reported much slower than 0.2.3 with the same settings. Its log shows 28–30
