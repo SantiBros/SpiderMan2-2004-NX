@@ -1,0 +1,219 @@
+{
+ "xbe_sha1": "853bcb253c5baea2d7e2d9b59e5888b4c87bb402",
+ "versions": [
+  {
+   "version": "0.3.1",
+   "date": "2026-11-03",
+   "en": "Smoother than 0.3.0, and a 2000s CRT TV",
+   "es": "Más fluida que la 0.3.0, y un televisor CRT de los 2000",
+   "changes_en": [
+    "Smoother than 0.3.0: no more pauses of up to 2 seconds while graphics effects (shaders) were prepared, because the shader list is kept",
+    "A graphics measurement taken every frame is gone",
+    "The CRT filter and the CRT TV cost nothing while they are off",
+    "New 4:3 decoration: a 2000s CRT TV (silver, stereo speakers, A/V inputs)",
+    "The blurred sides are made as in 0.2.3 again"
+   ],
+   "changes_es": [
+    "Más fluida que la 0.3.0: sin pausas de hasta 2 segundos mientras se preparaban efectos gráficos (shaders), porque la lista de shaders se conserva",
+    "Ya no hay una medición gráfica en cada imagen",
+    "El filtro CRT y el CRT TV no cuestan nada mientras están apagados",
+    "Nueva decoración para el 4:3: un televisor CRT de los 2000 (plateado, altavoces estéreo, entradas A/V)",
+    "Los lados difuminados se hacen otra vez como en la 0.2.3"
+   ],
+   "path": "0.3.1/"
+  },
+  {
+   "version": "0.3.0",
+   "date": "2026-11-03",
+   "en": "Install from your phone, 16:9 map fixed, CRT filter",
+   "es": "Instalación desde el móvil, el mapa en 16:9 arreglado, filtro CRT",
+   "warn_en": "It pauses for up to 2 seconds at a time while it prepares graphics effects (fixed in 0.3.1).",
+   "warn_es": "Se detiene hasta 2 segundos seguidos mientras prepara efectos gráficos (arreglado en la 0.3.1).",
+   "changes_en": [
+    "This installer page: install from your phone or computer, without building anything",
+    "The 16:9 city map fixed: Spider-Man's marker, the stars and the $ icons sit in their places",
+    "CRT filter (Light or Strong): scanlines, colour stripes, glow",
+    "New 4:3 decoration: an old wooden CRT TV",
+    "Lighter blurred sides at 720p and 1080p"
+   ],
+   "changes_es": [
+    "Esta página de instalación: instala desde el móvil o el computador, sin compilar nada",
+    "El mapa de la ciudad en 16:9 arreglado: el marcador de Spider-Man, las estrellas y los iconos de $ en su sitio",
+    "Filtro CRT (Light o Strong): líneas de barrido, franjas de color, brillo",
+    "Nueva decoración para el 4:3: un televisor CRT antiguo de madera",
+    "Lados difuminados más ligeros a 720p y 1080p"
+   ],
+   "path": "0.3.0/"
+  },
+  {
+   "version": "0.2.3",
+   "date": "2026-10-24",
+   "en": "Saved games load, and the 16:9 freezes fixed",
+   "es": "Las partidas guardadas cargan, y los bloqueos en 16:9 arreglados",
+   "changes_en": [
+    "Saved games load (before, loading always failed and the game started over)",
+    "A copy of your saves in sdmc:/config/SpiderMan2Xbox/save/, just in case",
+    "The game never waits for the SD card because of the log",
+    "A crash keeps the log's last lines"
+   ],
+   "changes_es": [
+    "Las partidas guardadas cargan (antes, cargar siempre fallaba y el juego empezaba de nuevo)",
+    "Una copia de tus partidas en sdmc:/config/SpiderMan2Xbox/save/, por si acaso",
+    "El juego nunca espera a la tarjeta SD por culpa del registro",
+    "Un cierre inesperado conserva las últimas líneas del registro"
+   ],
+   "path": "0.2.3/"
+  },
+  {
+   "version": "0.2.2",
+   "date": "2026-10-23",
+   "en": "The 16:9 slowdown fixed, and suit-coloured 4:3 sides",
+   "es": "La lentitud en 16:9 arreglada, y lados 4:3 con los colores del traje",
+   "warn_en": "Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
+   "warn_es": "Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "changes_en": [
+    "The 16:9 slowdown fixed: 16:9 no longer writes to the SD card every frame",
+    "No log line makes the game wait for the SD card any more",
+    "New 4:3 decoration: suit sides, the spider web in the suit's colours",
+    "Texture filtering's help warns that anisotropic filtering is heavy in the city"
+   ],
+   "changes_es": [
+    "El bajón del 16:9 arreglado: el 16:9 ya no escribe en la tarjeta SD en cada imagen",
+    "Ninguna línea del registro hace esperar al juego por la tarjeta SD",
+    "Nueva decoración para el 4:3: suit sides, la telaraña con los colores del traje",
+    "La ayuda de Texture filtering avisa que el filtrado anisotrópico pesa mucho en la ciudad"
+   ],
+   "path": "0.2.2/"
+  },
+  {
+   "version": "0.2.1",
+   "date": "2026-10-23",
+   "en": "Faster: all three cores, Auto clocks, lighter 16:9 and 720p/1080p",
+   "es": "Más rápida: los tres núcleos, relojes en Auto, 16:9 y 720p/1080p más ligeros",
+   "warn_en": "Slow, above all in 16:9 (fixed in 0.2.2). Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
+   "warn_es": "Lenta, sobre todo en 16:9 (arreglado en la 0.2.2). Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "changes_en": [
+    "The renderer and the sound start on cores of their own",
+    "Auto clocks, the new default: the GPU clock follows the picture",
+    "16:9 costs almost nothing now",
+    "720p and 1080p enlarge only the main picture; in handheld mode 1080p draws 720p",
+    "The shaders built with 0.2.0 are kept"
+   ],
+   "changes_es": [
+    "El renderizador y el sonido empiezan en núcleos propios",
+    "Relojes Auto, el nuevo valor de fábrica: el reloj de la GPU sigue a la imagen",
+    "El 16:9 ya casi no cuesta",
+    "720p y 1080p solo agrandan la imagen principal; en modo portátil, 1080p dibuja 720p",
+    "Se conservan los shaders preparados con la 0.2.0"
+   ],
+   "path": "0.2.1/"
+  },
+  {
+   "version": "0.2.0",
+   "date": "2026-10-23",
+   "en": "720p/1080p, full screen 16:9 and vibration",
+   "es": "720p/1080p, 16:9 a pantalla completa y vibración",
+   "warn_en": "Slow, above all in 16:9 (fixed in 0.2.2). Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
+   "warn_es": "Lenta, sobre todo en 16:9 (arreglado en la 0.2.2). Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "changes_en": [
+    "720p or 1080p",
+    "Full screen 16:9, nothing stretched: more of the city at the sides",
+    "4:3 with blurred or spider-web sides instead of black bars",
+    "Sharper upscaling and anisotropic filtering",
+    "Vibration, on Joy-Con or a Pro Controller"
+   ],
+   "changes_es": [
+    "720p o 1080p",
+    "Pantalla completa 16:9, sin estirar: más ciudad a los lados",
+    "4:3 con lados difuminados o una telaraña en vez de franjas negras",
+    "Escalado más nítido y filtrado anisotrópico",
+    "Vibración, en los Joy-Con o un Pro Controller"
+   ],
+   "path": "0.2.0/"
+  },
+  {
+   "version": "0.1.0",
+   "date": "2026-10-22",
+   "en": "Debug menu and your language",
+   "es": "Menú de depuración y tu idioma",
+   "warn_en": "Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
+   "warn_es": "Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "changes_en": [
+    "A debug menu: hold ZL + ZR and press −",
+    "The Switch's clocks and a frame-rate counter",
+    "The game in your console's language: Spanish, French, German or Italian texts",
+    "Faster: about 14% less processor time a frame for the game",
+    "Saves in a folder of their own (save/), a new icon and a Windows builder"
+   ],
+   "changes_es": [
+    "Un menú de depuración: mantén ZL + ZR y pulsa −",
+    "Los relojes de la Switch y un contador de imágenes por segundo",
+    "El juego en el idioma de tu consola: textos en español, francés, alemán o italiano",
+    "Más rápido: un 14% menos de tiempo de procesador por imagen para el juego",
+    "Las partidas en su propia carpeta (save/), un ícono nuevo y un compilador para Windows"
+   ],
+   "path": "0.1.0/"
+  },
+  {
+   "version": "0.0.10",
+   "date": "2026-10-22",
+   "en": "Early test: one crash fewer",
+   "es": "Prueba temprana: un cierre inesperado menos",
+   "early": true,
+   "folder": "SpiderMan2Xbox-0.0.10",
+   "warn_en": "It goes in a folder of its own, switch/SpiderMan2Xbox-0.0.10, so it never touches your saves: copy your game into that folder's game folder too.",
+   "warn_es": "Va en una carpeta propia, switch/SpiderMan2Xbox-0.0.10, para que nunca toque tus partidas: copia tu juego también en la carpeta game de esa carpeta.",
+   "changes_en": [
+    "One crash fewer: a system function the game uses to ask about a drive was missing",
+    "Everything from 0.0.9"
+   ],
+   "changes_es": [
+    "Un cierre inesperado menos: faltaba una función del sistema que el juego usa para consultar una unidad",
+    "Todo lo de la 0.0.9"
+   ],
+   "path": "0.0.10/"
+  },
+  {
+   "version": "0.0.9",
+   "date": "2026-10-22",
+   "en": "Early test: videos at their real speed, building shadows in place, fewer stutters",
+   "es": "Prueba temprana: vídeos a su velocidad real, sombras de los edificios en su sitio, menos tirones",
+   "early": true,
+   "folder": "SpiderMan2Xbox-0.0.9",
+   "warn_en": "It goes in a folder of its own, switch/SpiderMan2Xbox-0.0.9, so it never touches your saves: copy your game into that folder's game folder too.",
+   "warn_es": "Va en una carpeta propia, switch/SpiderMan2Xbox-0.0.9, para que nunca toque tus partidas: copia tu juego también en la carpeta game de esa carpeta.",
+   "changes_en": [
+    "The videos play at their real speed (they ran twice too fast)",
+    "Building shadows fall where they should, and half of the screen no longer goes dark",
+    "Fewer stutters the second time: the shaders are kept in a list"
+   ],
+   "changes_es": [
+    "Los vídeos van a su velocidad real (iban el doble de rápido)",
+    "Las sombras de los edificios caen donde deben, y la mitad de la pantalla ya no se oscurece",
+    "Menos tirones la segunda vez: los shaders se guardan en una lista"
+   ],
+   "path": "0.0.9/"
+  },
+  {
+   "version": "0.0.8",
+   "date": "2026-10-22",
+   "en": "Early test: drawn by the Switch's graphics chip",
+   "es": "Prueba temprana: dibujado por el chip gráfico de la Switch",
+   "early": true,
+   "folder": "SpiderMan2Xbox-0.0.8",
+   "warn_en": "It goes in a folder of its own, switch/SpiderMan2Xbox-0.0.8, so it never touches your saves: copy your game into that folder's game folder too.",
+   "warn_es": "Va en una carpeta propia, switch/SpiderMan2Xbox-0.0.8, para que nunca toque tus partidas: copia tu juego también en la carpeta game de esa carpeta.",
+   "changes_en": [
+    "The Switch's graphics chip draws the game, every frame",
+    "A render thread: the graphics work runs beside the game, on another core",
+    "Spider-Man is drawn when you play, and the opening cinematic's sky is fixed"
+   ],
+   "changes_es": [
+    "El chip gráfico de la Switch dibuja el juego, imagen por imagen",
+    "Un hilo de renderizado: el trabajo gráfico va junto al juego, en otro núcleo",
+    "Spider-Man se dibuja mientras juegas, y el cielo de la cinemática inicial está arreglado"
+   ],
+   "path": "0.0.8/"
+  }
+ ]
+}

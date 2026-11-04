@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spider-Man 2 (Xbox) for Switch: installer</title>
+<meta name="description" content="Make the SD card folder of the Spider-Man 2 (original Xbox) Switch port from your own copy of the game, in your browser: on a PC, a Mac or an Android phone.">
+<style>
+:root {
+  --bg: #0f1320; --panel: #171d2e; --line: #2a3350; --text: #e9ecf4; --muted: #9aa3bb;
+  --red: #d8262f; --red-dark: #a51b22; --blue: #2f5fd0; --ok: #2ea043; --warn: #e3a008; --err: #f0565d;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+h1 { font-size: 1.55rem; line-height: 1.25; margin: 0 0 4px; }
+h1 small { display: block; font-size: .95rem; font-weight: 500; color: var(--muted); margin-top: 4px; }
+.lang { display: flex; gap: 4px; flex: none; }
+.lang button { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: .85rem; cursor: pointer; }
+.lang button[aria-pressed="true"] { color: var(--text); border-color: var(--blue); background: #1d2a52; }
+.band { height: 4px; border-radius: 2px; margin: 16px 0 20px; background: linear-gradient(90deg, var(--red) 0 50%, var(--blue) 50% 100%); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 14px 0; }
+.panel h2 { font-size: 1.1rem; margin: 0 0 8px; display: flex; gap: 10px; align-items: center; }
+.num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--red); color: #fff; font-size: .9rem; flex: none; }
+p { margin: 8px 0; }
+.muted { color: var(--muted); font-size: .92rem; }
+code { background: #0b0f1a; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: .9em; overflow-wrap: anywhere; }
+.pick { display: block; margin: 12px 0 6px; font-weight: 600; font-size: .95rem; }
+.pick input { display: block; margin-top: 6px; font-weight: 400; }
+input[type=file] { width: 100%; color: var(--muted); font: inherit; }
+input[type=file]::file-selector-button { background: var(--blue); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; margin-right: 12px; font: inherit; cursor: pointer; }
+.ver { display: block; margin: 14px 0 0; font-weight: 600; font-size: .95rem; }
+select { display: block; width: 100%; margin-top: 6px; background: #0b0f1a; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: .95rem; }
+#vernote { margin: 6px 0 0; }
+#vernote .warn { display: block; margin-top: 8px; border-left: 3px solid var(--warn); padding: 2px 10px; color: #f3e3b0; }
+#vernote .state { display: inline-block; margin: 2px 0 6px; padding: 2px 8px; border-radius: 6px; font-size: .85rem; font-weight: 600; }
+#vernote .state.rec { background: #123a20; color: #8fe0a5; border: 1px solid var(--ok); }
+#vernote .state.old { background: #1d2a52; color: #b9c8f5; border: 1px solid var(--blue); }
+#vernote .state.early { background: #3d2f08; color: #f3d27a; border: 1px solid var(--warn); }
+#vernote .title { display: block; color: var(--text); }
+#vernote ul.changes { margin: 4px 0 6px; padding-left: 20px; }
+#vernote ul.changes li { margin: 2px 0; }
+#vernote .when { display: block; }
+.go { display: inline-block; width: 100%; margin-top: 14px; background: var(--red); color: #fff; border: 0; border-radius: 10px; padding: 14px; font: inherit; font-weight: 600; font-size: 1.05rem; cursor: pointer; }
+.go:disabled { background: #3a4058; color: #8b91a6; cursor: default; }
+.status { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #0b0f1a; border: 1px solid var(--line); font-size: .95rem; white-space: pre-line; display: none; }
+.status.show { display: block; }
+.status.ok { border-color: var(--ok); }
+.status.err { border-color: var(--err); color: #ffd7d9; }
+.bar { height: 6px; background: #0b0f1a; border-radius: 3px; overflow: hidden; margin-top: 10px; display: none; }
+.bar.show { display: block; }
+.bar > div { height: 100%; width: 0; background: var(--blue); transition: width .2s; }
+ol { padding-left: 22px; margin: 8px 0; }
+ul.kinds { padding-left: 20px; margin: 8px 0; }
+li { margin: 6px 0; }
+.note { border-left: 3px solid var(--warn); padding: 4px 12px; margin: 12px 0; color: #f3e3b0; font-size: .95rem; }
+footer { margin-top: 28px; color: var(--muted); font-size: .85rem; text-align: center; }
+a { color: #8fb0ff; }
+[data-lang="es"] .en, [data-lang="en"] .es { display: none !important; }
+</style>
+</head>
+<body data-lang="en">
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Spider-Man 2 (Xbox) for Switch
+        <small><span class="en">Installer: make the SD card folder from your own game</span><span class="es">Instalador: crea la carpeta de la tarjeta SD con tu propio juego</span></small>
+      </h1>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-set="en" aria-pressed="true">EN</button>
+      <button type="button" data-set="es" aria-pressed="false">ES</button>
+    </div>
+  </header>
+  <div class="band"></div>
+
+  <p class="en">Works in the browser of a PC, a Mac or an <b>Android phone</b>: nothing to install. Your game never leaves your device. The page only reads the game's main program from it (<code>default.xbe</code>, which every disc image has inside) to unlock the port, which is made from that file and doesn't work without it.</p>
+  <p class="es">Funciona en el navegador de un PC, un Mac o un <b>teléfono Android</b>: no hay que instalar nada. Tu juego nunca sale de tu dispositivo. La página solo lee de él el programa principal del juego (<code>default.xbe</code>, que toda imagen de disco lleva dentro) para desbloquear el port, que está hecho a partir de ese archivo y no funciona sin él.</p>
+
+  <section class="panel">
+    <h2><span class="num">1</span><span class="en">Choose your game</span><span class="es">Elige tu juego</span></h2>
+    <p class="en">Your own <b>Spider-Man 2 for the original Xbox</b> (not the PS2, GameCube or PC one). Choose <b>one</b> of these:</p>
+    <ul class="kinds en">
+      <li><b>A disc image</b>, one file: <code>.iso</code> (an Xbox ISO or a full disc dump), <code>.xiso</code>, <code>.cci</code> or <code>.cso</code>.</li>
+      <li><b>A split disc image:</b> choose <b>all</b> its parts at once, for example <code>name.1.iso</code> and <code>name.2.iso</code>, or <code>name.1.cci</code> and <code>name.2.cci</code>.</li>
+      <li><b>The game's files</b> instead of an image: choose only <code>default.xbe</code>, from the folder that also has the <code>data</code> folder.</li>
+    </ul>
+    <p class="es">Tu propio <b>Spider-Man 2 para la Xbox original</b> (no el de PS2, GameCube ni PC). Elige <b>una</b> de estas opciones:</p>
+    <ul class="kinds es">
+      <li><b>Una imagen de disco</b>, un solo archivo: <code>.iso</code> (una ISO de Xbox o una copia completa del disco), <code>.xiso</code>, <code>.cci</code> o <code>.cso</code>.</li>
+      <li><b>Una imagen de disco dividida:</b> elige <b>todas</b> sus partes a la vez, por ejemplo <code>nombre.1.iso</code> y <code>nombre.2.iso</code>, o <code>nombre.1.cci</code> y <code>nombre.2.cci</code>.</li>
+      <li><b>Los archivos del juego</b> en vez de una imagen: elige solo <code>default.xbe</code>, de la carpeta que también tiene la carpeta <code>data</code>.</li>
+    </ul>
+    <p class="muted en">Every version in the menu below takes these same files, here and on the Switch. Not accepted: <code>.zip</code>, <code>.rar</code> or <code>.7z</code> files (extract the disc image from them first), and Xbox 360 or other consoles' versions.</p>
+    <p class="muted es">Todas las versiones del menú de abajo aceptan estos mismos archivos, aquí y en la Switch. No se aceptan: archivos <code>.zip</code>, <code>.rar</code> o <code>.7z</code> (primero extrae de ellos la imagen de disco), ni versiones de Xbox 360 u otras consolas.</p>
+    <label class="pick"><span class="en">Your game:</span><span class="es">Tu juego:</span> <input id="game" type="file" multiple></label>
+    <label class="ver" for="version"><span class="en">Version</span><span class="es">Versión</span></label>
+    <select id="version"></select>
+    <p id="vernote" class="muted"></p>
+    <button id="make" class="go" type="button" disabled><span class="en">Make SpiderMan2Xbox-SD.zip</span><span class="es">Crear SpiderMan2Xbox-SD.zip</span></button>
+    <div id="bar" class="bar"><div></div></div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">2</span><span class="en">Put it on the SD card</span><span class="es">Pásalo a la tarjeta SD</span></h2>
+    <ol class="en">
+      <li>Extract <code>SpiderMan2Xbox-SD.zip</code> to the root of your SD card (merge it with the <code>switch</code> folder there). Updating? Extract it over the old one: your saves and settings stay.</li>
+      <li>Copy your game into <code>switch/SpiderMan2Xbox/game/</code>: the disc image you chose above (all its parts, if it is split), or, if you chose <code>default.xbe</code>, <code>default.xbe</code> <b>and</b> the <code>data</code> folder beside it. Copying it once is enough: an update doesn't need it again.</li>
+      <li>On the Switch, hold <b>R</b> while starting any game, then choose <b>Spider-Man 2 (Xbox)</b> in the Homebrew Menu (not from the Album: it doesn't have enough memory).</li>
+    </ol>
+    <ol class="es">
+      <li>Descomprime <code>SpiderMan2Xbox-SD.zip</code> en la raíz de tu tarjeta SD (combínalo con la carpeta <code>switch</code> que ya tenga). ¿Actualizas? Descomprímelo encima del anterior: tus partidas y ajustes se quedan.</li>
+      <li>Copia tu juego en <code>switch/SpiderMan2Xbox/game/</code>: la imagen de disco que elegiste arriba (todas sus partes, si está dividida) o, si elegiste <code>default.xbe</code>, <code>default.xbe</code> <b>y</b> la carpeta <code>data</code> que está a su lado. Basta con copiarlo una vez: una actualización no lo necesita de nuevo.</li>
+      <li>En la Switch, mantén <b>R</b> mientras abres cualquier juego y elige <b>Spider-Man 2 (Xbox)</b> en el Homebrew Menu (no desde el Álbum: ahí no hay memoria suficiente).</li>
+    </ol>
+    <p class="note en">The .nro you get is made from your copy of the game: keep it for yourself, never share or upload it.</p>
+    <p class="note es">El .nro que obtienes está hecho a partir de tu copia del juego: guárdalo para ti, nunca lo compartas ni lo subas.</p>
+  </section>
+
+  <p class="muted en">Prefer to build it yourself? The <a href="https://github.com/SantiBros/SpiderMan2-2004-NX#how-to-install">PC builder</a> makes the same port from the source code.</p>
+  <p class="muted es">¿Prefieres compilarlo tú? El <a href="https://github.com/SantiBros/SpiderMan2-2004-NX/blob/main/README.es.md#cómo-instalarlo">compilador para PC</a> crea el mismo port a partir del código fuente.</p>
+
+  <footer>
+    <span id="ver"></span> · <a href="https://github.com/SantiBros/SpiderMan2-2004-NX">GitHub</a> · A project by <b>SantiBros</b><br>
+    <span class="en">Unofficial homebrew, not affiliated with Activision, Treyarch, Marvel, Microsoft or Nintendo.</span><span class="es">Homebrew no oficial, sin relación con Activision, Treyarch, Marvel, Microsoft ni Nintendo.</span>
+  </footer>
+</div>
+
+<script>
+'use strict';
+// ---- language ----
+const L = { lang: 'en' };
+function setLang(l) {
+  L.lang = l;
+  document.body.dataset.lang = l;
+  document.documentElement.lang = l;
+  for (const b of document.querySelectorAll('.lang button')) b.setAttribute('aria-pressed', String(b.dataset.set === l));
+  try { localStorage.setItem('sm2nx-lang', l); } catch (e) {}
+}
+for (const b of document.querySelectorAll('.lang button')) b.addEventListener('click', () => setLang(b.dataset.set));
+try {
+  const saved = localStorage.getItem('sm2nx-lang');
+  setLang(saved || ((navigator.language || '').toLowerCase().startsWith('es') ? 'es' : 'en'));
+} catch (e) { setLang((navigator.language || '').toLowerCase().startsWith('es') ? 'es' : 'en'); }
+const T = (en, es) => (L.lang === 'es' ? es : en);
+
+// ---- status ----
+const statusEl = document.getElementById('status'), barEl = document.getElementById('bar');
+function say(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = 'status show' + (kind ? ' ' + kind : '');
+}
+function progress(f) {
+  barEl.classList.toggle('show', f !== null);
+  barEl.firstElementChild.style.width = f === null ? '0' : Math.round(f * 100) + '%';
+}
+class Problem extends Error {}
+const fail = (en, es) => { throw new Problem(T(en, es)); };
+
+// ---- the files: one run of bytes over the parts ----
+const SECTOR = 2048;
+const le32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
+const le64 = (b, o) => le32(b, o) + le32(b, o + 4) * 4294967296;
+async function slice(file, at, len) {
+  return new Uint8Array(await file.slice(at, at + len).arrayBuffer());
+}
+class Joined {
+  constructor(files) {
+    this.files = files; this.starts = []; let s = 0;
+    for (const f of files) { this.starts.push(s); s += f.size; }
+    this.size = s;
+  }
+  async read(at, len) {
+    const out = new Uint8Array(len); let done = 0;
+    while (done < len && at < this.size) {
+      let i = this.starts.length - 1;
+      while (this.starts[i] > at) i--;
+      const inFile = at - this.starts[i], want = Math.min(len - done, this.files[i].size - inFile);
+      out.set(await slice(this.files[i], inFile, want), done);
+      done += want; at += want;
+    }
+    return done === len ? out : out.subarray(0, done);
+  }
+}
+
+// LZ4 block, as kernel::Lz4Decode
+function lz4(src, cap) {
+  const dst = new Uint8Array(cap); let ip = 0, op = 0;
+  const len = (l) => { if (l !== 15) return l; let b; do { if (ip >= src.length) throw 0; b = src[ip++]; l += b; } while (b === 255); return l; };
+  while (ip < src.length) {
+    const token = src[ip++];
+    const lit = len(token >> 4);
+    if (lit > src.length - ip || lit > cap - op) throw 0;
+    dst.set(src.subarray(ip, ip + lit), op); ip += lit; op += lit;
+    if (ip >= src.length) break;
+    const off = src[ip] | src[ip + 1] << 8; ip += 2;
+    if (!off || off > op) throw 0;
+    let m = len(token & 15) + 4;
+    if (m > cap - op) throw 0;
+    while (m--) { dst[op] = dst[op - off]; op++; }
+  }
+  return dst.subarray(0, op);
+}
+
+// CCI (one run per part) and CSO v2 (one run): sectors behind an index, as kernel::SectorImage
+class SectorImage {
+  constructor() { this.runs = []; this.size = 0; this.block = SECTOR; this.align = 0; }
+  runOf(s) { let i = 0; while (i + 1 < this.runs.length && s >= this.runs[i + 1].first) i++; return this.runs[i]; }
+  pos(run, s) { return (run.index[s - run.first] & 0x7FFFFFFF) * 2 ** this.align; }
+  flag(run, s) { return (run.index[s - run.first] & 0x80000000) !== 0; }
+  async readIndex(run, offset) {
+    const raw = await run.data.read(offset, (run.count + 1) * 4);
+    if (raw.length !== (run.count + 1) * 4) fail('Its index is cut short: is a part missing?', 'Su índice está incompleto: ¿falta una parte?');
+    run.index = new Uint32Array(run.count + 1);
+    for (let i = 0; i <= run.count; i++) run.index[i] = le32(raw, i * 4);
+  }
+  // the sectors wanted, in one read per run of up to 4 MB, then decoded one by one
+  async read(at, len) {
+    const out = new Uint8Array(len); let done = 0;
+    while (done < len && at < this.size) {
+      const first = Math.floor(at / this.block), run = this.runOf(first);
+      let last = Math.min(Math.floor((at + len - done - 1) / this.block), run.first + run.count - 1);
+      const from = this.pos(run, first);
+      while (last > first && this.pos(run, last + 1) - from > (4 << 20)) last--;
+      const span = await run.data.read(from, this.pos(run, last + 1) - from);
+      for (let s = first; s <= last && done < len; s++) {
+        const p = this.pos(run, s) - from, q = this.pos(run, s + 1) - from;
+        const sec = this.decode(run, s, span.subarray(p, q)), within = at % this.block;
+        const take = Math.min(this.block - within, len - done);
+        out.set(sec.subarray(within, within + take), done);
+        done += take; at += take;
+      }
+    }
+    return out;
+  }
+}
+class CciImage extends SectorImage {
+  async open(files) {
+    for (const f of files) {
+      const data = new Joined([f]), h = await data.read(0, 32);
+      if (String.fromCharCode(...h.subarray(0, 4)) !== 'CCIM') fail(f.name + ' is not a CCI part.', f.name + ' no es una parte CCI.');
+      if (le32(h, 4) !== 32 || le32(h, 24) !== SECTOR || h[28] !== 1 || h[29] > 16) fail('Its CCI header is of an unknown kind.', 'Su cabecera CCI es de un tipo desconocido.');
+      this.align = h[29];
+      const size = le64(h, 8), run = { data, first: this.size / SECTOR, count: size / SECTOR };
+      await this.readIndex(run, le64(h, 16));
+      this.size += run.count * SECTOR; this.runs.push(run);
+    }
+    this.kind = 'CCI';
+  }
+  decode(run, s, src) {
+    if (src.length === SECTOR && !this.flag(run, s)) return src;
+    return lz4(src.subarray(1, src.length - src[0]), SECTOR);
+  }
+}
+class CsoImage extends SectorImage {
+  async open(files) {
+    const data = new Joined(files), h = await data.read(0, 24);
+    if (h[20] !== 2) fail('It is a version ' + h[20] + ' CSO (as for the PSP): only version 2, as Repackinator makes for the Xbox, is read.', 'Es un CSO versión ' + h[20] + ' (como para PSP): solo se lee la versión 2, como la que crea Repackinator para la Xbox.');
+    this.block = le32(h, 16); this.align = h[21];
+    const run = { data, first: 0, count: Math.floor(le64(h, 8) / this.block) };
+    await this.readIndex(run, 24);
+    this.size = run.count * this.block; this.runs.push(run); this.kind = 'CSO';
+  }
+  decode(run, s, src) {
+    if (!this.flag(run, s)) return src.subarray(0, this.block);
+    const size = le32(src, 0);
+    if (size & 0x80000000) return src.subarray(4, 4 + this.block);
+    return lz4(src.subarray(4, 4 + size), this.block);
+  }
+}
+
+// the parts of a split image in order: name.1.ext, name.2.ext, ...
+function ordered(files) {
+  const part = (f) => { const m = /\.(\d+)\.[^.]+$/.exec(f.name); return m ? +m[1] : 0; };
+  return [...files].sort((a, b) => part(a) - part(b) || a.name.localeCompare(b.name));
+}
+
+// default.xbe out of an XISO, at the start of the image or past a whole disc dump's video partition
+async function xbeFromImage(img) {
+  const MAGIC = 'MICROSOFT*XBOX*MEDIA';
+  const str = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));
+  for (const base of [0, 0x18300000]) {
+    if (base + 34 * SECTOR > img.size) continue;
+    const vol = await img.read(base + 32 * SECTOR, SECTOR);
+    if (str(vol, 0, 20) !== MAGIC || str(vol, 0x7EC, 20) !== MAGIC) continue;
+    const rootSector = le32(vol, 0x14), rootSize = le32(vol, 0x18);
+    const table = await img.read(base + rootSector * SECTOR, rootSize);
+    const todo = [0], seen = new Set();
+    while (todo.length) {
+      const at = todo.pop();
+      if (at + 14 > table.length || seen.has(at)) continue;
+      seen.add(at);
+      const left = table[at] | table[at + 1] << 8, right = table[at + 2] | table[at + 3] << 8;
+      if (left === 0xFFFF) continue;
+      const nameLen = table[at + 13], name = str(table, at + 14, nameLen);
+      if (left) todo.push(left * 4);
+      if (right) todo.push(right * 4);
+      if (name.toLowerCase() === 'default.xbe') {
+        const sector = le32(table, at + 4), size = le32(table, at + 8);
+        return img.read(base + sector * SECTOR, size);
+      }
+    }
+    fail('This disc has no default.xbe.', 'Este disco no tiene default.xbe.');
+  }
+  for (const base of [0xFD90000, 0x2080000]) {
+    if (base + 33 * SECTOR > img.size) continue;
+    if (str(await img.read(base + 32 * SECTOR, 20), 0, 20) === MAGIC) fail('This is an Xbox 360 disc image, not an original Xbox one.', 'Esta es una imagen de disco de Xbox 360, no de la Xbox original.');
+  }
+  fail('This is no Xbox disc image (' + img.kind + ' without the Xbox file system).', 'Esta no es una imagen de disco de Xbox (' + img.kind + ' sin el sistema de archivos de la Xbox).');
+}
+
+async function readXbe(files) {
+  const xbe = files.find((f) => f.name.toLowerCase().endsWith('.xbe'));
+  if (xbe) return new Uint8Array(await xbe.arrayBuffer());
+  const parts = ordered(files), head = await slice(parts[0], 0, 8), magic = String.fromCharCode(...head.subarray(0, 4));
+  if (magic === 'PK\x03\x04' || magic === 'Rar!' || (head[0] === 0x37 && head[1] === 0x7A && head[2] === 0xBC)) fail('This is a compressed archive (zip, rar or 7z): extract the disc image from it first.', 'Es un archivo comprimido (zip, rar o 7z): primero extrae de él la imagen de disco.');
+  let img;
+  if (magic === 'CCIM') { img = new CciImage(); await img.open(parts); }
+  else if (magic === 'CISO') { img = new CsoImage(); await img.open(parts); }
+  else { img = new Joined(parts); img.kind = 'ISO'; }
+  return xbeFromImage(img);
+}
+
+// ---- zip (stored) ----
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(entries) {
+  const parts = [], central = []; let offset = 0;
+  const enc = new TextEncoder();
+  const u16 = (v) => [v & 255, v >> 8 & 255], u32 = (v) => [v & 255, v >> 8 & 255, v >> 16 & 255, v >>> 24 & 255];
+  for (const e of entries) {
+    const name = enc.encode(e.name), data = e.data || new Uint8Array(0), crc = crc32(data), dir = e.name.endsWith('/');
+    const local = new Uint8Array([...u32(0x04034b50), ...u16(10), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0)]);
+    parts.push(local, name, data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(10), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(data.length), ...u32(data.length), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(dir ? 0x10 : 0), ...u32(offset)]), name);
+    offset += local.length + name.length + data.length;
+  }
+  const size = central.reduce((s, b) => s + b.length, 0);
+  return new Blob([...parts, ...central, new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(entries.length), ...u16(entries.length), ...u32(size), ...u32(offset), ...u16(0)])], { type: 'application/zip' });
+}
+
+// ---- the build ----
+async function fetchBytes(url, onProgress) {
+  const r = await fetch(url, { cache: 'no-cache' });
+  if (!r.ok) fail('Could not download ' + url + ' (' + r.status + ').', 'No se pudo descargar ' + url + ' (' + r.status + ').');
+  const total = +r.headers.get('content-length') || 0;
+  if (!r.body) return new Uint8Array(await r.arrayBuffer());
+  const chunks = [], reader = r.body.getReader(); let got = 0;
+  for (;;) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); got += value.length; if (total) onProgress(Math.min(1, got / total)); }
+  const out = new Uint8Array(got); let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
+}
+
+// ---- the versions: versions.json, newest first; each one's locked port and text files in its own folder ----
+let meta = null;
+const gameInput = document.getElementById('game'), makeBtn = document.getElementById('make');
+const verSel = document.getElementById('version'), verNote = document.getElementById('vernote');
+const RELEASES = 'https://github.com/SantiBros/SpiderMan2-2004-NX/releases/tag/v';
+const chosen = () => (meta ? meta.versions.find((v) => v.version === verSel.value) || meta.versions[0] : null);
+// each version's status: the newest is recommended, the early tests don't start on a Switch, the rest run on one
+// with the problems later versions fixed
+function status(v) {
+  if (v === meta.versions[0]) return { kind: 'rec', short: T('newest, recommended', 'la más reciente, recomendada'), long: T('Recommended: the newest version.', 'Recomendada: la versión más reciente.') };
+  if (v.early) return { kind: 'early', short: T('early test, doesn\'t start', 'prueba temprana, no arranca'), long: T('Early test: it doesn\'t get past its start on a Switch.', 'Prueba temprana: en una Switch no pasa de su arranque.') };
+  return { kind: 'old', short: T('runs, known problems', 'funciona, con problemas'), long: T('Runs on a Switch, with known problems that newer versions fix.', 'Funciona en una Switch, con problemas conocidos que arreglan las versiones más nuevas.') };
+}
+function showVersions() {
+  if (!meta) return;
+  const keep = verSel.value;
+  verSel.textContent = '';
+  for (const v of meta.versions) {
+    const o = document.createElement('option');
+    o.value = v.version;
+    o.textContent = v.version + ' · ' + status(v).short;
+    verSel.appendChild(o);
+  }
+  if (keep) verSel.value = keep;
+  noteVersion();
+}
+function noteVersion() {
+  const v = chosen();
+  if (!v) return;
+  const st = status(v), el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+  verNote.textContent = '';
+  verNote.append(el('span', 'state ' + st.kind, st.long));
+  if (v[L.lang]) verNote.append(el('b', 'title', v[L.lang]));
+  const changes = v['changes_' + L.lang] || [];
+  if (changes.length) {
+    const ul = el('ul', 'changes');
+    for (const c of changes) ul.append(el('li', '', c));
+    verNote.append(ul);
+  }
+  const a = el('a', '', T('All of ' + v.version + '\'s notes', 'Todas las notas de la ' + v.version));
+  a.href = RELEASES + v.version; a.target = '_blank'; a.rel = 'noopener';
+  const line = el('span', 'when');
+  if (v.date) line.append(v.date + ' · ');
+  line.append(a);
+  verNote.append(line);
+  const warn = T(v.warn_en, v.warn_es);
+  if (warn) verNote.append(el('span', 'warn', T('Watch out: ', 'Atención: ') + warn));
+}
+const loadMeta = () => fetch('versions.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
+  if (!m.versions || !m.versions.length) throw new Error('no versions');
+  meta = m;
+  const asked = new URLSearchParams(location.search).get('v');
+  showVersions();
+  if (asked && m.versions.some((v) => v.version === asked)) { verSel.value = asked; noteVersion(); }
+  document.getElementById('ver').textContent = 'Port ' + m.versions[0].version;
+  return m;
+});
+loadMeta().catch(() => {});
+document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', showVersions));
+verSel.addEventListener('change', () => { noteVersion(); statusEl.className = 'status'; });
+gameInput.addEventListener('change', () => { makeBtn.disabled = !gameInput.files.length; statusEl.className = 'status'; });
+
+makeBtn.addEventListener('click', async () => {
+  makeBtn.disabled = true;
+  try {
+    if (!meta) await loadMeta();
+    const v = chosen();
+    say(T('Reading default.xbe from your game…', 'Leyendo default.xbe de tu juego…'));
+    const xbe = await readXbe([...gameInput.files]);
+    const sha1 = [...new Uint8Array(await crypto.subtle.digest('SHA-1', xbe))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    if (sha1 !== meta.xbe_sha1) fail('This default.xbe is not the release the port supports.\nSupported: Spider-Man 2 for the original Xbox, default.xbe SHA-1 ' + meta.xbe_sha1 + '\nYours: ' + sha1, 'Este default.xbe no es la edición que el port admite.\nAdmitida: Spider-Man 2 para la Xbox original, default.xbe con SHA-1 ' + meta.xbe_sha1 + '\nEl tuyo: ' + sha1);
+    say(T('Your game is the supported release. Downloading the locked port ' + v.version + '…', 'Tu juego es la edición admitida. Descargando el port bloqueado ' + v.version + '…'));
+    const locked = await fetchBytes(v.path + 'SpiderMan2Xbox.nro.locked', progress);
+    progress(null);
+    say(T('Unlocking the port with your default.xbe…', 'Desbloqueando el port con tu default.xbe…'));
+    const label = new TextEncoder().encode('SpiderMan2-2004-NX lock 1\0'), material = new Uint8Array(label.length + xbe.length);
+    material.set(label); material.set(xbe, label.length);
+    const key = await crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', material), 'AES-GCM', false, ['decrypt']);
+    const header = locked.subarray(0, 64);
+    let nro;
+    try { nro = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: header.subarray(8, 20), additionalData: header }, key, locked.subarray(64))); }
+    catch (e) { fail('The port could not be unlocked with this default.xbe.', 'No se pudo desbloquear el port con este default.xbe.'); }
+    const [readme, gameReadme, licenses] = await Promise.all(['README.txt', 'PUT_YOUR_GAME_HERE.txt', 'LICENSES.txt'].map((n) => fetchBytes(v.path + n, () => {})));
+    const dir = 'switch/' + (v.folder || 'SpiderMan2Xbox') + '/';
+    const blob = zip([
+      { name: 'switch/' }, { name: dir }, { name: dir + 'game/' },
+      { name: dir + 'SpiderMan2Xbox.nro', data: nro },
+      { name: dir + 'README.txt', data: readme },
+      { name: dir + 'LICENSES.txt', data: licenses },
+      { name: dir + 'game/PUT_YOUR_GAME_HERE.txt', data: gameReadme },
+    ]);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'SpiderMan2Xbox-SD.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    say(T('Done: SpiderMan2Xbox-SD.zip (port ' + v.version + ') is downloading. Now step 2.', 'Listo: se está descargando SpiderMan2Xbox-SD.zip (port ' + v.version + '). Ahora el paso 2.') + (v.folder ? T('\nIt goes in switch/' + v.folder + ', with your game in its game folder.', '\nVa en switch/' + v.folder + ', con tu juego en su carpeta game.') : ''), 'ok');
+  } catch (e) {
+    progress(null);
+    say(e instanceof Problem ? e.message : T('Something went wrong: ', 'Algo salió mal: ') + (e && e.message ? e.message : String(e)), 'err');
+  } finally {
+    makeBtn.disabled = !gameInput.files.length;
+  }
+});
+</script>
+</body>
+</html>
