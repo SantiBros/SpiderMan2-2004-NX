@@ -6,3 +6,6 @@ contact_links:
   - name: Ayuda de instalación y solución de problemas (español)
     url: https://github.com/SantiBros/SpiderMan2-2004-NX/blob/main/docs/INSTALL.es.md#solución-de-problemas
     about: Los problemas más comunes y cómo resolverlos.
+  - name: Support SantiBros on Ko-fi
+    url: https://ko-fi.com/santibros
+    about: Enjoying the port? You can support its development here.

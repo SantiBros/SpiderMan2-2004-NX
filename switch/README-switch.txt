@@ -155,3 +155,10 @@ builds them before you need them: leave it there (a new version of the port
 keeps it, and brings it up to date by itself). If the console had to be restarted, also send the newest
 files in sdmc:/atmosphere/crash_reports/ and sdmc:/atmosphere/fatal_reports/
 if they are from that time.
+
+
+Support
+-------
+
+The port is free. If you enjoy it, you can support its development at
+https://ko-fi.com/santibros
