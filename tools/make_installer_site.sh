@@ -6,7 +6,9 @@
 #   TREE=<an older version's checkout, built> bash tools/make_installer_site.sh <default.xbe> [out/site]
 #
 # The site keeps the versions: <site>/<version>/ holds that version's locked .nro and the text files of its SD card
-# folder, and versions.json lists the versions there, newest first, with their titles from installer/versions.json.
+# folder, and versions.json lists the versions there, newest first, with what installer/versions.json says of each:
+# its date and title, a warning (warn_en, warn_es) and the SD card folder it goes in (folder, SpiderMan2Xbox if not
+# given).
 # When the site folder doesn't exist yet it starts from what the gh-pages branch publishes, so the versions already
 # there stay. The .nro of build-switch/ (made with switch/build.sh, of this repository or of TREE) is locked with
 # default.xbe (tools/lock_nro.py) into its version's folder, replacing that version only; index.html is this
@@ -48,8 +50,7 @@ out, manifest, sha1 = sys.argv[1:4]
 titles = {e['version']: e for e in json.load(open(manifest, encoding='utf-8'))}
 key = lambda v: tuple(int(n) for n in re.findall(r'\d+', v))
 there = [d for d in os.listdir(out) if os.path.isfile(os.path.join(out, d, 'SpiderMan2Xbox.nro.locked'))]
-versions = [dict(version=v, path=v + '/', **{k: titles.get(v, {}).get(k, '') for k in ('date', 'en', 'es')})
-            for v in sorted(there, key=key, reverse=True)]
+versions = [dict(titles.get(v, {}), version=v, path=v + '/') for v in sorted(there, key=key, reverse=True)]
 with open(os.path.join(out, 'versions.json'), 'w', encoding='utf-8') as f:
     json.dump({'xbe_sha1': sha1, 'versions': versions}, f, ensure_ascii=False, indent=1)
 print('versions.json:', ', '.join(v['version'] for v in versions))

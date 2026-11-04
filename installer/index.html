@@ -33,6 +33,7 @@ input[type=file]::file-selector-button { background: var(--blue); color: #fff; b
 .ver { display: block; margin: 14px 0 0; font-weight: 600; font-size: .95rem; }
 select { display: block; width: 100%; margin-top: 6px; background: #0b0f1a; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; }
 #vernote { margin: 6px 0 0; }
+#vernote .warn { display: block; margin-top: 6px; border-left: 3px solid var(--warn); padding: 2px 10px; color: #f3e3b0; }
 .go { display: inline-block; width: 100%; margin-top: 14px; background: var(--red); color: #fff; border: 0; border-radius: 10px; padding: 14px; font: inherit; font-weight: 600; font-size: 1.05rem; cursor: pointer; }
 .go:disabled { background: #3a4058; color: #8b91a6; cursor: default; }
 .status { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #0b0f1a; border: 1px solid var(--line); font-size: .95rem; white-space: pre-line; display: none; }
@@ -362,6 +363,8 @@ function noteVersion() {
   if (v.date) verNote.append(v.date + ' · ');
   verNote.append(a);
   if (v !== meta.versions[0]) verNote.append(T('. An older version: the newer ones fix its known problems.', '. Una versión anterior: las más nuevas arreglan sus problemas conocidos.'));
+  const warn = T(v.warn_en, v.warn_es);
+  if (warn) { const w = document.createElement('span'); w.className = 'warn'; w.textContent = warn; verNote.append(w); }
 }
 const loadMeta = () => fetch('versions.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
   if (!m.versions || !m.versions.length) throw new Error('no versions');
@@ -398,7 +401,7 @@ makeBtn.addEventListener('click', async () => {
     try { nro = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: header.subarray(8, 20), additionalData: header }, key, locked.subarray(64))); }
     catch (e) { fail('The port could not be unlocked with this default.xbe.', 'No se pudo desbloquear el port con este default.xbe.'); }
     const [readme, gameReadme, licenses] = await Promise.all(['README.txt', 'PUT_YOUR_GAME_HERE.txt', 'LICENSES.txt'].map((n) => fetchBytes(v.path + n, () => {})));
-    const dir = 'switch/SpiderMan2Xbox/';
+    const dir = 'switch/' + (v.folder || 'SpiderMan2Xbox') + '/';
     const blob = zip([
       { name: 'switch/' }, { name: dir }, { name: dir + 'game/' },
       { name: dir + 'SpiderMan2Xbox.nro', data: nro },
@@ -410,7 +413,7 @@ makeBtn.addEventListener('click', async () => {
     a.href = URL.createObjectURL(blob); a.download = 'SpiderMan2Xbox-SD.zip';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-    say(T('Done: SpiderMan2Xbox-SD.zip (port ' + v.version + ') is downloading. Now step 2.', 'Listo: se está descargando SpiderMan2Xbox-SD.zip (port ' + v.version + '). Ahora el paso 2.'), 'ok');
+    say(T('Done: SpiderMan2Xbox-SD.zip (port ' + v.version + ') is downloading. Now step 2.', 'Listo: se está descargando SpiderMan2Xbox-SD.zip (port ' + v.version + '). Ahora el paso 2.') + (v.folder ? T('\nIt goes in switch/' + v.folder + ', with your game in its game folder.', '\nVa en switch/' + v.folder + ', con tu juego en su carpeta game.') : ''), 'ok');
   } catch (e) {
     progress(null);
     say(e instanceof Problem ? e.message : T('Something went wrong: ', 'Algo salió mal: ') + (e && e.message ? e.message : String(e)), 'err');
