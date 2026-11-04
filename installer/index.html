@@ -32,9 +32,17 @@ code { background: #0b0f1a; border: 1px solid var(--line); border-radius: 4px; p
 input[type=file] { width: 100%; color: var(--muted); font: inherit; }
 input[type=file]::file-selector-button { background: var(--blue); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; margin-right: 12px; font: inherit; cursor: pointer; }
 .ver { display: block; margin: 14px 0 0; font-weight: 600; font-size: .95rem; }
-select { display: block; width: 100%; margin-top: 6px; background: #0b0f1a; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; }
+select { display: block; width: 100%; margin-top: 6px; background: #0b0f1a; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: .95rem; }
 #vernote { margin: 6px 0 0; }
-#vernote .warn { display: block; margin-top: 6px; border-left: 3px solid var(--warn); padding: 2px 10px; color: #f3e3b0; }
+#vernote .warn { display: block; margin-top: 8px; border-left: 3px solid var(--warn); padding: 2px 10px; color: #f3e3b0; }
+#vernote .state { display: inline-block; margin: 2px 0 6px; padding: 2px 8px; border-radius: 6px; font-size: .85rem; font-weight: 600; }
+#vernote .state.rec { background: #123a20; color: #8fe0a5; border: 1px solid var(--ok); }
+#vernote .state.old { background: #1d2a52; color: #b9c8f5; border: 1px solid var(--blue); }
+#vernote .state.early { background: #3d2f08; color: #f3d27a; border: 1px solid var(--warn); }
+#vernote .title { display: block; color: var(--text); }
+#vernote ul.changes { margin: 4px 0 6px; padding-left: 20px; }
+#vernote ul.changes li { margin: 2px 0; }
+#vernote .when { display: block; }
 .go { display: inline-block; width: 100%; margin-top: 14px; background: var(--red); color: #fff; border: 0; border-radius: 10px; padding: 14px; font: inherit; font-weight: 600; font-size: 1.05rem; cursor: pointer; }
 .go:disabled { background: #3a4058; color: #8b91a6; cursor: default; }
 .status { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: #0b0f1a; border: 1px solid var(--line); font-size: .95rem; white-space: pre-line; display: none; }
@@ -353,32 +361,47 @@ const gameInput = document.getElementById('game'), makeBtn = document.getElement
 const verSel = document.getElementById('version'), verNote = document.getElementById('vernote');
 const RELEASES = 'https://github.com/SantiBros/SpiderMan2-2004-NX/releases/tag/v';
 const chosen = () => (meta ? meta.versions.find((v) => v.version === verSel.value) || meta.versions[0] : null);
+// each version's status: the newest is recommended, the early tests don't start on a Switch, the rest run on one
+// with the problems later versions fixed
+function status(v) {
+  if (v === meta.versions[0]) return { kind: 'rec', short: T('newest, recommended', 'la más reciente, recomendada'), long: T('Recommended: the newest version.', 'Recomendada: la versión más reciente.') };
+  if (v.early) return { kind: 'early', short: T('early test, doesn\'t start', 'prueba temprana, no arranca'), long: T('Early test: it doesn\'t get past its start on a Switch.', 'Prueba temprana: en una Switch no pasa de su arranque.') };
+  return { kind: 'old', short: T('runs, known problems', 'funciona, con problemas'), long: T('Runs on a Switch, with known problems that newer versions fix.', 'Funciona en una Switch, con problemas conocidos que arreglan las versiones más nuevas.') };
+}
 function showVersions() {
   if (!meta) return;
   const keep = verSel.value;
   verSel.textContent = '';
-  meta.versions.forEach((v, i) => {
+  for (const v of meta.versions) {
     const o = document.createElement('option');
     o.value = v.version;
-    o.textContent = v.version + (i === 0 ? T(' (newest)', ' (la más reciente)') : '');
+    o.textContent = v.version + ' · ' + status(v).short;
     verSel.appendChild(o);
-  });
+  }
   if (keep) verSel.value = keep;
   noteVersion();
 }
 function noteVersion() {
   const v = chosen();
   if (!v) return;
+  const st = status(v), el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
   verNote.textContent = '';
-  const a = document.createElement('a');
+  verNote.append(el('span', 'state ' + st.kind, st.long));
+  if (v[L.lang]) verNote.append(el('b', 'title', v[L.lang]));
+  const changes = v['changes_' + L.lang] || [];
+  if (changes.length) {
+    const ul = el('ul', 'changes');
+    for (const c of changes) ul.append(el('li', '', c));
+    verNote.append(ul);
+  }
+  const a = el('a', '', T('All of ' + v.version + '\'s notes', 'Todas las notas de la ' + v.version));
   a.href = RELEASES + v.version; a.target = '_blank'; a.rel = 'noopener';
-  a.textContent = T('What\'s in ' + v.version, 'Qué trae la ' + v.version);
-  if (v[L.lang]) { const b = document.createElement('b'); b.textContent = v[L.lang]; verNote.append(b, document.createElement('br')); }
-  if (v.date) verNote.append(v.date + ' · ');
-  verNote.append(a);
-  if (v !== meta.versions[0]) verNote.append(T('. An older version: the newer ones fix its known problems.', '. Una versión anterior: las más nuevas arreglan sus problemas conocidos.'));
+  const line = el('span', 'when');
+  if (v.date) line.append(v.date + ' · ');
+  line.append(a);
+  verNote.append(line);
   const warn = T(v.warn_en, v.warn_es);
-  if (warn) { const w = document.createElement('span'); w.className = 'warn'; w.textContent = warn; verNote.append(w); }
+  if (warn) verNote.append(el('span', 'warn', T('Watch out: ', 'Atención: ') + warn));
 }
 const loadMeta = () => fetch('versions.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
   if (!m.versions || !m.versions.length) throw new Error('no versions');

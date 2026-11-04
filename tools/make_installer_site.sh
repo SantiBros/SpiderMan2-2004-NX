@@ -7,8 +7,9 @@
 #
 # The site keeps the versions: <site>/<version>/ holds that version's locked .nro and the text files of its SD card
 # folder, and versions.json lists the versions there, newest first, with what installer/versions.json says of each:
-# its date and title, a warning (warn_en, warn_es) and the SD card folder it goes in (folder, SpiderMan2Xbox if not
-# given).
+# its date and title, its main changes (changes_en, changes_es), a warning (warn_en, warn_es), whether it is an early
+# test that doesn't start on a Switch (early) and the SD card folder it goes in (folder, SpiderMan2Xbox if not given).
+# The page marks the newest one recommended.
 # When the site folder doesn't exist yet it starts from what the gh-pages branch publishes, so the versions already
 # there stay. The .nro of build-switch/ (made with switch/build.sh, of this repository or of TREE) is locked with
 # default.xbe (tools/lock_nro.py) into its version's folder, replacing that version only; index.html is this
