@@ -19,8 +19,11 @@ swing through New York.
 ![Original Xbox, 2004](https://img.shields.io/badge/original%20Xbox-2004-1c2233?style=for-the-badge)
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
 [![License: MIT](https://img.shields.io/badge/license-MIT-1c2233?style=for-the-badge)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support%20the%20port-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/S4I32A0WMU)
 
 **[⬇ Installer page](https://santibros.github.io/SpiderMan2-2004-NX/)** · [Install](#how-to-install) · [Controls](#controls) · [Debug menu](#debug-menu) · [Status](#status) · [FAQ](#faq) · [Troubleshooting](docs/INSTALL.md#troubleshooting) · [Changelog](CHANGELOG.md) · [How it works](docs/TECHNICAL.md)
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S4I32A0WMU)
 
 </div>
 

@@ -19,8 +19,11 @@ en tu móvil) y balancéate por Nueva York.
 ![Xbox original, 2004](https://img.shields.io/badge/Xbox%20original-2004-1c2233?style=for-the-badge)
 ![Atmosphère](https://img.shields.io/badge/CFW-Atmosph%C3%A8re-1c2233?style=for-the-badge)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-1c2233?style=for-the-badge)](LICENSE)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-apoya%20el%20port-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/S4I32A0WMU)
 
 **[⬇ Página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)** · [Instalar](#cómo-instalar) · [Controles](#controles) · [Menú de depuración](#menú-de-depuración) · [Estado](#estado) · [Preguntas frecuentes](#preguntas-frecuentes) · [Solución de problemas](docs/INSTALL.es.md#solución-de-problemas) · [Cambios](CHANGELOG.md) · [Cómo funciona](docs/TECHNICAL.md)
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S4I32A0WMU)
 
 </div>
 
