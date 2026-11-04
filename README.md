@@ -573,6 +573,12 @@ The result is `build-switch/SpiderMan2Xbox.nro`, laid out for the SD card in `ou
 [docs/BUILDING.md](docs/BUILDING.md) has the details, the tools used for development, the tests, and
 how a release is made.
 
+## Support
+
+If you enjoy this port, you can support my work on Ko-fi. It helps me keep updating my ports and make new ones!
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S4I32A0WMU)
+
 ## Credits
 
 Standing on the shoulders of others:
