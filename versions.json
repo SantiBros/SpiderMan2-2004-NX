@@ -1,11 +1,40 @@
 {
  "xbe_sha1": "853bcb253c5baea2d7e2d9b59e5888b4c87bb402",
+ "xbe_code": "b3d6d36a707840a9dcc047f0302b41edc61dfee2",
  "versions": [
+  {
+   "version": "0.4.0",
+   "date": "2026-11-12",
+   "en": "Updates from inside the port, voices in another language, European editions, a closer 16:9, the Switch's button layout",
+   "es": "Actualizaciones desde el port, voces en otro idioma, ediciones europeas, un 16:9 más cercano, la disposición de botones de la Switch",
+   "changes_en": [
+    "Update, in the debug menu: downloads the newest version from its GitHub release and installs it, unlocked with your game",
+    "Voices, in the debug menu: their own language, from the ones your copy has (European discs: French, German and Spanish, or Italian)",
+    "European editions accepted when their game code is the US one's, here and on the Switch",
+    "16:9, close view: Spider-Man and the city a third bigger, the HUD a tenth bigger",
+    "Buttons: the Switch layout maps by letter (A is A, B is B); the Xbox layout by position stays the default",
+    "Italian text fixed (it showed French)",
+    "16:9: the letterboxed cutscenes fill the screen's width, and the minimap's pins sit on the map again"
+   ],
+   "changes_es": [
+    "Update, en el menú de depuración: descarga la versión más reciente desde su release en GitHub y la instala, desbloqueada con tu juego",
+    "Voices, en el menú de depuración: su propio idioma, entre los que tenga tu copia (discos europeos: francés, alemán y español, o italiano)",
+    "Se aceptan las ediciones europeas cuyo código de juego sea el de la de EE. UU., aquí y en la Switch",
+    "16:9, vista cercana: Spider-Man y la ciudad un tercio más grandes, el HUD un décimo más grande",
+    "Buttons: la disposición de la Switch asigna por letra (A es A, B es B); la de la Xbox, por posición, sigue siendo la predeterminada",
+    "Texto en italiano arreglado (salía en francés)",
+    "16:9: las cinemáticas con franjas de cine llenan el ancho de la pantalla, y los marcadores del minimapa vuelven a estar sobre el mapa"
+   ],
+   "path": "0.4.0/",
+   "lock": 2
+  },
   {
    "version": "0.3.1",
    "date": "2026-11-03",
    "en": "Smoother than 0.3.0, and a 2000s CRT TV",
    "es": "Más fluida que la 0.3.0, y un televisor CRT de los 2000",
+   "warn_en": "In 16:9 the minimap's pins sit beside the map (fixed in 0.4.0).",
+   "warn_es": "En 16:9 los marcadores del minimapa quedan al lado del mapa (arreglado en la 0.4.0).",
    "changes_en": [
     "Smoother than 0.3.0: no more pauses of up to 2 seconds while graphics effects (shaders) were prepared, because the shader list is kept",
     "A graphics measurement taken every frame is gone",
@@ -20,15 +49,16 @@
     "Nueva decoración para el 4:3: un televisor CRT de los 2000 (plateado, altavoces estéreo, entradas A/V)",
     "Los lados difuminados se hacen otra vez como en la 0.2.3"
    ],
-   "path": "0.3.1/"
+   "path": "0.3.1/",
+   "lock": 1
   },
   {
    "version": "0.3.0",
    "date": "2026-11-03",
    "en": "Install from your phone, 16:9 map fixed, CRT filter",
    "es": "Instalación desde el móvil, el mapa en 16:9 arreglado, filtro CRT",
-   "warn_en": "It pauses for up to 2 seconds at a time while it prepares graphics effects (fixed in 0.3.1).",
-   "warn_es": "Se detiene hasta 2 segundos seguidos mientras prepara efectos gráficos (arreglado en la 0.3.1).",
+   "warn_en": "It pauses for up to 2 seconds at a time while it prepares graphics effects (fixed in 0.3.1). In 16:9 the minimap's pins sit beside the map (fixed in 0.4.0).",
+   "warn_es": "Se detiene hasta 2 segundos seguidos mientras prepara efectos gráficos (arreglado en la 0.3.1). En 16:9 los marcadores del minimapa quedan al lado del mapa (arreglado en la 0.4.0).",
    "changes_en": [
     "This installer page: install from your phone or computer, without building anything",
     "The 16:9 city map fixed: Spider-Man's marker, the stars and the $ icons sit in their places",
@@ -43,13 +73,16 @@
     "Nueva decoración para el 4:3: un televisor CRT antiguo de madera",
     "Lados difuminados más ligeros a 720p y 1080p"
    ],
-   "path": "0.3.0/"
+   "path": "0.3.0/",
+   "lock": 1
   },
   {
    "version": "0.2.3",
    "date": "2026-10-24",
    "en": "Saved games load, and the 16:9 freezes fixed",
    "es": "Las partidas guardadas cargan, y los bloqueos en 16:9 arreglados",
+   "warn_en": "In 16:9 the minimap's pins sit beside the map (fixed in 0.4.0).",
+   "warn_es": "En 16:9 los marcadores del minimapa quedan al lado del mapa (arreglado en la 0.4.0).",
    "changes_en": [
     "Saved games load (before, loading always failed and the game started over)",
     "A copy of your saves in sdmc:/config/SpiderMan2Xbox/save/, just in case",
@@ -62,15 +95,16 @@
     "El juego nunca espera a la tarjeta SD por culpa del registro",
     "Un cierre inesperado conserva las últimas líneas del registro"
    ],
-   "path": "0.2.3/"
+   "path": "0.2.3/",
+   "lock": 1
   },
   {
    "version": "0.2.2",
    "date": "2026-10-23",
    "en": "The 16:9 slowdown fixed, and suit-coloured 4:3 sides",
    "es": "La lentitud en 16:9 arreglada, y lados 4:3 con los colores del traje",
-   "warn_en": "Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
-   "warn_es": "Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "warn_en": "Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it. In 16:9 the minimap's pins sit beside the map (fixed in 0.4.0).",
+   "warn_es": "Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla. En 16:9 los marcadores del minimapa quedan al lado del mapa (arreglado en la 0.4.0).",
    "changes_en": [
     "The 16:9 slowdown fixed: 16:9 no longer writes to the SD card every frame",
     "No log line makes the game wait for the SD card any more",
@@ -83,15 +117,16 @@
     "Nueva decoración para el 4:3: suit sides, la telaraña con los colores del traje",
     "La ayuda de Texture filtering avisa que el filtrado anisotrópico pesa mucho en la ciudad"
    ],
-   "path": "0.2.2/"
+   "path": "0.2.2/",
+   "lock": 1
   },
   {
    "version": "0.2.1",
    "date": "2026-10-23",
    "en": "Faster: all three cores, Auto clocks, lighter 16:9 and 720p/1080p",
    "es": "Más rápida: los tres núcleos, relojes en Auto, 16:9 y 720p/1080p más ligeros",
-   "warn_en": "Slow, above all in 16:9 (fixed in 0.2.2). Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
-   "warn_es": "Lenta, sobre todo en 16:9 (arreglado en la 0.2.2). Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "warn_en": "Slow, above all in 16:9 (fixed in 0.2.2). Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it. In 16:9 the minimap's pins sit beside the map (fixed in 0.4.0).",
+   "warn_es": "Lenta, sobre todo en 16:9 (arreglado en la 0.2.2). Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla. En 16:9 los marcadores del minimapa quedan al lado del mapa (arreglado en la 0.4.0).",
    "changes_en": [
     "The renderer and the sound start on cores of their own",
     "Auto clocks, the new default: the GPU clock follows the picture",
@@ -106,15 +141,16 @@
     "720p y 1080p solo agrandan la imagen principal; en modo portátil, 1080p dibuja 720p",
     "Se conservan los shaders preparados con la 0.2.0"
    ],
-   "path": "0.2.1/"
+   "path": "0.2.1/",
+   "lock": 1
   },
   {
    "version": "0.2.0",
    "date": "2026-10-23",
    "en": "720p/1080p, full screen 16:9 and vibration",
    "es": "720p/1080p, 16:9 a pantalla completa y vibración",
-   "warn_en": "Slow, above all in 16:9 (fixed in 0.2.2). Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it.",
-   "warn_es": "Lenta, sobre todo en 16:9 (arreglado en la 0.2.2). Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla.",
+   "warn_en": "Slow, above all in 16:9 (fixed in 0.2.2). Saved games don't load in this version (fixed in 0.2.3): back up your save folder before trying it. In 16:9 the minimap's pins sit beside the map (fixed in 0.4.0).",
+   "warn_es": "Lenta, sobre todo en 16:9 (arreglado en la 0.2.2). Las partidas guardadas no cargan en esta versión (arreglado en la 0.2.3): haz una copia de tu carpeta save antes de probarla. En 16:9 los marcadores del minimapa quedan al lado del mapa (arreglado en la 0.4.0).",
    "changes_en": [
     "720p or 1080p",
     "Full screen 16:9, nothing stretched: more of the city at the sides",
@@ -129,7 +165,8 @@
     "Escalado más nítido y filtrado anisotrópico",
     "Vibración, en los Joy-Con o un Pro Controller"
    ],
-   "path": "0.2.0/"
+   "path": "0.2.0/",
+   "lock": 1
   },
   {
    "version": "0.1.0",
@@ -152,7 +189,8 @@
     "Más rápido: un 14% menos de tiempo de procesador por imagen para el juego",
     "Las partidas en su propia carpeta (save/), un ícono nuevo y un compilador para Windows"
    ],
-   "path": "0.1.0/"
+   "path": "0.1.0/",
+   "lock": 1
   },
   {
    "version": "0.0.10",
@@ -171,7 +209,8 @@
     "Un cierre inesperado menos: faltaba una función del sistema que el juego usa para consultar una unidad",
     "Todo lo de la 0.0.9"
    ],
-   "path": "0.0.10/"
+   "path": "0.0.10/",
+   "lock": 1
   },
   {
    "version": "0.0.9",
@@ -192,7 +231,8 @@
     "Las sombras de los edificios caen donde deben, y la mitad de la pantalla ya no se oscurece",
     "Menos tirones la segunda vez: los shaders se guardan en una lista"
    ],
-   "path": "0.0.9/"
+   "path": "0.0.9/",
+   "lock": 1
   },
   {
    "version": "0.0.8",
@@ -213,7 +253,8 @@
     "Un hilo de renderizado: el trabajo gráfico va junto al juego, en otro núcleo",
     "Spider-Man se dibuja mientras juegas, y el cielo de la cinemática inicial está arreglado"
    ],
-   "path": "0.0.8/"
+   "path": "0.0.8/",
+   "lock": 1
   }
  ]
 }

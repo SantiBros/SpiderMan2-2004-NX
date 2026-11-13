@@ -81,13 +81,13 @@ a { color: #8fb0ff; }
 
   <section class="panel">
     <h2><span class="num">1</span><span class="en">Choose your game</span><span class="es">Elige tu juego</span></h2>
-    <p class="en">Your own <b>Spider-Man 2 for the original Xbox</b> (not the PS2, GameCube or PC one). Choose <b>one</b> of these:</p>
+    <p class="en">Your own <b>Spider-Man 2 for the original Xbox</b> (not the PS2, GameCube or PC one): the US edition or, from port 0.4.0 on, a European one whose game code is the same as the US one's (this page checks it). Choose <b>one</b> of these:</p>
     <ul class="kinds en">
       <li><b>A disc image</b>, one file: <code>.iso</code> (an Xbox ISO or a full disc dump), <code>.xiso</code>, <code>.cci</code> or <code>.cso</code>.</li>
       <li><b>A split disc image:</b> choose <b>all</b> its parts at once, for example <code>name.1.iso</code> and <code>name.2.iso</code>, or <code>name.1.cci</code> and <code>name.2.cci</code>.</li>
       <li><b>The game's files</b> instead of an image: choose only <code>default.xbe</code>, from the folder that also has the <code>data</code> folder.</li>
     </ul>
-    <p class="es">Tu propio <b>Spider-Man 2 para la Xbox original</b> (no el de PS2, GameCube ni PC). Elige <b>una</b> de estas opciones:</p>
+    <p class="es">Tu propio <b>Spider-Man 2 para la Xbox original</b> (no el de PS2, GameCube ni PC): la edición de EE. UU. o, desde el port 0.4.0, una europea cuyo código de juego sea el mismo que el de la de EE. UU. (esta página lo comprueba). Elige <b>una</b> de estas opciones:</p>
     <ul class="kinds es">
       <li><b>Una imagen de disco</b>, un solo archivo: <code>.iso</code> (una ISO de Xbox o una copia completa del disco), <code>.xiso</code>, <code>.cci</code> o <code>.cso</code>.</li>
       <li><b>Una imagen de disco dividida:</b> elige <b>todas</b> sus partes a la vez, por ejemplo <code>nombre.1.iso</code> y <code>nombre.2.iso</code>, o <code>nombre.1.cci</code> y <code>nombre.2.cci</code>.</li>
@@ -343,6 +343,40 @@ function zip(entries) {
 }
 
 // ---- the build ----
+// the xbe's game code, as sdk/runtime/xbe/code.h makes it: each section it loads (not those inserted as files: flag 8)
+// with its address and sizes, then the entry point and the kernel imports' address. The same in every edition built
+// from the same code; a port locked with version 2 opens with it (tools/lock_nro.py).
+function codeBytes(x) {
+  if (x.length < 0x178 || x[0] !== 0x58 || x[1] !== 0x42 || x[2] !== 0x45 || x[3] !== 0x48) return null;
+  const d = new DataView(x.buffer, x.byteOffset, x.byteLength), u = (a) => d.getUint32(a, true);
+  const base = u(0x104), count = u(0x11C), headers = u(0x120), parts = [];
+  for (let i = 0; i < count; i++) {
+    const at = headers - base + i * 56, flags = u(at), raw = u(at + 12), rsize = u(at + 16);
+    if (flags & 8) continue;
+    const head = new Uint8Array(12), h = new DataView(head.buffer);
+    h.setUint32(0, u(at + 4), true); h.setUint32(4, u(at + 8), true); h.setUint32(8, rsize, true);
+    parts.push(head, x.subarray(raw, raw + rsize));
+  }
+  const tail = new Uint8Array(8), t = new DataView(tail.buffer);
+  t.setUint32(0, (u(0x128) ^ 0xA8FC57AB) >>> 0, true); t.setUint32(4, (u(0x158) ^ 0x5B6D40B6) >>> 0, true);
+  parts.push(tail);
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+// the certificate's game regions
+function regions(x) {
+  const d = new DataView(x.buffer, x.byteOffset, x.byteLength), cert = d.getUint32(0x118, true) - d.getUint32(0x104, true);
+  if (cert < 0 || cert + 0xA4 > x.length) return '?';
+  const r = d.getUint32(cert + 0xA0, true), n = [];
+  if (r & 1) n.push(T('North America', 'Norteamérica'));
+  if (r & 2) n.push(T('Japan', 'Japón'));
+  if (r & 4) n.push(T('Europe and the rest of the world', 'Europa y el resto del mundo'));
+  return n.join(', ') || '?';
+}
+const hex = async (algo, b) => [...new Uint8Array(await crypto.subtle.digest(algo, b))].map((v) => v.toString(16).padStart(2, '0')).join('');
+
 async function fetchBytes(url, onProgress) {
   const r = await fetch(url, { cache: 'no-cache' });
   if (!r.ok) fail('Could not download ' + url + ' (' + r.status + ').', 'No se pudo descargar ' + url + ' (' + r.status + ').');
@@ -402,6 +436,7 @@ function noteVersion() {
   verNote.append(line);
   const warn = T(v.warn_en, v.warn_es);
   if (warn) verNote.append(el('span', 'warn', T('Watch out: ', 'Atención: ') + warn));
+  if (meta.xbe_code && (v.lock || 1) < 2) verNote.append(el('span', 'when', T('Opens only with the US edition\'s default.xbe (other editions: 0.4.0 or later).', 'Solo abre con el default.xbe de la edición de EE. UU. (otras ediciones: la 0.4.0 o posterior).')));
 }
 const loadMeta = () => fetch('versions.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
   if (!m.versions || !m.versions.length) throw new Error('no versions');
@@ -424,16 +459,22 @@ makeBtn.addEventListener('click', async () => {
     const v = chosen();
     say(T('Reading default.xbe from your game…', 'Leyendo default.xbe de tu juego…'));
     const xbe = await readXbe([...gameInput.files]);
-    const sha1 = [...new Uint8Array(await crypto.subtle.digest('SHA-1', xbe))].map((b) => b.toString(16).padStart(2, '0')).join('');
-    if (sha1 !== meta.xbe_sha1) fail('This default.xbe is not the release the port supports.\nSupported: Spider-Man 2 for the original Xbox, default.xbe SHA-1 ' + meta.xbe_sha1 + '\nYours: ' + sha1, 'Este default.xbe no es la edición que el port admite.\nAdmitida: Spider-Man 2 para la Xbox original, default.xbe con SHA-1 ' + meta.xbe_sha1 + '\nEl tuyo: ' + sha1);
-    say(T('Your game is the supported release. Downloading the locked port ' + v.version + '…', 'Tu juego es la edición admitida. Descargando el port bloqueado ' + v.version + '…'));
+    const sha1 = await hex('SHA-1', xbe), code = codeBytes(xbe), codeSha1 = code ? await hex('SHA-1', code) : '';
+    const same = sha1 === meta.xbe_sha1, edition = !same && !!meta.xbe_code && codeSha1 === meta.xbe_code;
+    if (!same && !edition) fail('This default.xbe is not an edition the port supports: its game code is another.\nSupported: Spider-Man 2 for the original Xbox, default.xbe SHA-1 ' + meta.xbe_sha1 + (meta.xbe_code ? ' (game code ' + meta.xbe_code + ')' : '') + '\nYours: ' + sha1 + (code ? ' (game code ' + codeSha1 + ', ' + regions(xbe) + ')' : ''), 'Este default.xbe no es una edición que el port admita: su código de juego es otro.\nAdmitida: Spider-Man 2 para la Xbox original, default.xbe con SHA-1 ' + meta.xbe_sha1 + (meta.xbe_code ? ' (código de juego ' + meta.xbe_code + ')' : '') + '\nEl tuyo: ' + sha1 + (code ? ' (código de juego ' + codeSha1 + ', ' + regions(xbe) + ')' : ''));
+    if (edition && (v.lock || 1) < 2) fail('Your game is another edition (' + regions(xbe) + ') with the supported game code, which the port opens from version 0.4.0 on. Version ' + v.version + ' only opens with the US default.xbe: choose 0.4.0 or later.', 'Tu juego es otra edición (' + regions(xbe) + ') con el código de juego admitido, que el port abre desde la versión 0.4.0. La versión ' + v.version + ' solo abre con el default.xbe de EE. UU.: elige la 0.4.0 o una posterior.');
+    say(same ? T('Your game is the supported release. Downloading the locked port ' + v.version + '…', 'Tu juego es la edición admitida. Descargando el port bloqueado ' + v.version + '…')
+      : T('Your game is another edition (' + regions(xbe) + ') with the supported game code. Downloading the locked port ' + v.version + '…', 'Tu juego es otra edición (' + regions(xbe) + ') con el código de juego admitido. Descargando el port bloqueado ' + v.version + '…'));
     const locked = await fetchBytes(v.path + 'SpiderMan2Xbox.nro.locked', progress);
     progress(null);
     say(T('Unlocking the port with your default.xbe…', 'Desbloqueando el port con tu default.xbe…'));
-    const label = new TextEncoder().encode('SpiderMan2-2004-NX lock 1\0'), material = new Uint8Array(label.length + xbe.length);
-    material.set(label); material.set(xbe, label.length);
+    // version 1 (up to 0.3.1): the key from the whole default.xbe; 2: from its game code
+    const header = locked.subarray(0, 64), version = String.fromCharCode(...header.subarray(0, 8)) === 'SM2NXLK2' ? 2 : 1;
+    const label = new TextEncoder().encode('SpiderMan2-2004-NX lock ' + version + '\0'), from = version === 2 ? code : xbe;
+    if (!from) fail('This default.xbe can\'t be read.', 'Este default.xbe no se puede leer.');
+    const material = new Uint8Array(label.length + from.length);
+    material.set(label); material.set(from, label.length);
     const key = await crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', material), 'AES-GCM', false, ['decrypt']);
-    const header = locked.subarray(0, 64);
     let nro;
     try { nro = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: header.subarray(8, 20), additionalData: header }, key, locked.subarray(64))); }
     catch (e) { fail('The port could not be unlocked with this default.xbe.', 'No se pudo desbloquear el port con este default.xbe.'); }
