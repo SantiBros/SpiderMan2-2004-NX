@@ -1,7 +1,32 @@
 {
  "xbe_sha1": "853bcb253c5baea2d7e2d9b59e5888b4c87bb402",
  "xbe_code": "b3d6d36a707840a9dcc047f0302b41edc61dfee2",
+ "editions": [
+  {
+   "file": "europe-fr-de-es.patch",
+   "name": "European French, German and Spanish",
+   "name_es": "europea en francés, alemán y español",
+   "from": "0.4.1",
+   "sha1": "ad4f0d360fc5a1869005331fe50f54a711426029",
+   "code": "bb124f8bc899bc6e23006a0141d304e79edde78e",
+   "path": "editions/europe-fr-de-es.patch.locked"
+  }
+ ],
  "versions": [
+  {
+   "version": "0.4.1",
+   "date": "2026-11-13",
+   "en": "The European French, German and Spanish disc",
+   "es": "El disco europeo en francés, alemán y español",
+   "changes_en": [
+    "The European French, German and Spanish edition (\"Europe (Fr,De,Es)\") works: its voices, its movies and every text language"
+   ],
+   "changes_es": [
+    "Funciona la edición europea en francés, alemán y español (\"Europe (Fr,De,Es)\"): sus voces, sus películas y todos los idiomas de texto"
+   ],
+   "path": "0.4.1/",
+   "lock": 2
+  },
   {
    "version": "0.4.0",
    "date": "2026-11-12",
