@@ -7,6 +7,7 @@
 #include "core/log.h"
 #include "cpu/x86_context.h"
 #include "kernel/crypto.h"
+#include "xbe/code.h"
 #include "xbe/xbe.h"
 
 namespace kernel {
@@ -48,15 +49,34 @@ std::string Title(const xbe::Image& x) {
     return t;
 }
 
-void Describe(GameCopy& c, const std::string& sha1) {
+// the certificate's game regions (+0xA0)
+std::string Regions(uint32_t r) {
+    std::string s;
+    auto add = [&](const char* n) { s += std::string(s.empty() ? "" : ", ") + n; };
+    if (r & 1) add("North America");
+    if (r & 2) add("Japan");
+    if (r & 4) add("Europe and the rest of the world");
+    if (r & 0x80000000u) add("manufacturing");
+    return s.empty() ? "none" : s;
+}
+
+void Describe(GameCopy& c, const std::string& sha1, const std::string& code) {
     c.sha1 = Sha1Hex(c.xbe.data(), c.xbe.size());
-    c.same_release = c.sha1 == Lower(sha1);
+    std::vector<uint8_t> bytes;
+    if (xbe::CodeBytes(c.xbe, bytes)) c.code = Sha1Hex(bytes.data(), bytes.size());
+    const bool same_xbe = c.sha1 == Lower(sha1);
+    c.other_edition = !same_xbe && !code.empty() && c.code == Lower(code);
+    c.same_release = same_xbe || c.other_edition;
     xbe::Image x;
     std::string error;
     if (x.Parse(c.xbe, error)) {
         c.title_id = x.title_id;
         c.title = Title(x);
         c.same_entry = x.entry == X86EntryPoint;
+        if (x.cert >= x.base && size_t(x.cert - x.base) + 0xB0 <= c.xbe.size()) {
+            c.regions = Regions(x.U32(x.cert - x.base + 0xA0));
+            c.version = x.U32(x.cert - x.base + 0xAC);
+        }
     }
 }
 
@@ -90,7 +110,8 @@ std::string Sha1Hex(const uint8_t* data, size_t n) {
     return hex;
 }
 
-GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_name, const std::string& sha1) {
+GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_name, const std::string& sha1,
+                          const std::string& code) {
     GameSearch out;
     std::vector<fs::path> seen;
     for (const fs::path& dir : folders) {
@@ -108,7 +129,7 @@ GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_
                 c.folder = dir;
                 c.name = dir.filename().string();
                 c.kind = "folder";
-                Describe(c, sha1);
+                Describe(c, sha1, code);
                 out.copies.push_back(std::move(c));
             }
         }
@@ -141,7 +162,7 @@ GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_
             c.folder = dir;
             c.name = name;
             c.kind = c.disc->Kind();
-            Describe(c, sha1);
+            Describe(c, sha1, code);
             out.copies.push_back(std::move(c));
         }
     }
@@ -149,8 +170,12 @@ GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_
         return a.same_release != b.same_release ? a.same_release : a.same_entry && !b.same_entry;
     });
     for (const GameCopy& c : out.copies)
-        LOGI("game: %s (%s), %s %s, title %08X \"%s\"%s", c.name.c_str(), c.kind.c_str(), xbe_name, c.sha1.c_str(), c.title_id,
-             c.title.c_str(), c.same_release ? "" : c.same_entry ? ", another release" : ", another game or version");
+        LOGI("game: %s (%s), %s %s, game code %s, title %08X \"%s\" version %u, regions %s%s", c.name.c_str(), c.kind.c_str(), xbe_name,
+             c.sha1.c_str(), c.code.c_str(), c.title_id, c.title.c_str(), c.version, c.regions.c_str(),
+             c.other_edition  ? ", another edition of the same game code"
+             : c.same_release ? ""
+             : c.same_entry   ? ", another release"
+                              : ", another game or version");
     for (const std::string& s : out.skipped) LOGW("game: %s", s.c_str());
     return out;
 }

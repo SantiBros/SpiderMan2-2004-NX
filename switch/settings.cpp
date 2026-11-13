@@ -52,6 +52,7 @@ const char* ScreenKey(Screen v) {
         case Screen::Tv: return "4:3-tv";
         case Screen::Tv2000: return "4:3-tv2000";
         case Screen::Wide: return "16:9";
+        case Screen::WideClose: return "16:9-close";
         default: return "4:3";
     }
 }
@@ -97,11 +98,14 @@ void LoadSettings() {
         if (k == "language") {
             for (const Lang& l : kLanguages)
                 if (v == l.key) s.language = l.code;
+        } else if (k == "voices") {
+            for (const Lang& l : kLanguages)
+                if (v == l.key) s.voices = l.code;
         } else if (k == "resolution") {
             int n = std::atoi(v.c_str());
             if (n == 480 || n == 720 || n == 1080) s.resolution = uint32_t(n);
         } else if (k == "screen") {
-            s.screen = v == "16:9" ? Screen::Wide : v == "4:3-blur" ? Screen::Blur : v == "4:3-web" ? Screen::Web
+            s.screen = v == "16:9" ? Screen::Wide : v == "16:9-close" ? Screen::WideClose : v == "4:3-blur" ? Screen::Blur : v == "4:3-web" ? Screen::Web
                                                                                         : v == "4:3-suit" ? Screen::Suit
                                                                                         : v == "4:3-tv"   ? Screen::Tv
                                                                                         : v == "4:3-tv2000" ? Screen::Tv2000 : Screen::Black;
@@ -113,6 +117,8 @@ void LoadSettings() {
             int n = std::atoi(v.c_str());
             if (n == 2 || n == 4 || n == 8 || n == 16) s.anisotropy = uint32_t(n);
             else if (v == "off") s.anisotropy = 1;
+        } else if (k == "buttons") {
+            s.buttons = v == "switch" ? Buttons::Switch : Buttons::Xbox;
         } else if (k == "rumble") {
             s.rumble = v == "off" ? Rumble::Off : v == "low" ? Rumble::Low : v == "high" ? Rumble::High : Rumble::Medium;
         } else if (k == "settings") {
@@ -152,21 +158,26 @@ void LoadSettings() {
 void SaveSettings() {
     const Settings& s = g_now;
     const char* lang = "auto";
-    for (const Lang& l : kLanguages)
+    const char* voices = "auto";
+    for (const Lang& l : kLanguages) {
         if (s.language == l.code) lang = l.key;
+        if (s.voices == l.code) voices = l.key;
+    }
     std::ostringstream o;
     o << "# Spider-Man 2 (Xbox) for Switch: the port's settings, changed in its debug menu (hold ZL + ZR, press -).\n"
          "# Delete this file to go back to the recommended settings.\n"
       << "settings=2\n"
       << "language=" << lang << "        # auto (the console's), en, es, fr, de, it\n"
+      << "voices=" << voices << "          # auto (the language's, if your copy has them), en, es, fr, de, it\n"
       << "resolution=" << s.resolution << "p" << (s.resolution < 1000 ? "      " : "     ")
       << "# 480p (the console's), 720p, 1080p\n"
-      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 4:3-suit, 4:3-tv2000, 4:3-tv (70s), 16:9\n"
+      << "screen=" << ScreenKey(s.screen) << "    # 4:3, 4:3-blur, 4:3-web, 4:3-suit, 4:3-tv2000, 4:3-tv (70s), 16:9, 16:9-close\n"
       << "upscaling=" << (s.sharp ? "sharp" : "smooth") << "  # smooth, sharp\n"
       << "crt=" << (s.crt == Crt::Light ? "light " : s.crt == Crt::Strong ? "strong" : "off   ") << "       # the CRT filter: off, light, strong\n"
       << "anisotropic=" << (s.anisotropy > 1 ? std::to_string(s.anisotropy) + "x" : std::string("off"))
       << "   # texture filtering: off, 2x, 4x, 8x, 16x\n"
       << "rumble=" << RumbleKey(s.rumble) << "      # off, low, medium, high\n"
+      << "buttons=" << (s.buttons == Buttons::Switch ? "switch" : "xbox  ") << "      # xbox (by position, as the Xbox's), switch (by letter)\n"
       << "cpu_clock=" << Mhz(s.cpu_hz) << "      # auto, stock, or MHz\n"
       << "gpu_clock=" << Mhz(s.gpu_hz) << "\n"
       << "memory_clock=" << Mhz(s.mem_hz) << "\n"

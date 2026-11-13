@@ -110,6 +110,8 @@ Mode Output() {
     return Desktop();
 }
 
+bool WideClose() { return false; }
+
 bool Widescreen() {
     // asked per frame and per HUD quad: the desktop mode lookup only runs when the resolution setting changes
     static std::atomic<uint64_t> key{~0ull};

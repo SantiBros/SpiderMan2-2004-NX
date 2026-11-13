@@ -20,6 +20,8 @@ struct Picture {
     // the game's own 16:9 picture (src/game/widescreen.cpp): shown 16:9 across the screen, drawn wider when scaled,
     // what it draws flat (HUD, menus, text, movies) kept 4:3 in the middle
     bool wide = false;
+    // in it, what is drawn flat this much bigger (the close view's HUD and menus: 1.1), but movies
+    float hud = 1.0f;
     // a 4:3 picture's sides: black, the picture blurred, or a pattern; Suit: the web in the suit's colours; Tv: a 70s
     // CRT television's cabinet and controls, the picture with a tube's rounded corners and scanlines; Tv2000: a 2000s
     // one, silver, with stereo speakers and A/V inputs, its tube flat-faced

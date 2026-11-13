@@ -21,7 +21,11 @@ struct GameCopy {
     std::string sha1;              // of the xbe, lower case hex
     std::string title;             // the xbe's title
     uint32_t title_id = 0;
-    bool same_release = false;  // the xbe this build was recompiled from
+    std::string code;              // the SHA-1 of its game code (xbe/code.h), lower case hex
+    std::string regions;           // the certificate's: "North America", "Europe and the rest of the world", ...
+    uint32_t version = 0;          // the certificate's
+    bool same_release = false;  // the game code this build was recompiled from: its xbe, or another edition's of it
+    bool other_edition = false; // that code in another edition's xbe (another header and certificate)
     bool same_entry = false;    // an xbe with the recompiled entry point: a near release that may run
 };
 
@@ -30,8 +34,10 @@ struct GameSearch {
     std::vector<std::string> skipped;  // "name: why", files that look like a copy of the game but are not usable
 };
 
-// in each folder: default.xbe, then the disc images (a split one counted once, by its first part)
-GameSearch FindGameCopies(const std::vector<std::filesystem::path>& folders, const char* xbe_name, const std::string& sha1);
+// in each folder: default.xbe, then the disc images (a split one counted once, by its first part). sha1: of the xbe
+// this build was recompiled from; code: the SHA-1 of its game code, which another edition's xbe may share
+GameSearch FindGameCopies(const std::vector<std::filesystem::path>& folders, const char* xbe_name, const std::string& sha1,
+                          const std::string& code = {});
 
 std::string Sha1Hex(const uint8_t* data, size_t n);
 

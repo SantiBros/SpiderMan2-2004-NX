@@ -262,7 +262,11 @@ std::string VsEpilogue(bool quad) {
     // but for points right on the left and right edges (full screen passes, fades: at 0 or the width, or half a pixel
     // off) unless ext.w (movie frames). Others near or past the edges are narrowed too: text and lines placed partly
     // off the 4:3 screen (the city map's) keep their shape.
-    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))) p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
+    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))) {
+        p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
+        // taller by ext.z's part over 3/4: the close view's bigger HUD
+        if (ext.z != 0.75) p.y = (p.y - 0.5 * surf.y) * (ext.z * (4.0 / 3.0)) + 0.5 * surf.y;
+    }
     q.x = p.x * 2.0 / surf.x - 1.0;
     q.y = 1.0 - p.y * 2.0 / surf.y;
     q.z = p.z * surf.z;
@@ -734,7 +738,7 @@ std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, con
 )";
     if (quad) s += "    o.e = vec4(sp, (vec2(cp.x, -cp.y) / cp.w + 1.0) * 0.5 * surf.xy);\n";
     s += R"(    // the 16:9 picture's squeeze of what is drawn flat, as for screen space vertices
-    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))) cp.x *= ext.z;
+    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))) cp.xy *= vec2(ext.z, ext.z * (4.0 / 3.0));
     gl_Position = vec4(cp.x, -cp.y, 2.0 * cp.z - cp.w, cp.w);
     o.d0 = saturate(oD0);
     o.d1 = saturate(oD1);
@@ -750,18 +754,33 @@ std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, con
     return s;
 }
 
-// what the GLSL changed since the shader list's earlier versions (gl_backend.cpp's ShaderList), as text to replace
-// in their programs: version 3, points past the screen's left and right edges narrowed in the 16:9 picture
-std::vector<std::pair<std::string, std::string>> ListEdits() {
-    return {
-        {"p.w == 1.0 && (ext.w > 0.0 || (p.x > 1.0 && p.x < surf.x - 1.0))", "p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))"},
-        {"cp.w == 1.0 && (ext.w > 0.0 || (sp.x > 1.0 && sp.x < surf.x - 1.0))", "cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))"},
-        {"    // but for points on the left and right edges (full screen passes, fades) unless ext.w (movie frames)\n",
-         "    // but for points right on the left and right edges (full screen passes, fades: at 0 or the width, or half a pixel\n"
-         "    // off) unless ext.w (movie frames). Others near or past the edges are narrowed too: text and lines placed partly\n"
-         "    // off the 4:3 screen (the city map's) keep their shape.\n"},
-        {kOnEdgeAfter, std::string(kOnEdgeAfter) + kOnEdge},
-    };
+// what the GLSL changed since the shader list's earlier generators (gl_backend.cpp's ShaderList), as text to replace
+// in their programs, in order: generator 3, points past the screen's left and right edges narrowed in the 16:9
+// picture; 4, what is narrowed made taller too by the close view's HUD size
+std::vector<std::pair<std::string, std::string>> ListEdits(int since) {
+    std::vector<std::pair<std::string, std::string>> e;
+    if (since < 3) {
+        e.push_back({"p.w == 1.0 && (ext.w > 0.0 || (p.x > 1.0 && p.x < surf.x - 1.0))", "p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))"});
+        e.push_back({"cp.w == 1.0 && (ext.w > 0.0 || (sp.x > 1.0 && sp.x < surf.x - 1.0))", "cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))"});
+        e.push_back({"    // but for points on the left and right edges (full screen passes, fades) unless ext.w (movie frames)\n",
+                     "    // but for points right on the left and right edges (full screen passes, fades: at 0 or the width, or half a pixel\n"
+                     "    // off) unless ext.w (movie frames). Others near or past the edges are narrowed too: text and lines placed partly\n"
+                     "    // off the 4:3 screen (the city map's) keep their shape.\n"});
+        e.push_back({kOnEdgeAfter, std::string(kOnEdgeAfter) + kOnEdge});
+    }
+    if (since < 4) {
+        e.push_back({R"(    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))) p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
+)", R"(    if (ext.z > 0.0 && p.w == 1.0 && (ext.w > 0.0 || !onedge(p.x, surf.x))) {
+        p.x = (p.x - 0.5 * surf.x) * ext.z + 0.5 * surf.x;
+        // taller by ext.z's part over 3/4: the close view's bigger HUD
+        if (ext.z != 0.75) p.y = (p.y - 0.5 * surf.y) * (ext.z * (4.0 / 3.0)) + 0.5 * surf.y;
+    }
+)"});
+        e.push_back({R"(    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))) cp.x *= ext.z;
+)", R"(    if (ext.z > 0.0 && cp.w == 1.0 && (ext.w > 0.0 || !onedge(sp.x, surf.x))) cp.xy *= vec2(ext.z, ext.z * (4.0 / 3.0));
+)"});
+    }
+    return e;
 }
 
 std::string Pixel(const PixelKey& k) {

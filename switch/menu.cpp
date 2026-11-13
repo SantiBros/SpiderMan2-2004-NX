@@ -10,11 +10,13 @@
 #include <vector>
 
 #include "core/log.h"
+#include "game/language.h"
 #include "switch/clocks.h"
 #include "switch/rumble.h"
 #include "switch/screen.h"
 #include "switch/settings.h"
 #include "switch/state.h"
+#include "switch/update.h"
 
 namespace sw::menu {
 
@@ -38,7 +40,7 @@ struct Choice {
     std::string text;
     std::string note;  // in orange while it is chosen: what it costs
 };
-enum class Kind { Setting, Restore, Close };
+enum class Kind { Setting, Update, Restore, Close };
 struct Item {
     Kind kind = Kind::Setting;
     std::string label;
@@ -111,6 +113,17 @@ const char* LanguageName(uint32_t code) {
     }
 }
 
+// in the menu's sentences
+const char* EnglishName(uint32_t code) {
+    switch (code) {
+        case 3: return "German";
+        case 4: return "French";
+        case 5: return "Spanish";
+        case 6: return "Italian";
+        default: return "English";
+    }
+}
+
 std::string MhzText(uint32_t hz) {
     char b[24];
     if (hz % 1000000)
@@ -124,20 +137,46 @@ void Build() {
     const bool docked = clocks::Docked();
     g_items.clear();
 
+    // the languages the game has, and the voices the player's copy of it has (known once the game opened its disc)
+    const uint32_t kCodes[] = {1, 5, 4, 3, 6};
+    const uint32_t on_copy = sm2::VoicesOnCopy();
+    const uint32_t text = CurrentSettings().language ? CurrentSettings().language : g_console_language;
+    auto on = [&](uint32_t code) { return !on_copy || (on_copy >> code & 1); };
+    std::string copy_has;
+    for (uint32_t code : kCodes)
+        if (on_copy >> code & 1) copy_has += std::string(copy_has.empty() ? "" : ", ") + EnglishName(code);
+
     Item lang;
     lang.label = "Language";
     lang.get = [](const Settings& s) { return s.language; };
     lang.set = [](Settings& s, uint32_t v) { s.language = v; };
     lang.next_start = true;
-    lang.choices = {{0, std::string("Auto (") + LanguageName(g_console_language) + ")", ""},
-                    {1, "English", ""},
-                    {5, LanguageName(5), "The voices stay in English: the disc has only the English ones."},
-                    {4, LanguageName(4), "The voices stay in English: the disc has only the English ones."},
-                    {3, LanguageName(3), "The voices stay in English: the disc has only the English ones."},
-                    {6, LanguageName(6), "The voices stay in English: the disc has only the English ones."}};
-    lang.help = "The game's menus and subtitles. Auto follows the console's language; one the game doesn't have "
-                "is English.";
+    lang.choices = {{0, std::string("Auto (") + LanguageName(g_console_language) + ")", ""}};
+    for (uint32_t code : kCodes) lang.choices.push_back({code, LanguageName(code), ""});
+    for (Choice& ch : lang.choices) {
+        uint32_t code = ch.value ? ch.value : g_console_language;
+        if (CurrentSettings().voices == 0 && !on(code))
+            ch.note = std::string("Your copy of the game has no ") + EnglishName(code) + " voices: Voices on Auto speaks " +
+                      EnglishName(sm2::VoicesFor(code, 0)) + ".";
+    }
+    lang.help = "The game's menus and subtitles, in any of its five languages. Auto follows the console's language; "
+                "one the game doesn't have is English.";
     g_items.push_back(lang);
+
+    Item voices;
+    voices.label = "Voices";
+    voices.get = [](const Settings& s) { return s.voices; };
+    voices.set = [](Settings& s, uint32_t v) { s.voices = v; };
+    voices.next_start = true;
+    voices.choices = {{0, std::string("Auto (") + LanguageName(sm2::VoicesFor(text, 0)) + ")", ""}};
+    for (uint32_t code : kCodes)
+        voices.choices.push_back({code, LanguageName(code),
+                                  on(code) ? "" : "Not on your copy (it has " + copy_has + "): they will be " +
+                                                      EnglishName(sm2::VoicesFor(text, code)) + "."});
+    // (the help's lines and the note's fit the menu's six)
+    voices.help = "The language the characters speak, apart from the menus'. Auto: the menus' language if your copy "
+                  "has those voices. US disc: English; European discs: French, German and Spanish, or Italian.";
+    g_items.push_back(voices);
 
     Item res;
     res.label = "Resolution";
@@ -165,11 +204,14 @@ void Build() {
                       {uint32_t(Screen::Tv), "4:3, 70s CRT TV",
                        "An old television: a wooden cabinet with its knobs and speaker, the picture with a tube's "
                        "rounded corners and scanlines."},
-                      {uint32_t(Screen::Wide), "16:9 full screen",
-                       "The game's own wide camera: more of the city at the sides, nothing stretched. The HUD, menus "
-                       "and movies stay 4:3 in the middle."}};
+                      {uint32_t(Screen::Wide), "16:9, wide view",
+                       "The game's own wide camera: more of the city at the sides, nothing stretched. The HUD and "
+                       "menus stay 4:3 in the middle; the letterboxed cutscenes fill the width."},
+                      {uint32_t(Screen::WideClose), "16:9, close view",
+                       "The game's camera across the width: Spider-Man and the city a third bigger, a little less "
+                       "above and below; the HUD and menus a tenth bigger."}};
     screen.help = "The picture keeps its shape: 4:3 with something at the sides, or the game's hidden 16:9 mode "
-                  "across the whole screen.";
+                  "across the whole screen, wide or close.";
     g_items.push_back(screen);
 
     Item up;
@@ -214,6 +256,15 @@ void Build() {
     rum.help = "The game's rumble on Joy-Con or a Pro Controller (the Switch Lite has none of its own). One the game "
                "leaves on stops after 2 seconds.";
     g_items.push_back(rum);
+
+    Item btn;
+    btn.label = "Buttons";
+    btn.get = [](const Settings& s) { return uint32_t(s.buttons); };
+    btn.set = [](Settings& s, uint32_t v) { s.buttons = Buttons(v); };
+    btn.choices = {{uint32_t(Buttons::Xbox), "Xbox layout", ""}, {uint32_t(Buttons::Switch), "Switch layout", ""}};
+    btn.help = "Xbox layout: by position, as on the Xbox's controller, so the game's A is the bottom button (the "
+               "Switch's B). Switch layout: by letter, so the game's A is the Switch's A, B is B, X is X and Y is Y.";
+    g_items.push_back(btn);
 
     const char* above = "Above the console's own clock: more heat and battery use.";
     Item cpu;
@@ -315,12 +366,20 @@ void Build() {
                "a photo when the game doesn't start.";
     g_items.push_back(log);
 
+    Item upd;
+    upd.kind = Kind::Update;
+    upd.label = "Update";
+    upd.help = "Asks GitHub for the newest version. A newer one is downloaded from its release (it counts among the "
+               "release's downloads), unlocked here with your game's default.xbe and put in place of this .nro. Needs "
+               "the internet.";
+    g_items.push_back(upd);
+
     Item restore;
     restore.kind = Kind::Restore;
     restore.label = "Restore recommended settings";
-    restore.help = "The console's language, 480p, 4:3 with black sides, smooth upscaling, standard texture "
-                   "filtering, medium vibration, Auto clocks, no counter, full volume, the GPU renderer on its own "
-                   "thread, no start-up log.";
+    restore.help = "The console's language and Auto voices, 480p, 4:3 with black sides, smooth upscaling, standard texture "
+                   "filtering, medium vibration, the Xbox button layout, Auto clocks, no counter, full volume, the "
+                   "GPU renderer on its own thread, no start-up log.";
     g_items.push_back(restore);
 
     Item close;
@@ -356,6 +415,8 @@ void SetIndex(Item& it, int i) {
     SaveSettings();
     if (!it.next_start) ApplyLive();
     g_dirty = true;
+    // the languages' rows say what the other one gives: made again (it is not used after this)
+    if (it.label == "Language" || it.label == "Voices") Build();
 }
 
 void Step(Item& it, int dir, bool wrap) {
@@ -378,6 +439,10 @@ void Activate(Item& it) {
     switch (it.kind) {
         case Kind::Setting:
             Step(it, +1, true);
+            break;
+        case Kind::Update:
+            update::Act();
+            g_dirty = true;
             break;
         case Kind::Restore:
             CurrentSettings() = DefaultSettings();
@@ -428,7 +493,7 @@ std::string LiveLine() {
 
 void Draw() {
     const int n = int(g_items.size());
-    const int row_h = 25, top = 88;
+    const int row_h = 21, top = 88;
     int separators = 0;
     for (int i = 1; i < n; i++)
         if (g_items[i].kind != Kind::Setting && g_items[i - 1].kind == Kind::Setting) separators++;
@@ -483,6 +548,11 @@ void Draw() {
                 c.Text(value_mid - value_half - 8, ty, "<", idx != 0 ? kAmber : kGray);
                 c.Text(value_mid + value_half - 8, ty, ">", idx != int(it.choices.size()) - 1 ? kAmber : kGray);
             }
+        } else if (it.kind == Kind::Update) {
+            std::string v = update::RowText();
+            update::State st = update::Current();
+            c.Text(value_mid - TextWidth(v) / 2, ty, v,
+                   st == update::State::Off ? kGray : st == update::State::Available || st == update::State::Installed ? kAmber : kWhite);
         }
         y += row_h;
     }
@@ -498,6 +568,8 @@ void Draw() {
     }
     const size_t chars = (kPanelW - 2 * label_x) / 16;
     for (auto& l : Wrap(text, chars)) help.push_back({l, kDim});
+    if (cur.kind == Kind::Update)
+        for (auto& l : Wrap(update::HelpText(), chars)) help.push_back({l, kOrange});
     if (cur.kind == Kind::Setting) {
         int idx = Index(cur);
         if (idx >= 0 && !cur.choices[idx].note.empty())
@@ -609,6 +681,7 @@ void ApplyPicture(const Settings& s) {
     g_sharp.store(s.sharp, std::memory_order_relaxed);
     g_anisotropy.store(s.anisotropy, std::memory_order_relaxed);
     g_crt.store(int(s.crt), std::memory_order_relaxed);
+    g_buttons.store(int(s.buttons), std::memory_order_relaxed);
 }
 
 bool IsOpen() { return g_open; }
@@ -644,6 +717,12 @@ void Update() {
     }
     clocks::Tick();
     UpdateLive(now);
+    // the update's progress
+    static uint32_t update_seen = 0;
+    if (update::Changes() != update_seen) {
+        update_seen = update::Changes();
+        g_dirty = true;
+    }
     rumble::Update(g_open || g_block || appletGetFocusState() != AppletFocusState_InFocus);
 
     bool combo_now = (held & combo) == combo && (down & combo);

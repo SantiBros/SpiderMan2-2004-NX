@@ -39,6 +39,11 @@ Mode Output();
 float RenderScale(uint32_t guest_height);
 // the output is 3:2 or wider: the console reports a widescreen TV and the frame is shown 16:9, else 4:3 as on a 4:3 TV
 bool Widescreen();
+// the 16:9 picture's close view: the camera's own field of view across the width (what it shows a third bigger, less
+// above and below) and the HUD a tenth bigger; else (Widescreen() alone) the wide view, 4:3's height and more at the
+// sides
+bool WideClose();
+constexpr float kCloseHud = 1.1f;  // how much bigger the close view draws the HUD and menus
 
 std::filesystem::path ExeDir();
 // the game in assets (game_files.cpp): its folder and this executable's xbe, from the extracted files or a disc

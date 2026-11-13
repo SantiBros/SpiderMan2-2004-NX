@@ -525,6 +525,12 @@ uint32_t OpenOnDisc(const Disc::Entry* e, const std::string& name, uint32_t hand
 
 std::function<std::string(const std::string&)> g_missing_disc_file;
 
+bool DiscFileExists(const std::string& device_path) {
+    std::string missing, device;
+    Target t = ResolveOnce(device_path, 0, &missing, &device);
+    return !device.empty() && missing.empty() && (t.disc ? t.entry && !t.entry->dir : !t.host.empty());
+}
+
 void RewriteDiscFile(const std::string& device_path, std::function<bool(std::vector<uint8_t>& bytes)> rewrite) {
     std::lock_guard<std::mutex> lock(g_rewrites_lock);
     g_rewrites[Upper(device_path)] = {std::move(rewrite)};
@@ -554,6 +560,20 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
     uint32_t handle_out = a[0], access = a[1], attrs = a[2], iosb = a[3], disposition = a[7], options = a[8];
     uint32_t root;
     std::string name = ObjectName(attrs, &root);
+    // FILESWAP="a=b" (test builds): a file whose name holds a (in any case) is b instead, as another movie played in
+    // the place of the first one
+    static const char* swap = std::getenv("FILESWAP");
+    const char* eq = swap ? std::strchr(swap, '=') : nullptr;
+    if (eq) {
+        std::string from(swap, size_t(eq - swap)), lower = name;
+        for (char& c : lower) c = char(std::tolower(uint8_t(c)));
+        for (char& c : from) c = char(std::tolower(uint8_t(c)));
+        size_t at = lower.find(from);
+        if (!from.empty() && at != std::string::npos) {
+            name.replace(at, from.size(), eq + 1);
+            LOGI("files: FILESWAP: %s", name.c_str());
+        }
+    }
     Target t = Resolve(name, root);
     if (t.disc) return OpenOnDisc(t.entry, name, handle_out, iosb, disposition, options);
     const std::string& host = t.host;

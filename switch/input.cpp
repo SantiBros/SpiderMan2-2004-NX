@@ -1,7 +1,8 @@
-// The Switch's controls as the console's controller on port 0. Face buttons go by position, as the game's prompts
-// show the Xbox letters: Xbox A (bottom) is the Switch's B, Xbox B (right) is A, Xbox X (left) is Y, Xbox Y (top)
-// is X. L and R are the Xbox's white and black buttons, ZL and ZR the triggers, + is Start and - is Back. The debug
-// menu's combination (ZL + ZR + -) and the menu itself don't reach the game. The game's rumble goes to switch/rumble.
+// The Switch's controls as the console's controller on port 0. Face buttons go by position by default, as the game's
+// prompts show the Xbox letters: Xbox A (bottom) is the Switch's B, Xbox B (right) is A, Xbox X (left) is Y, Xbox Y
+// (top) is X. The debug menu's Buttons setting maps them by letter instead (Xbox A is the Switch's A). L and R are
+// the Xbox's white and black buttons, ZL and ZR the triggers, + is Start and - is Back. The debug menu's combination
+// (ZL + ZR + -) and the menu itself don't reach the game. The game's rumble goes to switch/rumble.
 #include <switch.h>
 
 #include <mutex>
@@ -10,6 +11,7 @@
 #include "core/input.h"
 #include "switch/menu.h"
 #include "switch/rumble.h"
+#include "switch/state.h"
 
 namespace input {
 
@@ -48,10 +50,11 @@ Pad Poll(int port) {
         if (b & HidNpadButton_StickL) p.buttons |= 64;
         if (b & HidNpadButton_StickR) p.buttons |= 128;
         auto press = [&](int i, uint64_t mask) { p.analog[i] = (b & mask) ? 255 : 0; };
-        press(0, HidNpadButton_B);   // Xbox A
-        press(1, HidNpadButton_A);   // Xbox B
-        press(2, HidNpadButton_Y);   // Xbox X
-        press(3, HidNpadButton_X);   // Xbox Y
+        const bool letters = sw::g_buttons.load(std::memory_order_relaxed) == 1;
+        press(0, letters ? HidNpadButton_A : HidNpadButton_B);  // Xbox A
+        press(1, letters ? HidNpadButton_B : HidNpadButton_A);  // Xbox B
+        press(2, letters ? HidNpadButton_X : HidNpadButton_Y);  // Xbox X
+        press(3, letters ? HidNpadButton_Y : HidNpadButton_X);  // Xbox Y
         press(4, HidNpadButton_R);   // black
         press(5, HidNpadButton_L);   // white
         press(6, HidNpadButton_ZL);  // left trigger

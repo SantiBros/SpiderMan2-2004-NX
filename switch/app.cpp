@@ -22,7 +22,11 @@ Mode Desktop() { return {1280, 720}; }
 Mode Output() { return Desktop(); }
 float RenderScale(uint32_t) { return 1.0f; }
 // the game's own 16:9 picture (src/game/widescreen.cpp), from the debug menu's Screen
-bool Widescreen() { return sw::g_screen.load(std::memory_order_relaxed) == int(sw::Screen::Wide); }
+bool Widescreen() {
+    int screen = sw::g_screen.load(std::memory_order_relaxed);
+    return screen == int(sw::Screen::Wide) || screen == int(sw::Screen::WideClose);
+}
+bool WideClose() { return sw::g_screen.load(std::memory_order_relaxed) == int(sw::Screen::WideClose); }
 
 std::filesystem::path ExeDir() {
     static const std::filesystem::path dir = std::filesystem::current_path();

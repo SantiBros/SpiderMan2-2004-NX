@@ -26,6 +26,7 @@
 
 #include "app/app.h"
 #include "core/log.h"
+#include "game/language.h"
 #include "gpu/backend.h"
 #include "image_symbols.h"
 #include "kernel/game_source.h"
@@ -38,10 +39,12 @@
 #include "switch/screen.h"
 #include "switch/settings.h"
 #include "switch/state.h"
+#include "switch/update.h"
 
 namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
+extern const char kImageCode[];  // the SHA-1 of its game code (xbe/code.h), which other editions may share
 // from the VERSION file, through switch/build.sh
 #ifndef SM2NX_VERSION
 #define SM2NX_VERSION "dev"
@@ -137,6 +140,7 @@ std::string Folder(const char* argv0) {
 int main(int argc, char** argv) {
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     std::string dir = Folder(argc > 0 ? argv[0] : nullptr);
+    sw::update::SetNro(argc > 0 && argv[0] ? argv[0] : "");
     chdir(dir.c_str());
     // a message when the port goes to the HOME menu, to give the system its clocks back (sw::clocks)
     appletSetFocusHandlingMode(AppletFocusHandlingMode_SuspendHomeSleepNotify);
@@ -188,16 +192,18 @@ int main(int argc, char** argv) {
     uint32_t console = ConsoleLanguage(console_name);
     sw::menu::SetConsoleLanguage(console ? console : 1);
     kernel::g_language = settings.language ? settings.language : console ? console : 1;
+    sm2::SetVoiceLanguage(settings.voices);
     LOGI("switch: console language %s, %s", console_name.c_str(), settings.language ? "the game's set in settings.ini" : "the game follows it");
-    LOGI("switch: settings: language %u, %up, screen %d, upscaling %s, CRT filter %d, anisotropic %ux, rumble %d, clocks CPU %u GPU %u "
-         "memory %u MHz (0 stock, 4294 auto), counter %d, volume %u%%, %s renderer, render thread %s, start-up log %s", settings.language,
+    LOGI("switch: settings: language %u, voices %u, %up, screen %d, upscaling %s, CRT filter %d, anisotropic %ux, rumble %d, buttons %s, clocks CPU %u "
+         "GPU %u memory %u MHz (0 stock, 4294 auto), counter %d, volume %u%%, %s renderer, render thread %s, start-up log %s", settings.language, settings.voices,
          settings.resolution, int(settings.screen), settings.sharp ? "sharp" : "smooth", int(settings.crt), settings.anisotropy, int(settings.rumble),
+         settings.buttons == sw::Buttons::Switch ? "Switch layout" : "Xbox layout",
          settings.cpu_hz / 1000000, settings.gpu_hz / 1000000, settings.mem_hz / 1000000, int(settings.counter),
          settings.volume, settings.gpu_renderer ? "GPU" : "CPU", settings.render_thread ? "on" : "off",
          settings.startup_log ? "on" : "off");
 
     // the player's copy: in game/, or beside the .nro
-    kernel::GameSearch search = kernel::FindGameCopies({game, dir}, IMAGE_XBE, kImageSha1);
+    kernel::GameSearch search = kernel::FindGameCopies({game, dir}, IMAGE_XBE, kImageSha1, kImageCode);
     std::string skipped;
     for (size_t i = 0; i < search.skipped.size() && i < 6; i++) skipped += "\n- " + search.skipped[i];
     if (search.copies.empty())
@@ -219,10 +225,15 @@ int main(int argc, char** argv) {
                      "This build runs only the game whose default.xbe has the SHA-1\n  " +
                      kImageSha1 + "\nThis one's is\n  " + copy.sha1);
         if (!Ask("A different release of the game",
-                 copy.name + " holds another release of Spider-Man 2 than the one this\n"
-                             "build was made from, and will most likely crash.\n\n"
-                             "Its default.xbe SHA-1:   " + copy.sha1 + "\nthe build's:            " + kImageSha1))
+                 copy.name + " holds another release of Spider-Man 2 (" + copy.regions +
+                     ")\nthan the one this build was made from: its game code is not the\n"
+                     "same, so it will most likely crash. Tell us about it on GitHub.\n\n"
+                     "Its default.xbe SHA-1:  " + copy.sha1 + "\nits game code:          " + copy.code +
+                     "\nthe build's:            " + kImageCode))
             return 1;
+    }
+    if (copy.other_edition) {
+        LOGI("switch: another edition of the game (%s), with the game code this build was made from", copy.regions.c_str());
     }
     if (!copy.disc && !fs::is_directory(copy.folder / "data")) {
         std::string g = copy.folder.string();
@@ -249,6 +260,8 @@ int main(int argc, char** argv) {
     }
     kernel::UseSaveFolders(copy.title_id, folders.saves.string(), folders.title_data.string());
 
+    // the key a release's locked .nro opens with, for the debug menu's Update
+    sw::update::SetGame(copy.xbe, copy.same_release);
     if (copy.disc) kernel::MountDisc(std::move(copy.disc));
     if (app::kGame.init) app::kGame.init();
     if (!kernel::Boot(std::move(copy.xbe), IMAGE_XBE, copy.folder.string(), folders.cache.string()))
@@ -261,7 +274,7 @@ int main(int argc, char** argv) {
     // even when the game hangs.
     uint64_t last_text = 0;
     kernel::NameHostThread("main");  // the menu and the applet, off the game's core (it is above the game's priority)
-    while (appletMainLoop() && !sw::QuitRequested()) {
+    while (appletMainLoop() && !sw::QuitRequested() && !sw::update::RestartRequested()) {
         svcSleepThread(16'000'000);
         sw::menu::Update();
         uint64_t now = armTicksToNs(armGetSystemTick());
@@ -290,5 +303,6 @@ int main(int argc, char** argv) {
     sw::clocks::Exit();
     logx::Sync();  // the lines not on the card yet (the watch thread puts them there every 250 ms)
     sw::Close();
+    sw::update::StartNext();  // after an update: the new .nro, through the Homebrew loader
     std::_Exit(0);
 }

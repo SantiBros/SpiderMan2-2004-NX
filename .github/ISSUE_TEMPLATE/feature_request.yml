@@ -6,6 +6,6 @@ body:
     id: idea
     attributes:
       label: What would you like?
-      description: For another release of the game, include its default.xbe SHA-1 (build.sh prints it). Never attach the file itself.
+      description: For another release of the game, include its default.xbe SHA-1 and game code (build.sh and the port's log print them) and its region. Never attach the file itself.
     validations:
       required: true

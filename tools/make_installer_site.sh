@@ -12,9 +12,9 @@
 # The page marks the newest one recommended.
 # When the site folder doesn't exist yet it starts from what the gh-pages branch publishes, so the versions already
 # there stay. The .nro of build-switch/ (made with switch/build.sh, of this repository or of TREE) is locked with
-# default.xbe (tools/lock_nro.py) into its version's folder, replacing that version only; index.html is this
-# repository's. The page unlocks it in the player's browser with their own default.xbe. The .nro itself is never
-# published.
+# default.xbe (tools/lock_nro.py: from 0.4.0 with its game code, so other editions of the same code open it too) into
+# its version's folder, replacing that version only; index.html is this repository's. The page unlocks it in the
+# player's browser with their own default.xbe. The .nro itself is never published.
 # Into out/release: the locked .nro as SpiderMan2Xbox-<version>.nro.locked, and SpiderMan2Xbox-<version>-symbols.elf,
 # the .elf's names and debug information without its code or data (for reading crash reports' addresses).
 set -euo pipefail
@@ -35,7 +35,11 @@ fi
 V=$OUT/$VERSION
 rm -rf "$V"
 mkdir -p "$V"
-python3 "$R/tools/lock_nro.py" lock "$NRO" "$XBE" "$V/SpiderMan2Xbox.nro.locked"
+# 0.4.0 on: locked with the game code (version 2), which other editions of the game share; before, the ports
+# themselves ran only the US default.xbe, locked with it (version 1)
+LOCK=lock
+python3 -c "import sys; sys.exit(tuple(map(int, sys.argv[1].split('.'))) >= (0, 4, 0))" "$VERSION" && LOCK=lock1
+python3 "$R/tools/lock_nro.py" "$LOCK" "$NRO" "$XBE" "$V/SpiderMan2Xbox.nro.locked"
 cp "$T/switch/README-switch.txt" "$V/README.txt"
 cp "$T/switch/game-folder-README.txt" "$V/PUT_YOUR_GAME_HERE.txt"
 {
@@ -45,15 +49,18 @@ cp "$T/switch/game-folder-README.txt" "$V/PUT_YOUR_GAME_HERE.txt"
 } > "$V/LICENSES.txt"
 cp "$R/installer/index.html" "$OUT/index.html"
 SHA1=$(python3 -c "import hashlib,sys; print(hashlib.sha1(open(sys.argv[1],'rb').read()).hexdigest())" "$XBE")
-python3 - "$OUT" "$R/installer/versions.json" "$SHA1" <<'EOF'
+CODE=$(python3 "$R/tools/lock_nro.py" code "$XBE")
+python3 - "$OUT" "$R/installer/versions.json" "$SHA1" "$CODE" <<'EOF'
 import json, os, re, sys
-out, manifest, sha1 = sys.argv[1:4]
+out, manifest, sha1, code = sys.argv[1:5]
 titles = {e['version']: e for e in json.load(open(manifest, encoding='utf-8'))}
 key = lambda v: tuple(int(n) for n in re.findall(r'\d+', v))
 there = [d for d in os.listdir(out) if os.path.isfile(os.path.join(out, d, 'SpiderMan2Xbox.nro.locked'))]
-versions = [dict(titles.get(v, {}), version=v, path=v + '/') for v in sorted(there, key=key, reverse=True)]
+# lock: 1 opens with the US default.xbe only, 2 with any edition's of the same game code (tools/lock_nro.py)
+lock = lambda v: 2 if open(os.path.join(out, v, 'SpiderMan2Xbox.nro.locked'), 'rb').read(8) == b'SM2NXLK2' else 1
+versions = [dict(titles.get(v, {}), version=v, path=v + '/', lock=lock(v)) for v in sorted(there, key=key, reverse=True)]
 with open(os.path.join(out, 'versions.json'), 'w', encoding='utf-8') as f:
-    json.dump({'xbe_sha1': sha1, 'versions': versions}, f, ensure_ascii=False, indent=1)
+    json.dump({'xbe_sha1': sha1, 'xbe_code': code, 'versions': versions}, f, ensure_ascii=False, indent=1)
 print('versions.json:', ', '.join(v['version'] for v in versions))
 EOF
 touch "$OUT/.nojekyll"  # served as it is, without GitHub's Jekyll

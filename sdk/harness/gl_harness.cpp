@@ -101,6 +101,7 @@ public:
             glr::Picture q;
             q.height = uint32_t(Env("XBE_RES"));
             q.wide = app::Widescreen();
+            if (app::WideClose()) q.hud = app::kCloseHud;
             long sides = Env("XBE_SIDES");
             q.sides = sides == 1   ? glr::Picture::Sides::Blur
                       : sides == 2 ? glr::Picture::Sides::Web

@@ -30,7 +30,9 @@ export CXX BASE INC GEN OUT
 # host side: the SDK runtime without its Windows parts, the game's hooks, the GPU renderer, the harness CPU renderer,
 # the Switch files
 SHA=$(sha1sum "$R/assets/default.xbe" 2>/dev/null | cut -c1-40)
-echo "extern const char kImageSha1[] = \"${SHA:-unknown}\";" > "$OUT/xbe_sha1.cpp"
+CODE=$(python3 "$R/tools/lock_nro.py" code "$R/assets/default.xbe" 2>/dev/null)
+printf 'extern const char kImageSha1[] = "%s";\nextern const char kImageCode[] = "%s";\n' "${SHA:-unknown}" "${CODE:-unknown}" > "$OUT/xbe_sha1.cpp.new"
+cmp -s "$OUT/xbe_sha1.cpp.new" "$OUT/xbe_sha1.cpp" && rm "$OUT/xbe_sha1.cpp.new" || mv "$OUT/xbe_sha1.cpp.new" "$OUT/xbe_sha1.cpp"
 SRC=$(ls "$R"/sdk/runtime/*/*.cpp | grep -Ev "/runtime/app/|/core/input.cpp|/gpu/d3d12.cpp|/audio/xaudio2.cpp")
 SRC="$SRC $(ls "$R"/src/*/*.cpp) $(ls "$R"/gl/*.cpp) $R/sdk/harness/reference_renderer.cpp"
 SRC="$SRC $(ls "$R"/switch/*.cpp) $OUT/xbe_sha1.cpp"

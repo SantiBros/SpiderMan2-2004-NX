@@ -27,7 +27,7 @@ std::string FixedVertex(uint16_t regs, uint64_t decode, bool pretransformed, con
 std::string Pixel(const gpu::PixelKey& k);
 
 // the GLSL's changes since the shader list's earlier versions, as (from, to) text in their programs
-std::vector<std::pair<std::string, std::string>> ListEdits();
+std::vector<std::pair<std::string, std::string>> ListEdits(int since);  // to this generator from that one
 
 // a full screen pass's vertex shader: uv over the triangle covering the target (gl_VertexID 0 to 2)
 extern const char* kFullScreenVertex;

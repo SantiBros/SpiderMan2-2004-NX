@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 
+#include "app/app.h"
 #include "core/log.h"
 #include "gl/gl_backend.h"
 #include "gpu/backend.h"
@@ -110,7 +111,8 @@ public:
         // the handheld screen has 720 rows: 1080p there would only be drawn to be shrunk, for half the frame rate
         if (p.height > 720 && appletGetOperationMode() != AppletOperationMode_Console) p.height = 720;
         int screen = sw::g_screen.load(std::memory_order_relaxed);
-        p.wide = screen == int(sw::Screen::Wide);
+        p.wide = screen == int(sw::Screen::Wide) || screen == int(sw::Screen::WideClose);
+        if (screen == int(sw::Screen::WideClose)) p.hud = app::kCloseHud;
         p.sides = screen == int(sw::Screen::Blur) ? glr::Picture::Sides::Blur
                   : screen == int(sw::Screen::Web) ? glr::Picture::Sides::Web
                   : screen == int(sw::Screen::Suit) ? glr::Picture::Sides::Suit

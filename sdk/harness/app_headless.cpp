@@ -19,13 +19,20 @@ void ApplyDisplay() {}
 Mode Desktop() { return {1280, 720}; }
 Mode Output() { return Desktop(); }
 float RenderScale(uint32_t) { return 1.0f; }
-// XBE_WIDESCREEN=1: the game's 16:9 picture (src/game/widescreen.cpp), as the GL harness shows it
+// XBE_WIDESCREEN=1: the game's 16:9 picture (src/game/widescreen.cpp), as the GL harness shows it; 2 its close view
 bool Widescreen() {
     static const bool wide = [] {
         const char* e = std::getenv("XBE_WIDESCREEN");
         return e && std::atoi(e) != 0;
     }();
     return wide;
+}
+bool WideClose() {
+    static const bool close = [] {
+        const char* e = std::getenv("XBE_WIDESCREEN");
+        return e && std::atoi(e) == 2;
+    }();
+    return close;
 }
 
 std::filesystem::path ExeDir() {

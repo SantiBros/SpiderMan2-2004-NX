@@ -45,7 +45,7 @@ namespace {
 constexpr uint64_t kStaleFrames = 8;  // frames a target may go unused and still be read back
 // the GLSL this renderer and gl/glsl.cpp make: a new name whenever any program's text changes (the shader list keeps
 // the programs of the last one); "2" is 0.2.0's
-constexpr const char* kShaderGenerator = "3";
+constexpr int kShaderGenerator = 4;
 constexpr float kDepth24Max = 16777215.0f;
 constexpr float kUpscaledMin = 1.01f;   // host texels per console texel past rounding: the target is upscaled
 constexpr float kGlowBoxTexels = 3.0f;  // console texels across the box each wide tap averages, as d3d12.cpp's
@@ -254,6 +254,7 @@ struct DrawTextures {
     uint32_t levels[4] = {1, 1, 1, 1};
     float wide[4][2] = {};  // kTexWide: host texels per console texel across and down
     bool movie = false;     // a stage samples a movie frame (YUY2 or UYVY)
+    bool movie_fill = false;  // in the 16:9 picture that movie fills the width (MovieFit)
 };
 
 // a draw's shaders
@@ -624,11 +625,12 @@ GLuint Link(GLuint vs, GLuint fs) {
 // Mesa has no binary shader cache, and a program built in the middle of play is a stutter.
 class ShaderList {
 public:
-    // name: the list's header line (the shader generator's version). older(line): what an earlier header line is,
-    // 0 a list to start over, 1 programs as this generator makes them (kept as they are), 2 programs of an earlier
-    // generator, kept with their text changed by edits (what the GLSL changed since: each from replaced by its to)
-    void Open(const std::string& path, const std::string& name, const std::function<int(const std::string&)>& older_kind,
-              const std::vector<std::pair<std::string, std::string>>& edits = {}) {
+    // name: the list's header line (the shader generator's version). older_generator(line): the shader generator of an
+    // earlier header line's list, 0 a list to start over; its programs are kept, those of an earlier generator than this one
+    // with their text changed by edits_since(it) (what the GLSL changed since: each from replaced by its to, in order)
+    using Edits = std::vector<std::pair<std::string, std::string>>;
+    void Open(const std::string& path, const std::string& name, int generator, const std::function<int(const std::string&)>& older_generator,
+              const std::function<Edits(int)>& edits_since) {
         if (path.empty()) return;
         path_ = path;
         const std::string head = name + "\n";
@@ -641,8 +643,9 @@ public:
         }
         bool same = all.compare(0, head.size(), head) == 0, older = false;
         size_t eol = all.find('\n');
-        int kind = same || eol == std::string::npos ? 0 : older_kind(all.substr(0, eol));
+        int kind = same || eol == std::string::npos ? 0 : older_generator(all.substr(0, eol));
         if (kind) {
+            const Edits edits = kind < generator ? edits_since(kind) : Edits{};
             const std::string old_head = all.substr(0, eol + 1);
             older = true;
             std::string kept = head;
@@ -654,7 +657,7 @@ public:
                 at += size_t(used);
                 if (at + vl + fl > all.size()) break;
                 std::string vs = all.substr(at, vl), fs = all.substr(at + vl, fl);
-                for (const auto& [from, to] : kind == 2 ? edits : std::vector<std::pair<std::string, std::string>>{}) {
+                for (const auto& [from, to] : edits) {
                     for (size_t p = vs.find(from); p != std::string::npos; p = vs.find(from, p + to.size()))
                         vs.replace(p, from.size(), to), changed++;
                     for (size_t p = fs.find(from); p != std::string::npos; p = fs.find(from, p + to.size()))
@@ -667,7 +670,8 @@ public:
                 at += vl + fl;
             }
             all = std::move(kept);
-            LOGI("gl: the shader list of an earlier version or driver is kept: %zu programs, %zu changes for this one", programs, changed);
+            LOGI("gl: the shader list of an earlier version or driver is kept: %zu programs of shader generator %d, %zu changes for "
+                 "this one's", programs, kind, changed);
         }
         if (same || older) {
             size_t at = head.size();
@@ -1189,6 +1193,7 @@ private:
     // textures
     void BindTexture(const State& s, int stage, DrawTextures& st);
     void BindGuestTexture(const State& s, int stage, const TextureDesc& d, const FormatInfo& fi, DrawTextures& st);
+    void LookAtMovieFrame(const TextureDesc& d);
     void CreateTexture(Tex& tx, const TextureDesc& d, const FormatInfo& fi);
     void UploadTexture(Tex& tx, const TextureDesc& d, const FormatInfo& fi, const uint32_t* colours);
     GLuint Sampler(const State& s, int i, const DrawTextures& st);
@@ -1296,6 +1301,16 @@ private:
     std::unordered_map<uint32_t, uint64_t> target_used_;
     std::map<std::pair<GLuint, GLuint>, GLuint> fbos_;
     std::unordered_map<uint64_t, Tex> textures_;
+    // The game's movies in its 16:9 picture. The cutscenes are letterboxed for the cinema, black bands across the top
+    // and bottom of their 4:3 frame: they fill the screen's width, enlarged by 4/3 with their bands cut to fit. Those
+    // with a picture up to their top or bottom (the logos, the attract demo) stay 4:3 in the middle. Each movie frame
+    // texture is looked at as it changes; a movie whose texture isn't drawn for 2 seconds is judged afresh.
+    struct MovieFit {
+        uint64_t last = 0;     // the frame it was last drawn
+        bool picture = false;  // a frame with something in its middle seen
+        bool tall = false;     // a frame with something in the bands the width would cut: it stays 4:3
+    };
+    std::unordered_map<uint32_t, MovieFit> movies_;
     std::unordered_map<uint64_t, GLuint> samplers_;
     // shaders by their source's hash, programs by both hashes, and the draw keys that led to them
     std::unordered_map<uint64_t, GLuint> vshaders_, fshaders_;
@@ -1423,22 +1438,25 @@ bool GlBackend::Init(uint32_t width, uint32_t height) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     // the list is the GLSL, the same whatever the driver: named by the shader generator's version only (it changes
-    // only when the GLSL does, kShaderGenerator), so a new port version, or a port built with another Mesa, keeps it.
-    // Lists before 0.3.1 were named by the driver too ("sm2nx glsl list 1 <renderer>, <version>, shaders N", 0.2.0's
-    // "..., port 0.2.0"): kept whatever their driver, the GLSL of generator 2 (and 0.2.0's, the same) updated
+    // only when the GLSL does, kShaderGenerator), so a new port version, or a port built with another Mesa, keeps it,
+    // a list of an earlier generator updated (glsl::ListEdits). Lists before 0.3.1 were named by the driver too
+    // ("sm2nx glsl list 1 <renderer>, <version>, shaders N", 0.2.0's "..., port 0.2.0", generator 2): kept whatever
+    // their driver
     shader_list_.Open(
-        host_->CachePath(), std::string("sm2nx glsl list 2, shaders ") + kShaderGenerator,
+        host_->CachePath(), "sm2nx glsl list 2, shaders " + std::to_string(kShaderGenerator), kShaderGenerator,
         [](const std::string& line) {
             auto ends = [&](const char* tail) {
                 size_t n = std::strlen(tail);
                 return line.size() >= n && line.compare(line.size() - n, n, tail) == 0;
             };
-            if (line.rfind("sm2nx glsl list 1 ", 0) != 0) return 0;
-            if (ends((std::string(", shaders ") + kShaderGenerator).c_str())) return 1;
-            if (ends(", shaders 2") || ends(", port 0.2.0")) return 2;
-            return 0;
+            if (ends(", port 0.2.0")) return line.rfind("sm2nx glsl list 1 ", 0) == 0 ? 2 : 0;
+            if (line.rfind("sm2nx glsl list 1 ", 0) != 0 && line.rfind("sm2nx glsl list 2, ", 0) != 0) return 0;
+            size_t at = line.rfind(", shaders ");
+            if (at == std::string::npos) return 0;
+            int g = std::atoi(line.c_str() + at + 10);
+            return g >= 2 && g <= kShaderGenerator ? g : 0;
         },
-        glsl::ListEdits());
+        [](int since) { return glsl::ListEdits(since); });
     // the first call from whichever thread draws takes the context
     glFinish();
     host_->Release();
@@ -1752,6 +1770,7 @@ void GlBackend::BindGuestTexture(const State& s, int stage, const TextureDesc& d
             tx.sig = sig;
             tx.full = full;
             UploadTexture(tx, d, fi, palette.va ? palette.colours : nullptr);
+            if (pic_.wide && (d.format == 0x24 || d.format == 0x25) && d.linear) LookAtMovieFrame(d);
         }
     }
     st.tex[stage] = tx.tex;
@@ -1761,6 +1780,38 @@ void GlBackend::BindGuestTexture(const State& s, int stage, const TextureDesc& d
     if (d.format == 0x24 || d.format == 0x25) {  // YUY2, UYVY: the game's movie frames
         st.movie = true;
         if (pic_.sharp_movies && info.kind == kTex2D) info.flags |= glsl::kTexSharp;
+        if (pic_.wide) {
+            MovieFit& m = movies_[d.data];
+            m.last = frame_;
+            st.movie_fill = m.picture && !m.tall;
+        }
+    }
+}
+
+// A movie frame of the 16:9 picture: its middle, and the bands across its top and bottom eighth that filling the
+// screen's width cuts off. Bright enough is picture (luma above 40 of 16..235), else the letterbox's black.
+void GlBackend::LookAtMovieFrame(const TextureDesc& d) {
+    MovieFit& m = movies_[d.data];
+    if (frame_ > m.last + 60) m = MovieFit{};  // not drawn for 2 seconds: another movie
+    m.last = frame_;
+    if (m.tall || d.width < 16 || d.height < 64) return;
+    const uint8_t* p = static_cast<const uint8_t*>(kernel::HostPtr(d.data));
+    const uint32_t pitch = d.pitch ? d.pitch : d.width * 2, luma = d.format == 0x24 ? 0 : 1, h = d.height;
+    auto bright = [&](uint32_t row) {
+        const uint8_t* r = p + size_t(row) * pitch + luma;
+        for (uint32_t x = 0; x < d.width; x += 4)
+            if (r[x * 2] > 40) return true;
+        return false;
+    };
+    bool middle = false, bands = false;
+    for (uint32_t y = h * 3 / 8; y < h * 5 / 8 && !middle; y += 4) middle = bright(y);
+    for (uint32_t y = 2; y < h / 8 && !bands; y += 3) bands = bright(y) || bright(h - 1 - y);
+    if (bands) {
+        m.tall = true;
+        LOGI("gl: movie %08X %ux%u has a picture to its edges: 4:3 in the 16:9 picture", d.data, d.width, d.height);
+    } else if (middle && !m.picture) {
+        m.picture = true;
+        LOGI("gl: movie %08X %ux%u is letterboxed: it fills the 16:9 picture's width", d.data, d.width, d.height);
     }
 }
 
@@ -2045,15 +2096,29 @@ void GlBackend::ApplyState(const State& s, const Assembled& a) {
 // A small draw's box decides (reference::ScreenBox): one from the top to the bottom, or across the whole width and
 // reaching the top or the bottom, stays across the screen (full screen passes, also drawn in halves, as the shadows'
 // darkening; fades, bars along the top or bottom) unless it shows a picture (menus' layers, the title's logo), others
-// are narrowed.
+// are narrowed. In the close view (Picture::hud) the narrowed ones are also that much bigger, pictures from the top to
+// the bottom too (a menu's art is drawn with its logo: they keep their places).
 // A bigger draw is left to the vertex shader: every flat vertex narrowed but those on the left and right edges. Movie
-// frames are narrowed whole, to stay 4:3.
+// frames are narrowed whole, to stay 4:3, but for the letterboxed ones (MovieFit), enlarged to the screen's width.
 void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, const DrawTextures& st,
                         uint64_t vkey) {
     squeeze_ = squeeze_all_ = 0;
     if (!pic_.wide || !bound_rt_ || bound_rt_->gw != guest_w_ || bound_rt_->gh != guest_h_) return;
-    squeeze_ = kWideSqueeze;
-    if (st.movie) return;
+    // the close view's HUD bigger (taller too: VsEpilogue scales the height by squeeze_ over 3/4), but movies
+    squeeze_ = st.movie ? kWideSqueeze : kWideSqueeze * pic_.hud;
+    if (st.movie) {
+        if (st.movie_fill) {
+            // across the whole width, and 4/3 as tall about the middle: the frame enlarged, its bands off the screen
+            squeeze_ = 0;
+            const GLint w = GLint(bound_rt_->w), h = GLint(bound_rt_->h), vh = h * 4 / 3;
+            const GLint vp[4] = {0, -(vh - h) / 2, w, vh};
+            if (std::memcmp(cache_.vp, vp, sizeof vp)) {
+                glViewport(vp[0], vp[1], vp[2], vp[3]);
+                std::memcpy(cache_.vp, vp, sizeof vp);
+            }
+        }
+        return;
+    }
     constexpr uint32_t kSmallDraw = 24;
     float box[4];
     bool flat = false;
@@ -2088,11 +2153,15 @@ void GlBackend::Squeeze(const State& s, uint32_t prim, uint32_t start, uint32_t 
     perf_.squeeze += Ms(t0);
     perf_.boxes += boxed;
     if (!boxed) {
-        if (long(frame_) == trace0) LOGI("gl: squeeze draw %llu: %u vertices, left to the shader", (unsigned long long)frame_draws_, count);
+        if (long(frame_) == trace0)
+            LOGI("gl: squeeze draw %llu: %u vertices, left to the shader; viewport %u %u %u %u", (unsigned long long)frame_draws_, count,
+                 s.viewport.x, s.viewport.y, s.viewport.w, s.viewport.h);
         return;
     }
     if (!flat) {
-        if (long(frame_) == trace0) LOGI("gl: squeeze draw %llu: not flat", (unsigned long long)frame_draws_);
+        if (long(frame_) == trace0)
+            LOGI("gl: squeeze draw %llu: not flat; viewport %u %u %u %u", (unsigned long long)frame_draws_, s.viewport.x, s.viewport.y,
+                 s.viewport.w, s.viewport.h);
         squeeze_ = 0;
         return;
     }

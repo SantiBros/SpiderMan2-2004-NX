@@ -24,6 +24,7 @@ R=$(cd "$(dirname "$0")" && pwd)
 cd "$R"
 VERSION=$(tr -d ' \r\n' < VERSION)
 SUPPORTED_SHA1=853bcb253c5baea2d7e2d9b59e5888b4c87bb402  # Spider-Man 2, title 4156002B, version 4
+SUPPORTED_CODE=b3d6d36a707840a9dcc047f0302b41edc61dfee2  # its game code (tools/lock_nro.py code), which other editions may share
 export DEVKITPRO=${DEVKITPRO:-/opt/devkitpro}
 JOBS=${JOBS:-$(nproc 2>/dev/null || echo 4)}
 
@@ -148,11 +149,17 @@ else
     esac
 fi
 sha=$(sha1sum "$xbe" | cut -c1-40)
-echo "  default.xbe SHA-1 $sha"
-[ "$sha" = "$SUPPORTED_SHA1" ] || fail "this default.xbe is not the release the port supports.
+code=$(python3 tools/lock_nro.py code "$xbe" 2>/dev/null || true)
+echo "  default.xbe SHA-1 $sha, game code ${code:-not read}"
+if [ "$sha" != "$SUPPORTED_SHA1" ] && [ "$code" = "$SUPPORTED_CODE" ]; then
+    echo "  another edition of the game, with the supported game code"
+elif [ "$sha" != "$SUPPORTED_SHA1" ]; then
+    fail "this default.xbe is not the release the port supports.
   Supported: Spider-Man 2 for the original Xbox, title 4156002B version 4, default.xbe SHA-1 $SUPPORTED_SHA1
-  Yours:     $sha
-  The recompiled code is made for that one file; other releases need their own config (see docs/TECHNICAL.md)."
+             (game code $SUPPORTED_CODE: other editions built from it work too)
+  Yours:     $sha (game code ${code:-not read})
+  The recompiled code is made for that game code; other releases need their own config (see docs/TECHNICAL.md)."
+fi
 cp "$xbe" assets/default.xbe
 
 # 3. recompile
