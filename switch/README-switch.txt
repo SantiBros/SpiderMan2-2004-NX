@@ -49,9 +49,10 @@ Not read: .zip, .7z or .rar archives (extract the image or the folder from
 them first), Xbox 360 images, and the old zlib CSO (version 1) made for the
 PSP.
 
-It must be the same release of the game the .nro was made with (its
-default.xbe SHA-1 is in the log). With another release the screen says so and
-asks before starting, as it would most likely crash.
+It must be the game code the .nro was made with: the US edition's, or another
+edition built from the same code (a European one, if its code is the same; the
+log names your copy's game code and regions). With another release the screen
+says so and asks before starting, as it would most likely crash.
 
 
 2. Start it with full memory
@@ -66,8 +67,10 @@ the debug menu's "Start-up log" on, it shows the newest lines of the log
 instead, so a photo of it tells how far the game got.
 
 The game is in the console's language: English, Spanish, French, German or
-Italian menus and subtitles (any other language: English). The voices are in
-English in every language: the disc only has those.
+Italian menus and subtitles (any other language: English), from any edition.
+The voices come from your copy: the US disc has English ones, the European
+discs French, German and Spanish, or Italian. The debug menu's Voices picks
+them apart from the text.
 
 Hold while you start it (until the blue screen appears), for that start only,
 to find where a problem comes from:
@@ -91,12 +94,16 @@ first start.
 3. Controls
 -----------
 
-The game shows Xbox buttons. They are mapped by position:
+The game shows Xbox buttons. By default they are mapped by position, as on
+the Xbox's controller:
 
   Xbox A (bottom)  = Switch B        Xbox B (right) = Switch A
   Xbox X (left)    = Switch Y        Xbox Y (top)   = Switch X
   Start = +    Back = -    triggers = ZL / ZR    white / black = L / R
   sticks and D-pad as on the Xbox
+
+The debug menu's Buttons setting maps them by letter instead (Switch
+layout): A is A, B is B, X is X and Y is Y.
 
 Hold + and - together for one second to quit.
 
@@ -109,15 +116,21 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
 (the touch screen works too). The game gets no input while it is open.
 
   Language            Auto (the console's), English, Espanol, Francais,
-                      Deutsch, Italiano - from the next start
+                      Deutsch, Italiano: menus and subtitles - from the next
+                      start
+  Voices              Auto (the text's language if your copy has those
+                      voices, else your copy's own), or any language your
+                      copy has voices in - from the next start
   Resolution          480p (the Xbox's), 720p, 1080p (docked; 720p in
                       handheld mode) - the whole picture and the movies;
                       more work for the GPU
   Screen              4:3 with black, blurred, web or suit sides (the web in
                       the suit's red, blue and black), on a 2000s or a
-                      70s CRT TV, or 16:9 full screen
-                      (the game's own wide camera; the HUD, menus and movies
-                      stay 4:3)
+                      70s CRT TV, or 16:9: the wide view (the game's own
+                      wide camera, more city at the sides; the HUD and menus
+                      stay 4:3) or the close view (Spider-Man and the city a
+                      third bigger, the HUD and menus a tenth bigger); in
+                      both, the letterboxed cutscenes fill the width
   Upscaling           smooth or sharp
   CRT filter          off, light, strong (scanlines, the screen's colour
                       stripes and glow, as on an old TV; strong also curves
@@ -126,6 +139,8 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
                       the GPU in the city)
   Vibration           off, low, medium, high (Joy-Con or a Pro Controller;
                       the Switch Lite has none of its own)
+  Buttons             Xbox layout (by position, the default) or Switch
+                      layout (by letter: A is A, B is B...)
   CPU / GPU / memory  auto (the default: 1785 MHz CPU, 1600 MHz memory,
   clock               the GPU by the picture), stock, or rates Nintendo's
                       own profiles use (up to 1785 / 768 / 1600 MHz); the
@@ -136,6 +151,12 @@ same, B or + close it. Up/Down picks a setting, Left/Right or A changes it
   Renderer            GPU or CPU - from the next start
   Render thread       on or off - from the next start
   Start-up log        the log on the start screen - from the next start
+  Update              A asks GitHub for the newest version; a newer one is
+                      downloaded from its release, unlocked on the console
+                      with your game's default.xbe and put in place of this
+                      .nro (the old one kept as SpiderMan2Xbox.nro.old), then
+                      A again starts it. Needs the internet; your saves and
+                      settings stay.
 
 The settings are kept in settings.ini beside the .nro: delete it to go back
 to the recommended ones. If the game runs under 30 frames a second in busy

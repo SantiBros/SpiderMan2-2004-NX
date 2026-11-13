@@ -130,14 +130,34 @@ Two backends take the draws:
   the bottom, stays across (full screen passes, the shadows' darkening drawn in halves, fades, bars) unless it shows
   a picture (a menu's layers, the logo); a bigger draw is narrowed vertex by vertex but for those right on the left
   and right edges (at 0 or the width, or half a pixel off: full screen passes), those past the edges included, so
-  text placed partly off the 4:3 screen keeps its shape; movie frames are always narrowed. What the game places at a
+  text placed partly off the 4:3 screen keeps its shape. Movie frames are narrowed too, but those letterboxed for the
+  cinema (the cutscenes: black bands across the top and bottom eighth of every frame, a picture in the middle; each
+  movie texture is looked at as it changes) fill the width instead: drawn across the whole screen with a GL viewport
+  4/3 as tall, their bands off the screen. What the game places at a
   point of the world through its own world-to-screen function (`0x00343FF0`: the city map's icons, district names
   and lines, the markers over the city in play) is drawn flat too, so it would be narrowed after the wider
   projection had already put it nearer the middle: the hook widens that function's x by 4/3 about the middle when
-  the camera is the widened one, and the narrowing puts it back on its point. The shader list of an earlier version
-  is kept when the GLSL changes: `glsl::ListEdits()` carries the changes as text replaced in its programs. The list
-  is named by the shader generator's version only (`sm2nx glsl list 2, shaders N`): the GLSL is the same whatever the
-  driver, so a port built with another Mesa keeps it.
+  the camera is the widened one, and the narrowing puts it back on its point. A view drawn into part of the frame,
+  the minimap in the bottom right corner, is 3D and so shown where its rectangle is across the 16:9 screen, while
+  its pins and its N are placed through WorldToScreen into that rectangle and drawn flat, a quarter of their
+  distance nearer the middle: the view's screen scale and offset (`0x003443A0`, made from its rectangle for its
+  vertex shaders) are made from the rectangle moved by that quarter, so the map lands under its pins, the rectangle
+  itself left as it is for what the game places in it.
+
+  **Its close view** (`app::WideClose()`) is the engine's own 16:9 instead: the camera's aspect set to 16:9 and its
+  field of view left as the game set it, across the width, so what it shows is a third bigger and a little less is
+  seen above and below. What is drawn flat is narrowed by 0.75 × 1.1 and made 1.1 times taller about the middle
+  (`Picture::hud`; the vertex shader scales the height by the narrowing over 3/4), menus' pictures from the top to
+  the bottom included, so a menu's art and its logo keep their places; movies stay 0.75 and their height. The views
+  in part of the frame (the minimap) keep the wide view's camera, so they go with the HUD: their rectangle is moved
+  and enlarged as the HUD is (its middle nearer the screen's by 0.75 × 1.1 across, 1.1 down, its size 1.1 times),
+  and WorldToScreen's points in a full-frame view are moved by the opposite of the flat drawing (x by 1/(0.75 × 1.1),
+  y by 1/1.1 about the middle), so the map icons and markers land on their points.
+
+  The shader list of an earlier version is kept when the GLSL changes: `glsl::ListEdits(generator)` carries the
+  changes since that list's shader generator as text replaced in its programs. The list is named by the shader
+  generator's version only (`sm2nx glsl list 2, shaders N`): the GLSL is the same whatever the driver, so a port
+  built with another Mesa keeps it.
 - The CPU **reference renderer** ([`sdk/harness/reference_renderer.cpp`](../sdk/harness/reference_renderer.cpp)),
   which draws into guest memory in software, register combiners and vertex programs included. It is exact enough
   to compare against and slow (seconds per city frame). The test build uses it, and the Switch falls back to it
@@ -153,7 +173,7 @@ Two backends take the draws:
 | `main.cpp` | Checks the launch mode (title takeover), loads `settings.ini`, reads the console's language, finds the game (`kernel/game_source`), asks before a different release, mounts the disc image, boots the game, and keeps the applet alive, running the debug menu. Until the game draws, the start screen says "Loading..." (or, with the start-up log on, shows the newest log lines). Quitting (+ and −) takes no lock the game could hold. |
 | `screen.cpp` | The 1280×720 window. With GL (the default): an EGL window surface and an OpenGL 4.3 core context; the main thread draws the text screens (libnx's console font, as an image) until the renderer takes the context, then the renderer puts the status text over the frames until the game draws its own picture. Without: libnx's framebuffer, presented by the main thread, with the reference renderer's frames scaled to the screen's height. Two overlay layers (the frame-rate counter and the debug menu), RGBA pictures the main thread draws on the CPU, are blended over every frame: by the renderer's thread with `glr::DrawOverlay` after the frame, or into the framebuffer. |
 | `menu.cpp` | The debug menu (ZL + ZR + −): its own pad state on the main thread, so it works whatever the game does; the game's controller reads nothing while it is open, nor the − of the combination, nor the buttons that closed it until they are let go. The touch screen picks rows and steps values. The frame-rate counter is counted from the frames presented, every half second. |
-| `settings.cpp` | `settings.ini` beside the `.nro`: language, resolution, screen, upscaling, texture filtering, vibration, clocks, counter, volume, renderer, render thread, start-up log; written whole (a new file, then renamed) at every change. The buttons held at start override it for that start. The picture settings reach the renderer's thread and the game's through atomics (`state.h`) and change in play. |
+| `settings.cpp` | `settings.ini` beside the `.nro`: language, voices, resolution, screen, upscaling, texture filtering, vibration, buttons, clocks, counter, volume, renderer, render thread, start-up log; written whole (a new file, then renamed) at every change. The buttons held at start override it for that start. The picture settings reach the renderer's thread and the game's through atomics (`state.h`) and change in play. |
 | `clocks.cpp` | CPU, GPU and memory clocks through `clkrst` (`pcv` before 8.0.0), as the NFS Most Wanted port does: only the rates of Nintendo's performance configurations, the configuration's own clocks found through `apm:sys`, put back twice a second after the system resets them (docking, sleep, performance mode changes), given back while out of focus (the focus mode notifies the port of the HOME menu) and at exit; while custom clocks are in use the exit is locked so that closing from HOME first restores them. |
 | `backend.cpp` | The GPU renderer's host (the window, the context, the swap), falling back to the reference renderer when GL doesn't start; the reference renderer paced for the Switch (60 frames a second, a frame drawn when as long as the last drawing has passed, at least half a second). Held at start: R the reference renderer, ZR the GPU renderer on the game's thread (no render thread). |
 | `audio.cpp` | audout at 48 kHz, four 20 ms buffers filled by DirectSound's mixer, at the settings' volume; L at start turns it off. |
@@ -164,17 +184,23 @@ Two backends take the draws:
 | `crash.cpp` | The exception handler: registers, the module offset of the crash, return addresses from the stack and the game thread's current function, into `logs/crash.txt` and the run's log. |
 | `pthread_detach.cpp` | `pthread_detach`, which libnx doesn't have (below). |
 
-## Language
+## Languages and editions
 
-The disc holds the game's text in English, French, German, Italian and Spanish (`packs/`), but its `game.ini` names
-the English SKU (`SKU=Xbox-E`), with which the game shows English whatever the console says. With the
-multi-language SKU (`Xbox-Multi`) it takes the Xbox's language setting (`XC_LANGUAGE`, read with
-`ExQueryNonVolatileSetting`). So for another language than English, [`src/game/language.cpp`](../src/game/language.cpp)
-asks the file layer for a rewritten `game.ini` (`kernel::RewriteDiscFile`: the copy is made at the first open, in
-`cache/disc/`, and opened in its place), and the kernel answers the console's language (`kernel::g_language`, set from
-the Switch's system language, or the settings'). The disc only has the English voices and songs: a sound bank of
-another language (`NAME_ES.WBK`) is opened as the English one (`kernel::g_missing_disc_file`), as the game would
-otherwise find no file and play nothing.
+One `default.xbe` serves the game's three editions, told apart by their disc's `game.ini` (read at `0x001F3490`):
+`SKU=Xbox-E` English, `SKU=Xbox-Multi` French, German or Spanish (the Xbox's language setting, `XC_LANGUAGE` read
+with `ExQueryNonVolatileSetting`, picks one: German, Spanish, and French for any other) and `SKU=Xbox-It` Italian. The
+discs hold the text of all five languages (`packs/`), so [`src/game/language.cpp`](../src/game/language.cpp) asks the
+file layer for a `game.ini` naming the edition of the text's language (`kernel::RewriteDiscFile`: the copy is made at
+the first open, in `cache/disc/`, and opened in its place; none when the disc's already names it), and the kernel
+answers that language (`kernel::g_language`, set from the Switch's system language, or the settings').
+
+The voices are in sound banks of their own for each language (`NAME_EN.WBK`, `NAME_FR.WBK`, ...), their lip sync in
+the pack for all five. The US disc has only the English banks; the European discs have French, German and Spanish, or
+Italian. The game names the banks and the lip sync from its language (`0x0021B2D0` the two letters, `0x0021B320` the
+whole name); the port's hooks answer the voices' language instead: the one set in the debug menu, or with Auto the
+text's when the copy has its banks (`STREAMS_VOICE_<XX>.WBK`), else the copy's own (English, French, then Italian
+first). A bank still missing is opened in another language's place, and a movie only one edition has in the other's
+(`NAME.XMV` and the 50 Hz `NAME_PAL.XMV`) (`kernel::g_missing_disc_file`), as the game would otherwise find no file.
 
 | Switch | Xbox (`XC_LANGUAGE`) |
 |---|---|
@@ -187,18 +213,39 @@ otherwise find no file and play nothing.
 
 ## The locked .nro and the installer page
 
-The release's `.nro` is encrypted with AES-256-GCM ([`tools/lock_nro.py`](../tools/lock_nro.py)). The key is the
-SHA-256 of a label and the whole `default.xbe` of the supported release, so only someone with the game can make it.
-The locked file is a 64 byte header (`SM2NXLK1`, the 12 byte nonce, the `.nro`'s size, the SHA-1 of the
-`default.xbe` it needs; all of it authenticated) and the ciphertext with GCM's tag.
+The release's `.nro` is encrypted with AES-256-GCM ([`tools/lock_nro.py`](../tools/lock_nro.py)), so only someone
+with the game can make it. Up to 0.3.1 (lock version 1) the key is the SHA-256 of a label and the whole `default.xbe`
+of the supported release. From 0.4.0 (version 2) it is the SHA-256 of another label and the xbe's **game code**
+([`sdk/runtime/xbe/code.h`](../sdk/runtime/xbe/code.h): each section the title loads, with its address and sizes,
+then the entry point and the kernel imports' address; not the header and certificate, which name the edition's
+regions, title and signature), so another edition built from the same code opens it too. The locked file is a 64 byte
+header (`SM2NXLK1` or `SM2NXLK2`, the 12 byte nonce, the `.nro`'s size, the SHA-1 of the `default.xbe` or of the game
+code it needs; all of it authenticated) and the ciphertext with GCM's tag.
 
 The [installer page](../installer/index.html) is one HTML file served by GitHub Pages beside a folder for each
 version (its locked `.nro` and the SD card folder's text files) and `versions.json`, which lists them. The player
 picks the version, the newest unless they choose another (or the address names one: `?v=0.2.3`). In the browser,
 with no upload: it finds `default.xbe` in what the player chooses (the file
 itself, or inside an XISO, a full disc dump, a CCI or a CSO, split or not: the same formats as the port, read with
-`File.slice` so a 1.7 GB image is never loaded whole), checks its SHA-1, unlocks the `.nro` with WebCrypto and
+`File.slice` so a 1.7 GB image is never loaded whole), checks its SHA-1 or its game code's (another edition, for
+the versions locked with it, listed with `lock: 2` in `versions.json`), unlocks the `.nro` with WebCrypto and
 writes `SpiderMan2Xbox-SD.zip` (stored, no compression) with the `switch` folder for the SD card.
+
+## In-app updates
+
+The debug menu's **Update** row ([`switch/update.cpp`](../switch/update.cpp)) does on the console what the
+installer page does in a browser. It asks GitHub's API for the repository's releases and takes the newest that has a
+`SpiderMan2Xbox-<version>.nro.locked`, newer than the running port's version. That file is downloaded from the
+release's own download link, as a browser would, so GitHub counts it among the release's downloads. It is unlocked
+as it arrives, AES-256-GCM in pieces ([`switch/update_core.cpp`](../switch/update_core.cpp): AES from libnx, GHASH
+with 4-bit tables), with the key worked out at start from the game code of the game's `default.xbe` (lock version 2:
+the US edition's, or another edition's of the same code).
+The unlocked `.nro` goes to `SpiderMan2Xbox.nro.new` and only once GCM's tag is right does it take the running
+`.nro`'s place, the old one renamed `SpiderMan2Xbox.nro.old`. A again quits as usual and asks the Homebrew loader to
+start the new one (`envSetNextLoad`). The connection is the Switch's own TLS (the `ssl` service, with its trusted
+certificates and host name check), over libnx's sockets, after `nifm` says the console is online; nothing of it is
+started until the row is used. The HTTP, the release lookup and the unlocking are tested on a computer:
+`tools/test_update.sh <default.xbe>`.
 
 ## Disc images
 
@@ -218,7 +265,9 @@ Inside, XDVDFS starts at the image's beginning (an XISO) or at `0x18300000`, pas
 dump of an original Xbox disc). Images with the file system at the Xbox 360's offsets are named as such.
 [`kernel/game_source.cpp`](../sdk/runtime/kernel/game_source.cpp) looks in `game/` and beside the `.nro` for the
 disc's files and for images (a split one counted once), and picks the copy whose `default.xbe` matches the build's
-SHA-1, then one with the same entry point; every file it can't use is listed with the reason.
+SHA-1 or its game code's SHA-1 (another edition of the same code: the build writes it, `kImageCode`), then one with
+the same entry point; every file it can't use is listed with the reason. The log names each copy's game code, title
+version and regions.
 
 ## What the Switch does differently
 
@@ -278,11 +327,12 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 
 - `runtime/kernel/image.{h,cpp}` (new): the disc image containers (plain, split, CCI, CSO v2) and the LZ4 decoder;
   `kernel/disc.cpp` reads through it and names Xbox 360 images.
-- `runtime/kernel/game_source.{h,cpp}` (new): the player's copy found in folders, matched by SHA-1 and entry point.
+- `runtime/kernel/game_source.{h,cpp}` (new): the player's copy found in folders, matched by SHA-1, game code
+  (`runtime/xbe/code.h`, new) and entry point.
 - `runtime/kernel/files.cpp`: read-only opens unless written, renames and resizes around open files (above);
   `IoQueryVolumeInformation`, which the game imports, answers as `NtQueryVolumeInformationFile` does (it was missing, and
   a call would have stopped the game); `RewriteDiscFile` (a disc file the title layer rewrites, opened from a copy)
-  and `g_missing_disc_file` (a disc file that isn't there opened as another), for the language.
+  and `g_missing_disc_file` (a disc file that isn't there opened as another), for the languages; `DiscFileExists`.
 - `runtime/cpu/x86_ops.h`, `kernel/memory.cpp`: generated functions take guest memory's base pointer `__restrict`,
   and in the segmented layout reach every guest byte from it (`x86_seg_rel`, the slices' offsets from the base), so
   the compiler knows a guest store never writes the `X86Context`: the x86 registers stay in host registers across
@@ -362,12 +412,13 @@ src/game/swing_log.cpp   each web swing's direction and animations, in the log
 src/game/debug_hooks.cpp hooks that only log, for the test build
 gl/                  the GPU renderer: OpenGL 4.3 (loader, GLSL translation, the backend)
 switch/              the Switch program: start-up, screen, debug menu, settings, clocks, renderer host, sound,
-                     controls, rumble, watch, crash handler
+                     controls, rumble, watch, crash handler, in-app updates
 tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)
 tools/make_release.sh  the release zip
-tools/lock_nro.py    the release's .nro locked with the supported default.xbe (AES-256-GCM), and unlocked
+tools/lock_nro.py    the release's .nro locked with the supported default.xbe's game code (AES-256-GCM; up to
+                     0.3.1 with the whole file), and unlocked; `code` prints an xbe's game code SHA-1
 tools/make_installer_site.sh  the installer page's site (gh-pages) and the release's locked .nro and symbols
 installer/           the installer page: unlocks the .nro in the browser with the player's own game
 tools/art/           the README's banner, social preview and install steps (make_art.py), and clips

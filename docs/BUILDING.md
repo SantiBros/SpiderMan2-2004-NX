@@ -121,6 +121,7 @@ frame `f - 1` is `REFAT`'s frame `f`; draws count from 1 there and from 0 in the
 | `FENCETRACE=frame` | From that frame, each fence the game inserts and waits for, with the caller, in the log. |
 | `DRAWTRACE=frame` | Every draw of that frame into `drawtrace.txt`: its vertex count and first vertex, and the return addresses into the game's code on the guest stack (which of the game's functions drew it). `DRAWTRACE_VERTS=1`: every vertex's position and texture coordinates too. |
 | `PEEK="frame address bytes; ..."` | Guest memory logged at that frame; `*address` reads the address there first. |
+| `FILESWAP="a=b"` | A file the game opens whose name holds `a` (any case) is `b` instead: `FILESWAP="activision.xmv=openingmovie.xmv"` plays a cutscene at the start, to see the movies without playing to them. |
 | `RUMBLELOG=1`, `RANDLOG=N`, `FMODCHECK=N` | Every change of the rumble the game asks for; the first N values of the C library's `rand()`; the first N results of its x87 `fmod`, against the host's. |
 | `TRACE="x,y"`, `PROBES="x,y ..."` | In `REFAT`'s frames: every triangle over the pixel, why it was or wasn't drawn (culled, depth, stencil, alpha test) and the stencil before and after; `PROBES` the colour each draw leaves there. |
 | `IDMAP=1` | `cap/ids_<frame>.bin`: for each pixel, the last four CPU renderer draws that wrote it. |
@@ -174,6 +175,13 @@ g++ -std=c++20 -O2 -I sdk/runtime tools/test/disc_check.cpp sdk/runtime/kernel/{
 CSO files for testing come from [`ciso`](https://github.com/antangelo/ciso) (`cargo build --release`). The
 images you make are your copy of the game: keep them out of the repository.
 
+The in-app update's own parts (HTTP through redirects and chunks, the newest release in GitHub's list, unlocking a
+locked `.nro` as it downloads) are tested with OpenSSL standing in for the Switch's AES and TLS:
+
+```sh
+bash tools/test_update.sh /path/to/default.xbe
+```
+
 ## Making a release
 
 1. **The version:** raise [`VERSION`](../VERSION), add the version to [`CHANGELOG.md`](../CHANGELOG.md), and
@@ -184,7 +192,8 @@ images you make are your copy of the game: keep them out of the repository.
 3. **The zip:** commit, then `bash tools/make_release.sh` writes `out/SpiderMan2-2004-NX-<version>.zip` (the
    repository at that commit) and prints its SHA-256. It refuses a zip with game files in it.
 4. **The locked .nro, the symbols and the installer page:** with the `.nro` of step 2 in `build-switch/`,
-   `bash tools/make_installer_site.sh <default.xbe>` locks it with the supported `default.xbe`
+   `bash tools/make_installer_site.sh <default.xbe>` locks it with the supported `default.xbe`'s game code (lock
+   version 2; versions before 0.4.0, built with `TREE=`, with the whole file, version 1)
    ([`tools/lock_nro.py`](../tools/lock_nro.py)) and writes `out/site/<version>/` (the locked `.nro` and the SD card
    folder's text files), the installer page and `versions.json` (the versions in `out/site/`, newest first, titled
    from [`installer/versions.json`](../installer/versions.json): add the new one there), and `out/release/`:

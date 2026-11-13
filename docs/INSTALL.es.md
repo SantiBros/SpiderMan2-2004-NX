@@ -37,8 +37,11 @@ tarjeta SD junto con tu juego.
 ## Cómo conseguir tu juego
 
 Necesitas *Spider-Man 2* para la **Xbox original**, la edición cuyo `default.xbe` tiene el SHA-1
-`853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título `4156002B`, versión 4). El compilador lo comprueba,
-así que no tienes que averiguarlo tú. El port nunca descarga nada: usa la copia que le das.
+`853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título `4156002B`, versión 4, la edición de EE. UU.). Desde la
+0.4.0 también sirve otra edición si su código de juego es el mismo (`b3d6d36a707840a9dcc047f0302b41edc61dfee2`: el
+programa en sí, sin la cabecera que nombra su región), como puede serlo una europea. El compilador, la página de
+instalación y el port lo comprueban, así que no tienes que averiguarlo tú. El port nunca descarga nada: usa la
+copia que le das.
 
 ### Con una Xbox modificada
 
@@ -81,7 +84,8 @@ navegador reciente (Chrome, Firefox, Edge, Safari, Samsung Internet; en iPhone n
 
 1. **Elige tu juego:** tu imagen de disco (`.iso`, `.xiso`, `.cci`, `.cso`; si está dividida, selecciona todas sus
    partes a la vez) o solo su `default.xbe`. La página lee el `default.xbe` del juego y comprueba que sea la
-   edición compatible. Todas las versiones aceptan los mismos archivos.
+   edición compatible o (para la 0.4.0 y posteriores) otra edición con su código de juego. Todas las versiones
+   aceptan los mismos archivos.
 2. **Elige la versión**, o deja la más reciente, que ya está elegida. El menú tiene todas desde la 0.0.8 y dice cuál
    es la recomendada (la más reciente), cuáles funcionan en una Switch con problemas conocidos (0.1.0 a 0.3.0) y
    cuáles son pruebas tempranas que no arrancan en ella (0.0.8 a 0.0.10). Debajo están los cambios principales de
@@ -93,7 +97,7 @@ navegador reciente (Chrome, Firefox, Edge, Safari, Samsung Internet; en iPhone n
 4. Sigue con [Copiarlo a la tarjeta SD](#copiarlo-a-la-tarjeta-sd).
 
 Tu juego nunca se sube a ningún sitio: la página solo descarga el port bloqueado y hace el resto en tu navegador.
-Sin el `default.xbe` de la edición compatible el port bloqueado no se puede abrir, y por eso puede estar en las
+Sin el `default.xbe` del juego compatible el port bloqueado no se puede abrir, y por eso puede estar en las
 releases. En un computador, `python3 tools/lock_nro.py unlock SpiderMan2Xbox-<versión>.nro.locked default.xbe
 SpiderMan2Xbox.nro` hace lo mismo.
 
@@ -195,7 +199,7 @@ Los mensajes del compilador están en inglés:
 |---|---|
 | `Missing: ...` y `Install them now?` | Pulsa Enter (o `Y`) y escribe tu contraseña: las instala. En una distribución sin `apt`, [instálalas a mano](#instalar-las-herramientas-a-mano). |
 | `still missing after installing` | La instalación de arriba dice qué falló (a menudo, no hay internet). Prueba otra vez, o [instálalas a mano](#instalar-las-herramientas-a-mano). Si devkitPro está en otro lugar que no sea `/opt/devkitpro`, ejecuta antes `export DEVKITPRO=/donde/esté`. |
-| `this default.xbe is not the release the port supports` | Tu copia es otra edición del juego (de otra región o versión). El port solo funciona con la edición para la que se hizo: abre un issue con el SHA-1 que mostró, si quieres que esa edición sea compatible. |
+| `this default.xbe is not the release the port supports` | Tu copia es otra edición del juego, con otro código de juego (otra versión, o una edición compilada aparte). El port solo funciona con el código de juego para el que se hizo: abre un issue con el SHA-1 y el código de juego que mostró, si quieres que esa edición sea compatible. |
 | `... is a compressed archive` | Extrae la imagen de disco o la carpeta del juego del `.zip`, `.7z` o `.rar`, e indica esa al compilador. |
 | `default.xbe could not be read from ...` | El mensaje dice por qué (no es una imagen de Xbox, es una imagen de Xbox 360, falta una parte de una imagen dividida...). |
 | `the PC tools did not build` / `the Switch build failed` | El registro que nombra (`build-tools.log`, `build-switch.log`) dice por qué. Adjúntalo a un issue si no está claro. |
@@ -251,6 +255,8 @@ tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en
 
 - **Language** (idioma): Auto (el de la consola), English, Español, Français, Deutsch o Italiano, desde el
   siguiente arranque.
+- **Voices** (voces): Auto (las del idioma, si tu copia las tiene; si no, las de tu copia) o cualquier idioma del
+  que tu copia tenga voces, desde el siguiente arranque. El menú dice cuáles.
 - **Resolution** (resolución): 480p (la de la Xbox), 720p o 1080p: todo el juego y sus videos dibujados con esos
   píxeles. 720p llena la pantalla portátil píxel a píxel; 1080p, para jugar en el dock, se dibuja más grande y se
   reduce (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU
@@ -258,8 +264,10 @@ tiempo de cada imagen y las llamadas de dibujo de ese momento. El menú está en
 - **Screen** (pantalla): 4:3 con los lados negros, desenfocados, con telaraña o con la telaraña en los colores del
   traje (rojo, azul y negro), en un televisor CRT de los 2000 (**2000s CRT TV**: plateado, altavoces estéreo,
   entradas A/V, tubo de pantalla plana) o de los 70 (**70s CRT TV**: un mueble de madera con perillas y altavoz, la
-  imagen con esquinas redondeadas y líneas de barrido), o **16:9 full screen**, la cámara panorámica oculta del propio juego, con más ciudad
-  a los lados y el HUD, los menús y los videos en 4:3 en el centro.
+  imagen con esquinas redondeadas y líneas de barrido), o 16:9, la cámara panorámica oculta del propio juego: **16:9, wide view** (vista amplia), con más
+  ciudad a los lados y el HUD, los menús y los videos en 4:3 en el centro, o **16:9, close view** (vista cercana),
+  con Spider-Man y la ciudad un tercio más grandes y el HUD y los menús un décimo más grandes. En las dos, las
+  cinemáticas con franjas de cine llenan el ancho.
 - **CRT filter** (filtro CRT): Off, Light o Strong, la imagen como en un televisor CRT antiguo (líneas de barrido,
   las franjas roja, verde y azul de la pantalla, un brillo suave, los bordes más oscuros; Strong además curva el
   cristal), con cualquier opción de Screen.
@@ -286,9 +294,15 @@ recomendados, elige **Restore recommended settings**, o borra el archivo.
 
 El juego toma el idioma de la consola (Configuración del sistema → Sistema → Idioma). En inglés, español (de
 España o de Latinoamérica), francés (de Francia o de Canadá), alemán o italiano, sus menús y subtítulos salen en
-ese idioma, con los textos de tu disco; en cualquier otro idioma, en inglés. Las voces son en inglés en todos los
-idiomas: el disco solo trae las inglesas. Para jugar en otro idioma que el de la consola, cambia **Language** en
-el menú de depuración y vuelve a arrancar el port.
+ese idioma, con los textos que trae cualquier disco (el italiano bien desde la 0.4.0); en cualquier otro idioma, en
+inglés. Para jugar en otro idioma que el de la consola, cambia **Language** en el menú de depuración y vuelve a
+arrancar el port.
+
+Las voces son las de tu copia: el disco de cada edición solo trae las suyas. El disco de EE. UU. trae voces en
+inglés; los europeos, en francés, alemán y español (el doblaje de España) uno, en italiano otro. Con **Voices** en
+Auto los personajes hablan el idioma de los menús si tu copia tiene esas voces; si no, las de tu copia. O pon
+**Voices** en cualquier idioma que tenga tu copia, aparte del de los textos (voces en español con textos en inglés,
+por ejemplo). El menú de depuración dice qué voces tiene tu copia.
 
 ## Partidas
 
@@ -327,7 +341,7 @@ Los mensajes de la pantalla están en inglés:
 | **El compilador se detiene al instalar las herramientas** ("the build stopped" justo después de los paquetes de Ubuntu) | No pudo descargar las herramientas de devkitPro; desde la 0.2.3 dice por qué, y lo intenta tres veces. Comprueba que Linux tenga internet y vuelve a abrir el compilador; una VPN, un antivirus o una red que bloquee `apt.devkitpro.org` también lo causa, así que prueba otra red. A mano, en Ubuntu: `wget https://apt.devkitpro.org/install-devkitpro-pacman`, `chmod +x install-devkitpro-pacman`, `sudo ./install-devkitpro-pacman`, `sudo dkp-pacman -S switch-dev switch-mesa`, y luego el compilador otra vez. |
 | **Game not found** | Tu juego no está en `switch/SpiderMan2Xbox/game/`, o está en una forma que el port no lee. La pantalla lista los archivos que encontró y por qué no puede usar cada uno. Mira [los formatos](#los-formatos-que-lee-el-port). |
 | **The data folder is missing** | El contenido de `data` está directamente en `game/`. Crea ahí una carpeta llamada `data` y mueve a ella `game.ini`, `movies`, `packs` y `sound`. |
-| **A different release of the game** | Tu copia no es la edición a partir de la cual se compiló el port. Lo más probable es que se cierre: pulsa **+** para volver. Normalmente el compilador lo detecta; esto pasa cuando el `.nro` se compiló a partir de otra copia. |
+| **A different release of the game** | El código de juego de tu copia no es aquel a partir del cual se compiló el port (la pantalla dice sus regiones, su SHA-1 y su código de juego). Lo más probable es que se cierre: pulsa **+** para volver. Normalmente el compilador lo detecta; esto pasa cuando el `.nro` se compiló a partir de otra copia. |
 | **Another game or version** | La imagen que está en `game/` es de otro juego, o de otra versión de este. |
 | **Not enough memory in this mode** | Abre el port con **R + un juego**, no desde el Álbum. |
 | **The game did not start** | El archivo más nuevo de `logs/` dice por qué. |
@@ -335,7 +349,7 @@ Los mensajes de la pantalla están en inglés:
 | **La imagen sale mal** (falta, negra, parpadea, colores raros) | Toma una foto y envía la carpeta `logs`. Luego prueba manteniendo **R** al arrancar (el renderizador por CPU): si así la imagen sale bien, el problema está en el renderizador por GPU. |
 | **Va lento** | Activa el contador en el [menú de depuración](#el-menú-de-depuración) y revisa ahí que los relojes estén en Auto y el filtrado en Standard. A 720p o 1080p, prueba una resolución menor. Envía la carpeta `logs`: cada 5 segundos el registro tiene líneas `perf:` que dicen en qué se va el tiempo. |
 | **No vibra** | La Switch Lite no tiene motor de vibración: usa Joy-Con o un Pro Controller. Revisa que **Vibration** no esté en Off en el [menú de depuración](#el-menú-de-depuración), y que la vibración del control esté activada en la configuración de la consola. |
-| **El juego sale en otro idioma** | Sigue el idioma de la consola, que se lee al arrancar. Cambia **Language** en el [menú de depuración](#el-menú-de-depuración) y vuelve a arrancar el port. Las voces siempre son en inglés. |
+| **El juego sale en otro idioma** | Sigue el idioma de la consola, que se lee al arrancar. Cambia **Language** en el [menú de depuración](#el-menú-de-depuración) y vuelve a arrancar el port. Las voces son las de tu copia: el disco de EE. UU. solo trae las inglesas (ver [Idioma](#idioma)). |
 | **Da tirones** (paradas cortas al jugar) | Sobre todo la primera vez que pasas por un sitio, mientras el driver gráfico prepara los shaders que necesita; se guardan en `cache/shaders.cache` y la siguiente vez se preparan al arrancar. Si siguen, envía la carpeta `logs`: una línea `hitch:` señala cada tirón y en qué se fue el tiempo. |
 | **Una pantalla de error de Atmosphère** | Envía el archivo más nuevo de `atmosphere/crash_reports/` y la carpeta `logs`. |
 
@@ -351,7 +365,7 @@ que compilaste. Puedes escribir en español.
 | Palabra | Significado |
 |---|---|
 | **XBE** | El formato de los programas de la Xbox. `default.xbe` es el programa del juego; el port se hace a partir de él, y se desbloquea con él. |
-| **.nro bloqueado** | El port de la release, cifrado (AES-256-GCM) con una clave hecha del `default.xbe` compatible: no sirve sin el juego. La página de instalación lo desbloquea. |
+| **.nro bloqueado** | El port de la release, cifrado (AES-256-GCM) con una clave hecha del `default.xbe` compatible (desde la 0.4.0, de su código de juego, que comparten las otras ediciones del mismo código): no sirve sin el juego. La página de instalación lo desbloquea. |
 | **XISO** | Una imagen de disco con solo la partición del juego de un disco de Xbox. |
 | **Volcado completo del disco** | Una imagen de todo el disco (primero la partición de video, luego la del juego), como las de Redump. |
 | **CCI**, **CSO** | Imágenes de disco de Xbox comprimidas, hechas por Repackinator, que leen Cerbios (CCI) y StellarOS (CSO). |

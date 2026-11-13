@@ -49,6 +49,18 @@ en tu móvil) y balancéate por Nueva York.
 > mientras se preparaban shaders, y la 0.3.1 lo arregla.
 
 > [!TIP]
+> **Novedades de la 0.4.0: actualizaciones desde el port, voces en otro idioma, ediciones europeas, un 16:9 más
+> cercano y la disposición de botones de la Switch.** La nueva fila **Update** del menú de depuración descarga la
+> versión más reciente desde su release en GitHub (cada actualización cuenta como una descarga allí), la desbloquea
+> en la consola con tu propio juego y la instala: después de esta, ya no hace falta computador ni móvil. **Voices**
+> elige el idioma de los personajes aparte del de los textos, entre las voces que tenga tu copia: los discos
+> europeos traen francés, alemán y español, o italiano. Una **edición europea** funciona si su código de juego es el
+> de la de EE. UU. (el port y la página de instalación lo comprueban). **16:9, close view** muestra a Spider-Man y la
+> ciudad un tercio más grandes, con un HUD un décimo más grande. El nuevo ajuste **Buttons** asigna A a A, B a B,
+> X a X e Y a Y si prefieres las letras de la Switch a las posiciones de la Xbox. En 16:9 las cinemáticas ahora
+> llenan la pantalla y los marcadores del minimapa vuelven a estar sobre el mapa, y el texto en italiano ya no sale
+> en francés.
+>
 > **Nuevo en la página de instalación: todas las versiones para elegir.** Su menú de versiones tiene todas desde
 > la 0.0.8 hasta la 0.3.1, con la más reciente ya elegida. Cada una dice si es la recomendada, si funciona con
 > problemas conocidos o si es una prueba temprana que no arranca en una Switch, sus cambios principales y qué tener
@@ -187,11 +199,12 @@ en tu móvil) y balancéate por Nueva York.
   texturas se decodifican una vez y se guardan, en un hilo de renderizado junto al del juego.
 - **A 480p, 720p o 1080p.** Todas las superficies que dibuja el juego se agrandan por igual, así que toda la
   imagen es más nítida, videos incluidos, con escalado más nítido y filtrado anisotrópico si quieres.
-- **Pantalla completa sin estirar.** La cámara 16:9 oculta del propio juego muestra más ciudad a los lados; el
-  HUD, los menús y los videos se quedan en 4:3. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje, o en un televisor CRT de los 2000 o de los 70.
+- **Pantalla completa sin estirar.** La cámara 16:9 oculta del propio juego: la vista amplia muestra más ciudad a
+  los lados, con el HUD y los menús en 4:3; la vista cercana muestra a Spider-Man y la ciudad un tercio más grandes,
+  con un HUD un décimo más grande. Las cinemáticas llenan el ancho. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje, o en un televisor CRT de los 2000 o de los 70.
 - **Vibración** en los Joy-Con y el Pro Controller, con la fuerza que elijas, y nunca se queda encendida.
-- **Tu copia en el formato que tengas.** Una imagen de disco (`.iso` o `.xiso`, una XISO recortada o un
-  volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
+- **Tu copia en el formato que tengas.** La edición de EE. UU., o una europea con el mismo código de juego. Una
+  imagen de disco (`.iso` o `.xiso`, una XISO recortada o un volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
 - **Se instala desde tu móvil.** La [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)
   desbloquea el port con tu propia copia en tu navegador y te da la carpeta para la tarjeta SD, de la versión más
@@ -199,10 +212,11 @@ en tu móvil) y balancéate por Nueva York.
   partir de tu copia en un computador: en Windows `build-windows.cmd` prepara todo lo que necesita y te pide tu
   juego; en Linux es un solo comando.
 - **En tu idioma.** El juego toma el idioma de la consola: menús y subtítulos en inglés, español, francés,
-  alemán o italiano, con los textos de tu disco.
+  alemán o italiano, con los textos que trae cualquier disco. Las voces son las de tu copia (en inglés en el disco
+  de EE. UU.; en francés, alemán y español, o en italiano, en los europeos), en su propio idioma si quieres.
 - **Un menú de depuración** (**ZL + ZR + −**) con la resolución, la forma de la pantalla, la vibración, un
   contador de imágenes por segundo, los relojes de CPU, GPU y memoria de la Switch (Auto de fábrica, y solo
-  velocidades que usan los perfiles de Nintendo, devueltas en el menú HOME y al salir), el idioma, el volumen y el renderizador. Se guarda
+  velocidades que usan los perfiles de Nintendo, devueltas en el menú HOME y al salir), el idioma y las voces, el volumen y el renderizador. Se guarda
   en `settings.ini`.
 - **Dice qué está mal.** Falta la carpeta data, hay un archivo comprimido que extraer, una imagen de Xbox
   360, otra edición del juego: la pantalla lo explica con palabras sencillas.
@@ -214,8 +228,9 @@ en tu móvil) y balancéate por Nueva York.
   conservan entre actualizaciones, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` que vuelve sola si alguna
   vez se reemplaza la carpeta.
 - **Controles asignados por posición**, para que los botones que muestra el juego estén donde tus dedos
-  los esperan.
-- **Totalmente sin conexión.** El port no usa la red.
+  los esperan, o por letra (A es A, B es B) si prefieres la disposición de la Switch.
+- **Actualizaciones desde el port** (desde la 0.4.0): Update, en el menú de depuración, descarga la versión más
+  reciente desde GitHub y la instala. Es la única vez que el port usa internet, y solo para llegar a GitHub.
 
 ## Qué necesitas
 
@@ -292,7 +307,11 @@ cómo compilar en Windows con WSL, cómo actualizar y la [solución de problemas
 
 ### Actualizar
 
-Abre otra vez la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) (siempre tiene la versión más nueva, y todas las anteriores en su menú de versiones) y copia la carpeta
+Desde la 0.4.0, lo más fácil es dentro del port: abre el [menú de depuración](#menú-de-depuración) (**ZL + ZR + −**),
+ve a **Update** y pulsa **A**; cuando encuentra una versión más nueva, **A** la instala y **A** otra vez reinicia el
+port con ella. Necesita la consola conectada a internet.
+
+Si no, o para conseguir la 0.4.0 misma, abre otra vez la [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/) (siempre tiene la versión más nueva, y todas las anteriores en su menú de versiones) y copia la carpeta
 `switch` del zip nuevo encima de la vieja, o compila la versión nueva y copia su carpeta `out/sd/switch`. Tus
 carpetas `game/` y `save/` se quedan como están. ¿Vienes de una versión anterior a la 0.1.0, que lo guardaba todo
 en `hdd/`? En el primer arranque tus partidas pasan solas a `save/` y el resto de `hdd/` se convierte en `cache/`.
@@ -314,6 +333,9 @@ pide el juego está donde está en el control de la Xbox:
 | X (izquierda) | **Y** | | Start / Back | **+** / **−** |
 | Y (arriba) | **X** | | Palancas, cruceta | lo mismo |
 
+¿Prefieres las letras de la Switch? El ajuste **Buttons** del [menú de depuración](#menú-de-depuración) tiene una
+**Switch layout**: la A del juego es la A de la Switch, la B es la B, la X es la X y la Y es la Y.
+
 Mantén **+ y −** a la vez durante un segundo para salir. Mantén **ZL + ZR** y pulsa **−** para el
 [menú de depuración](#menú-de-depuración) del port.
 
@@ -330,12 +352,14 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 
 | Ajuste | Opciones | Qué hace |
 |---|---|---|
-| Language (idioma) | Auto, English, Español, Français, Deutsch, Italiano | Los menús y subtítulos del juego. Auto sigue a la consola; un idioma que el juego no tiene es inglés. Las voces son en inglés en todos. Desde el siguiente arranque. |
+| Language (idioma) | Auto, English, Español, Français, Deutsch, Italiano | Los menús y subtítulos del juego, en cualquiera de sus cinco idiomas con cualquier disco. Auto sigue a la consola; un idioma que el juego no tiene es inglés. Desde el siguiente arranque. |
+| Voices (voces) | Auto, English, Español, Français, Deutsch, Italiano | El idioma en que hablan los personajes (la sincronía de labios lo sigue). Un disco solo trae las voces de su edición: el de EE. UU. en inglés, los europeos en francés, alemán y español, o en italiano; el menú dice cuáles tiene tu copia. Auto usa el idioma de los menús si tu copia tiene esas voces; si no, las de tu copia. Desde el siguiente arranque. |
 | Resolution (resolución) | 480p (la de la consola), 720p, 1080p (docked: en el dock) | Con cuántos píxeles se dibujan el juego y sus videos. 720p llena la pantalla portátil píxel a píxel; 1080p, en el dock, se dibuja más grande y se reduce, con bordes más suaves (en modo portátil dibuja 720p, la de la pantalla). Más trabajo para la GPU, que el reloj Auto de la GPU sube. |
-| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 2000s CRT TV, 4:3 70s CRT TV, 16:9 full screen | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego (más ciudad a los lados); el HUD, los menús y los videos se quedan en 4:3 en el centro. Los lados del 4:3 pueden ser negros, la imagen desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro), un televisor CRT de los 2000 (plateado, altavoces estéreo, entradas A/V, tubo de pantalla plana) o uno de los 70 (mueble de madera con perillas y altavoz, la imagen con esquinas redondeadas y líneas de barrido). |
+| Screen (pantalla) | 4:3 black sides, 4:3 blurred sides, 4:3 web sides, 4:3 suit sides, 4:3 2000s CRT TV, 4:3 70s CRT TV, 16:9 wide view, 16:9 close view | La imagen conserva su forma. 16:9 usa la cámara panorámica propia del juego: la vista amplia (wide view) muestra más ciudad a los lados, con el HUD y los menús en 4:3 en el centro; la vista cercana (close view) muestra a Spider-Man y la ciudad un tercio más grandes (un poco menos arriba y abajo), con el HUD y los menús un décimo más grandes. En las dos, las cinemáticas con franjas de cine llenan el ancho. Los lados del 4:3 pueden ser negros, la imagen desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro), un televisor CRT de los 2000 (plateado, altavoces estéreo, entradas A/V, tubo de pantalla plana) o uno de los 70 (mueble de madera con perillas y altavoz, la imagen con esquinas redondeadas y líneas de barrido). |
 | Upscaling (escalado) | Smooth, Sharp | Cómo se agrandan los videos y la imagen: Sharp conserva más detalle (Catmull-Rom), Smooth es el aspecto más suave de una TV. |
 | CRT filter (filtro CRT) | Off, Light, Strong | La imagen como en un televisor CRT antiguo, con cualquier opción de Screen: líneas de barrido, las franjas roja, verde y azul de la pantalla, un brillo suave en las partes claras y los bordes más oscuros; Strong además curva el cristal. |
 | Texture filtering (filtrado) | Standard, Anisotropic 4x, 8x, 16x | Las calles y fachadas vistas de lado se ven nítidas a lo lejos. Mucho más trabajo para el chip gráfico en la ciudad: si bajan las imágenes por segundo, vuelve a Standard. |
+| Buttons (botones) | Xbox layout, Switch layout | Xbox layout asigna los botones por posición, como en el control de la Xbox (la A del juego es el botón de abajo, la B de la Switch). Switch layout los asigna por letra: la A del juego es la A de la Switch, la B es la B, la X es la X y la Y es la Y. |
 | Vibration (vibración) | Off, Low, Medium, High | La vibración del juego en los Joy-Con o un Pro Controller (la Switch Lite no tiene motor propio). Si el juego deja una vibración encendida, se apaga a los 2 segundos, y no vibra con el menú abierto ni en el menú HOME. |
 | CPU clock | Auto (1785 MHz), Stock (1020 MHz), 1224, 1428, 1581, 1785 MHz | El código traducido del juego y el controlador gráfico corren en la CPU. Auto la deja en 1785 MHz mientras corre el juego. |
 | GPU clock | Auto, Stock, 307.2, 384, 460.8, 614.4, 768 MHz | El chip gráfico. Auto es 460,8 MHz (lo más alto que usa Nintendo en modo portátil) a 480p en modo portátil, y 768 MHz a 720p y en el dock. |
@@ -345,11 +369,12 @@ Los cambios se guardan al momento en `settings.ini`, junto al `.nro`. El menú e
 | Renderer | GPU, CPU | CPU es muchas veces más lento: solo para saber si un fallo de la imagen viene del renderizador por GPU. Desde el siguiente arranque. |
 | Render thread | On, Off | El trabajo gráfico en un núcleo propio (el sonido tiene un tercero). Desde el siguiente arranque. |
 | Start-up log | Off, On | Las últimas líneas del registro en la pantalla de arranque mientras carga el juego, para una foto si no arranca. Desde el siguiente arranque. |
+| Update (actualizar) | A: buscar, instalar, reiniciar | Pregunta a GitHub por la versión más reciente. Una más nueva se descarga desde su release (cuenta entre las descargas de la release), se desbloquea aquí con el `default.xbe` de tu juego como lo hace la página de instalación, y reemplaza el `.nro` (el viejo se guarda como `SpiderMan2Xbox.nro.old`); A otra vez reinicia el port con ella. Tus partidas y ajustes se quedan. Necesita internet. |
 
 Los relojes solo ofrecen velocidades que usan los perfiles de rendimiento de Nintendo. Los de la consola
 vuelven mientras el port está en el menú HOME y al cerrarlo, y el port vuelve a poner los tuyos después de
 conectar al dock o del modo reposo. "Restore recommended settings" deja todo como al principio (el idioma de la
-consola, 480p, 4:3 con lados negros, escalado suave, filtrado estándar, vibración media, relojes Auto, sin
+consola, voces en Auto, 480p, 4:3 con lados negros, escalado suave, filtrado estándar, vibración media, la disposición de botones de la Xbox, relojes Auto, sin
 contador, volumen completo, el renderizador por GPU en su propio hilo). Los ajustes de imagen, los relojes y la
 vibración cambian al momento, mientras juegas. Los relojes Auto gastan más batería que los de la consola: elige
 Stock para que la batería dure más.
@@ -367,17 +392,19 @@ Stock para que la batería dure más.
 | Jugar en una Switch | ✅ Jugado en una Switch Lite, en modo portátil |
 | Velocidad | 🧪 La 0.1.0 iba fluida en una Switch Lite a 480p; se reportó que la 0.2.0 y la 0.2.1 iban lentas, sobre todo en 16:9, donde sus registros muestran al juego esperando a la tarjeta SD. La 0.2.2 quita las escrituras en la tarjeta del 16:9 y la 0.2.3 saca de los hilos del juego toda escritura en la tarjeta (los relojes Auto, un 16:9 y una resolución más ligeros llegaron en la 0.2.1); en 4:3 a 720p la 0.2.1 de un tester se mantuvo en 30 imágenes por segundo. Se reportó que la 0.3.0 iba mucho más lenta: su registro muestra 28–30 imágenes por segundo entre pausas largas mientras se preparaban shaders, porque su lista de shaders se había descartado; la 0.3.1 conserva la lista y quita una medición de la GPU en cada imagen: falta confirmarlo en una consola |
 | Imagen | ✅ La GPU de la Switch con OpenGL, imagen por imagen |
-| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0; falta medir qué tan rápido va en una consola |
+| 720p, 1080p, 16:9 | 🧪 Nuevo en la 0.2.0, más ligero en la 0.2.1, el mapa en 16:9 bien en la 0.3.0, el minimapa, las cinemáticas y la vista cercana en la 0.4.0; falta medir qué tan rápido va en una consola |
+| Actualizaciones desde el port | 🧪 Nuevo en la 0.4.0: comprobado contra GitHub y con archivos bloqueados en un computador; aún no se ha probado en una consola |
 | Página de instalación | ✅ Nueva en la 0.3.0: desbloquea el port en el navegador, comprobada con todos los formatos de imagen de disco y con imágenes divididas; todas las versiones de la 0.0.8 a la 0.3.1 en su menú |
 | Vibración | 🧪 Nuevo en la 0.2.0: necesita Joy-Con o un Pro Controller; aún no se ha probado en una consola |
 | Menús, cinemáticas, la ciudad | ✅ En una Switch Lite |
 | Sonido | ✅ Música, efectos de sonido y voces, en una Switch Lite |
-| Controles | ✅ Asignados por posición |
+| Controles | ✅ Asignados por posición; por letra con la disposición de la Switch (nuevo en la 0.4.0) |
 | En el dock (TV) | 🧪 Todavía no se ha probado en una consola |
 | Partidas | ✅ Guardar y cargar funcionan desde la 0.2.3 (antes, las partidas se guardaban pero nunca cargaban); en `save/` en la tarjeta SD, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` |
-| Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (voces en inglés, como en el disco) |
+| Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (el italiano bien desde la 0.4.0); las voces que tenga tu copia, en su propio idioma desde la 0.4.0 |
+| Otras ediciones | 🧪 Nuevo en la 0.4.0: se acepta una edición europea con el código de juego de la de EE. UU., y se ofrecen sus voces; todavía sin probar con un disco europeo |
 | Menú de depuración, contador | ✅ En una Switch Lite; los relojes solo ofrecen velocidades que usan los perfiles de Nintendo |
-| En línea | ❌ Nada: el port no usa la red |
+| En línea | Solo Update, en el menú de depuración, para llegar a GitHub |
 
 **Problemas conocidos**
 - Jugar en el dock con la TV todavía no se ha comprobado en una consola. Antes de la 0.2.3 las partidas guardadas no
@@ -386,8 +413,9 @@ Stock para que la batería dure más.
   **reflejos incorrectos en las ventanas de los edificios**. Un vídeo corto de cada uno, con la carpeta `logs`,
   mostraría qué arreglar (las líneas `swing:` del log dicen qué animaciones de balanceo elige el juego).
 - La primera vez que pasas por un sitio nuevo puede haber un tirón breve mientras se preparan los shaders; se guardan para la siguiente vez.
-- En español, francés, alemán e italiano las voces son en inglés: el disco solo trae las inglesas.
-- Solo funciona la edición de arriba: otras ediciones necesitan su propia configuración del recompilador.
+- El disco de EE. UU. solo trae voces en inglés: las de los otros idiomas están en los discos europeos.
+- Solo funciona el código de juego de arriba (la edición de EE. UU. y otras ediciones hechas con el mismo código):
+  otras ediciones necesitan su propia configuración del recompilador.
 
 En la [lista de cambios](CHANGELOG.md) (en inglés) está lo que cambió en cada versión.
 
@@ -399,7 +427,7 @@ juego. Los reportes en español o en inglés ayudan mucho, con la carpeta `logs`
 | Qué | Cómo ayudar |
 |---|---|
 | 📺 **En el dock** | Juega con la consola en el dock, en una TV, y cuenta cómo va (el contador del menú de depuración muestra las imágenes por segundo). |
-| 🖼️ **720p, 1080p, 16:9** | Prueba las nuevas resoluciones y formas de pantalla: las imágenes por segundo en una calle concurrida, y cualquier cosa fuera de lugar (una parte del HUD o un marcador que no esté donde debe en 16:9). |
+| 🖼️ **720p, 1080p, 16:9** | Prueba las nuevas resoluciones y formas de pantalla, también la vista cercana del 16:9: las imágenes por segundo en una calle concurrida, y cualquier cosa fuera de lugar (una parte del HUD o un marcador que no esté donde debe en 16:9). |
 | 📳 **Vibración** | Con Joy-Con o un Pro Controller: ¿se siente bien, y alguna vez se queda vibrando sola? |
 | 🕸️ **El balanceo y las ventanas** | Un vídeo corto balanceándote con la telaraña (¿Spider-Man usa siempre el mismo balanceo?) y de ventanas de edificios con reflejos que se vean mal, con la carpeta `logs`. |
 | 💾 **Partidas** | Guarda en el juego, sal, vuelve a abrirlo y carga: ¿vuelve tu progreso? |
@@ -407,6 +435,7 @@ juego. Los reportes en español o en inglés ayudan mucho, con la carpeta `logs`
 | 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), y otra manteniendo **R** (el renderizador por CPU). |
 | 🎨 **La imagen** | Una foto de lo que se dibuje mal, y la carpeta `logs`: sus líneas `perf:` dicen a qué velocidad va y en qué se va el tiempo. |
 | 💿 **El formato de tu imagen** | Si tu `.cci`, `.cso` o imagen dividida no es aceptada, envía el registro: dice por qué. |
+| 🇪🇺 **Un disco europeo** | ¿Lo acepta la página de instalación? ¿Arranca el port, y las **Voices** en francés, alemán, español o italiano suenan con los labios a tiempo? Envía el registro: su línea `game:` dice el código de juego y las regiones de tu copia. |
 
 Abre un [issue](../../issues/new/choose): el formulario pide todo lo necesario.
 
@@ -447,11 +476,14 @@ juegos de *Spider-Man* más nuevos (por ejemplo *Marvel's Spider-Man 2*, de 2023
 <details>
 <summary><b>¿Qué edición del juego de Xbox funciona?</b></summary>
 
-La que tiene un `default.xbe` con el SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título
-`4156002B`, versión 4), en inglés. `build.sh` lo comprueba y te avisa si la tuya es distinta. El código
-recompilado corresponde exactamente a ese archivo; otra edición (de otra región, por ejemplo) necesitaría su
-propia configuración del recompilador. Si tienes otra edición, ayuda abrir un issue con su SHA-1 (el
-compilador lo muestra).
+La edición de EE. UU., cuyo `default.xbe` tiene el SHA-1 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título
+`4156002B`, versión 4). Desde la 0.4.0 también funciona otra edición si su **código de juego** es el mismo: el
+programa en sí (las secciones del xbe, su punto de entrada y sus importaciones, sin la cabecera ni el certificado que
+nombran su región), cuyo SHA-1 es `b3d6d36a707840a9dcc047f0302b41edc61dfee2`. Una edición europea hecha con el mismo
+código se acepta tal cual, con sus voces. `build.sh`, la página de instalación y el port lo comprueban y te avisan si
+la tuya es distinta. El código recompilado corresponde exactamente a ese código de juego; una edición con otro
+código necesitaría su propia configuración del recompilador. Si tienes otra edición, ayuda abrir un issue con su
+SHA-1 y su código de juego (el compilador y el port los muestran).
 </details>
 
 <details>
@@ -497,10 +529,13 @@ Nintendo). En el dock todavía no se ha medido.
 <details>
 <summary><b>¿Puede llenar toda la pantalla? ¿Se estira?</b></summary>
 
-Sí, y no. Pon **Screen** en **16:9 full screen** en el menú de depuración. El juego se hizo para TV 4:3, pero su
-código tiene una cámara 16:9 que Treyarch nunca activó; el port la enciende y amplía su vista, así que ves más ciudad
-a los lados y nada se estira. Lo que el juego dibuja plano en la pantalla (el HUD, los menús, los textos, los videos)
-se queda en 4:3 en el centro. Si prefieres la imagen 4:3 original, los lados pueden ser negros, la imagen
+Sí, y no. Pon **Screen** en **16:9, wide view** o **16:9, close view** en el menú de depuración. El juego se hizo
+para TV 4:3, pero su código tiene una cámara 16:9 que Treyarch nunca activó; el port la enciende, y nada se estira.
+La vista amplia (wide view) amplía la vista de la cámara, así que ves más ciudad a los lados, y lo que el juego
+dibuja plano en la pantalla (el HUD, los menús, los textos) se queda en 4:3 en el centro. La vista cercana (close
+view) conserva el ancho de la cámara, como el 16:9 propio del motor: Spider-Man y la ciudad se ven un tercio más
+grandes, con un poco menos arriba y abajo, y el HUD y los menús son un décimo más grandes. Las cinemáticas, con franjas negras de cine, llenan el ancho con franjas más finas; los logos y
+la demo de la pantalla de título se quedan en 4:3. Si prefieres la imagen 4:3 original, los lados pueden ser negros, la imagen
 desenfocada, una telaraña, la telaraña con los colores del traje (rojo, azul y negro) o un televisor CRT de los 2000
 o de los 70 alrededor.
 </details>
@@ -527,15 +562,19 @@ el juego alguna vez deja una vibración encendida, se apaga sola a los 2 segundo
 <summary><b>¿Puedo jugar en español?</b></summary>
 
 Sí. El juego toma el idioma de la consola: con la consola en español (de España o de Latinoamérica), francés,
-alemán o italiano, sus menús y subtítulos salen en ese idioma, con los textos de tu disco. Las voces siguen en
-inglés, porque el disco solo trae las inglesas. Para elegir otro idioma que el de la consola, usa el menú de
-depuración (**ZL + ZR + −**) y vuelve a arrancar el port.
+alemán o italiano, sus menús y subtítulos salen en ese idioma, con los textos que trae cualquier disco. Las voces
+son las que tenga tu copia: el disco de EE. UU. solo trae las inglesas, así que siguen en inglés; el disco europeo
+con francés, alemán y español trae voces en español (el doblaje de España), que **Voices**, en el menú de
+depuración, pone con cualquier texto. Para elegir otro idioma que el de la consola, usa el menú de depuración
+(**ZL + ZR + −**) y vuelve a arrancar el port.
 </details>
 
 <details>
 <summary><b>¿El port se conecta a internet? ¿Me pueden banear?</b></summary>
 
-El port nunca se conecta a internet. Usar cualquier homebrew requiere firmware personalizado, lo que va
+Solo cuando usas **Update** en el menú de depuración, y entonces solo a GitHub (`api.github.com`, `github.com` y
+el servidor de descargas de GitHub): nunca a Nintendo. Si mantienes tu consola sin conexión, actualiza con la página
+de instalación. Usar cualquier homebrew requiere firmware personalizado, lo que va
 contra las condiciones de Nintendo y puede hacer que una consola sea baneada de los servicios en línea de
 Nintendo. Lo habitual es usar el homebrew en un emuMMC y tener una copia de seguridad de tu tarjeta SD.
 </details>

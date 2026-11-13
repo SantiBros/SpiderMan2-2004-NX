@@ -36,8 +36,11 @@ computer. Either way the result is a `.nro` made with your copy, and it goes on 
 ## Getting your game
 
 You need *Spider-Man 2* for the **original Xbox**, the release whose `default.xbe` has the SHA-1
-`853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (title ID `4156002B`, version 4). The builder checks it, so
-you don't have to work it out yourself. The port never downloads anything: it uses the copy you give it.
+`853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (title ID `4156002B`, version 4, the US edition). From 0.4.0 another
+edition works too if its game code is the same (`b3d6d36a707840a9dcc047f0302b41edc61dfee2`: the program itself,
+without the header that names its region), as a European one may be. The builder, the installer page and the port
+check it, so you don't have to work it out yourself. The port never downloads anything: it uses the copy you give
+it.
 
 ### With a modded Xbox
 
@@ -80,7 +83,8 @@ browser (Chrome, Firefox, Edge, Safari, Samsung Internet; untested on an iPhone)
 
 1. **Choose your game:** your disc image (`.iso`, `.xiso`, `.cci`, `.cso`; for a split one, select all its parts
    at once) or only its `default.xbe`. The page reads the game's `default.xbe` from it and checks that it is the
-   supported release. Every version takes the same files.
+   supported release, or (for 0.4.0 and later) another edition with its game code. Every version takes the same
+   files.
 2. **Choose the version**, or leave the newest, which is already picked. The menu has every release from 0.0.8 on
    and says which is recommended (the newest), which run on a Switch with known problems (0.1.0 to 0.3.0) and which
    are early tests that don't start on one (0.0.8 to 0.0.10). Under it are the version's main changes, a link to
@@ -92,7 +96,7 @@ browser (Chrome, Firefox, Edge, Safari, Samsung Internet; untested on an iPhone)
 4. Go on with [Copying it to the SD card](#copying-it-to-the-sd-card).
 
 Your game is never uploaded: the page only downloads the locked port and does the rest in your browser. Without
-the supported release's `default.xbe` the locked port can't be opened, which is why it can be in the releases at
+the supported game's `default.xbe` the locked port can't be opened, which is why it can be in the releases at
 all. On a computer, `python3 tools/lock_nro.py unlock SpiderMan2Xbox-<version>.nro.locked default.xbe
 SpiderMan2Xbox.nro` does the same.
 
@@ -190,7 +194,7 @@ What `build-windows.cmd` does, step by step:
 |---|---|
 | `Missing: ...` and `Install them now?` | Press Enter (or `Y`) and give your password: it installs them. On a distribution without `apt`, [install them by hand](#installing-the-tools-by-hand). |
 | `still missing after installing` | The installation above it says what went wrong (often no internet). Try again, or [install them by hand](#installing-the-tools-by-hand). If devkitPro is somewhere other than `/opt/devkitpro`, run `export DEVKITPRO=/where/it/is` first. |
-| `this default.xbe is not the release the port supports` | Your copy is another release of the game (another region or version). The port only runs the one it was made for: open an issue with the SHA-1 it printed, if you'd like that release supported. |
+| `this default.xbe is not the release the port supports` | Your copy is another release of the game, with other game code (another version, or an edition built apart). The port only runs the game code it was made for: open an issue with the SHA-1 and game code it printed, if you'd like that release supported. |
 | `... is a compressed archive` | Extract the disc image or the game's folder from the `.zip`, `.7z` or `.rar`, and point the builder at that. |
 | `default.xbe could not be read from ...` | The message says why (not an Xbox image, an Xbox 360 image, a missing part of a split image...). |
 | `the PC tools did not build` / `the Switch build failed` | The log it names (`build-tools.log`, `build-switch.log`) says why. Attach it to an issue if it isn't clear. |
@@ -243,6 +247,8 @@ it). Each setting has a line of help, and an orange note when the chosen value c
 speed). The bottom line shows the frame rate, the time of a frame and the draw calls right now.
 
 - **Language**: Auto (the console's), English, Español, Français, Deutsch or Italiano, from the next start.
+- **Voices**: Auto (the language's, if your copy has those voices; else your copy's own) or any language your copy
+  has voices in, from the next start. The menu says which.
 - **Resolution**: 480p (the Xbox's), 720p or 1080p: the whole game and its movies drawn with that many pixels.
   720p fills the handheld screen pixel for pixel; 1080p, for docked play, is drawn bigger and shrunk (in handheld
   mode it draws 720p, the screen's own). More work for the GPU, which the Auto GPU clock raises: if the frame rate
@@ -250,8 +256,9 @@ speed). The bottom line shows the frame rate, the time of a frame and the draw c
 - **Screen**: 4:3 with black, blurred, spider-web or suit sides (the web in the suit's red, blue and black), on a
   2000s CRT TV (silver, stereo speakers, A/V inputs, a flat-faced tube) or a 70s one (a wooden cabinet with knobs and
   a speaker, the picture with rounded corners and scanlines), or
-  **16:9 full screen**, the game's own hidden widescreen camera, with more of the city at the sides and the HUD,
-  menus and movies kept 4:3 in the middle.
+  16:9, the game's own hidden widescreen camera: **16:9, wide view**, with more of the city at the sides and the
+  HUD, menus and movies kept 4:3 in the middle, or **16:9, close view**, with Spider-Man and the city a third bigger
+  and the HUD and menus a tenth bigger. In both the letterboxed cutscenes fill the width.
 - **CRT filter**: Off, Light or Strong, the picture as on an old CRT television (scanlines, the screen's red, green
   and blue stripes, a soft glow, darker edges; Strong also curves the glass), with any Screen choice.
 - **Upscaling** (Smooth or Sharp) and **Texture filtering** (Standard or Anisotropic 4x to 16x; anisotropic is much
@@ -274,9 +281,14 @@ choose **Restore recommended settings**, or delete the file.
 
 The game takes the console's language (System Settings → System → Language). With English, Spanish (Spain or
 Latin America), French (France or Canada), German or Italian, its menus and subtitles are in that language,
-from the texts on your disc; with any other language, in English. The voices are in English in every language:
-the disc only has the English ones. To play in another language than the console's, set **Language** in the
-debug menu and start the port again.
+from the texts every disc has (Italian right since 0.4.0); with any other language, in English. To play in another
+language than the console's, set **Language** in the debug menu and start the port again.
+
+The voices are your copy's: each edition's disc has only its own. The US disc has English voices; the European
+discs French, German and Spanish (Spain's dub) on one, Italian on another. With **Voices** on Auto the characters
+speak the menus' language when your copy has those voices, else your copy's own; or set **Voices** to any language
+your copy has, apart from the text (Spanish voices with English text, say). The debug menu says which voices your
+copy has.
 
 ## Saves
 
@@ -311,7 +323,7 @@ folder their `hdd/` would sit beside your `save/`, and a newer version could go 
 | **The builder stops while installing the tools** ("the build stopped" right after Ubuntu's packages) | It could not download devkitPro's tools; since 0.2.3 it says why, and tries three times. Check that Linux is online, then start the builder again; a VPN, antivirus or network that blocks `apt.devkitpro.org` causes it too, so try another network. By hand, in Ubuntu: `wget https://apt.devkitpro.org/install-devkitpro-pacman`, `chmod +x install-devkitpro-pacman`, `sudo ./install-devkitpro-pacman`, `sudo dkp-pacman -S switch-dev switch-mesa`, then the builder again. |
 | **Game not found** | Your game isn't in `switch/SpiderMan2Xbox/game/`, or it is in a form the port doesn't read. The screen lists the files it found and why each can't be used. See [the formats](#the-formats-the-port-reads). |
 | **The data folder is missing** | The contents of `data` are directly in `game/`. Make a folder named `data` there and move `game.ini`, `movies`, `packs` and `sound` into it. |
-| **A different release of the game** | Your copy isn't the release the port was built from. It would most likely crash: press **+** to go back. The builder normally catches this; this happens when the `.nro` was built from another copy. |
+| **A different release of the game** | Your copy's game code isn't the one the port was built from (the screen names its regions, SHA-1 and game code). It would most likely crash: press **+** to go back. The builder normally catches this; this happens when the `.nro` was built from another copy. |
 | **Another game or version** | The image in `game/` holds another game, or another version of this one. |
 | **Not enough memory in this mode** | Start the port with **R + a game**, not from the Album. |
 | **The game did not start** | The newest file in `logs/` says why. |
@@ -319,7 +331,7 @@ folder their `hdd/` would sit beside your `save/`, and a newer version could go 
 | **The picture is wrong** (missing, black, flickering, wrong colours) | Take a photo and send the `logs` folder. Then try holding **R** at start (the CPU renderer): if that picture is right, the problem is in the GPU renderer. |
 | **It runs slowly** | Turn on the frame-rate counter in the [debug menu](#the-debug-menu), and check that the clocks are on Auto there and Texture filtering on Standard. At 720p or 1080p, try a lower Resolution. Send the `logs` folder: every 5 seconds the log has `perf:` lines that say where the time goes. |
 | **It doesn't vibrate** | The Switch Lite has no rumble motor: use Joy-Con or a Pro Controller. Check that **Vibration** isn't Off in the [debug menu](#the-debug-menu), and that the controller's vibration is on in the console's System Settings. |
-| **The game is in the wrong language** | It follows the console's language, read at start. Set **Language** in the [debug menu](#the-debug-menu) and start the port again. The voices are always in English. |
+| **The game is in the wrong language** | It follows the console's language, read at start. Set **Language** in the [debug menu](#the-debug-menu) and start the port again. The voices are your copy's: the US disc only has English ones (see [Language](#language)). |
 | **It stutters** (short freezes while playing) | Mostly the first time through a place, while the graphics driver builds the shaders it needs; they are kept in `cache/shaders.cache` and built at the start the next time. Send the `logs` folder if it goes on: a `hitch:` line names each stutter and what took the time. |
 | **An Atmosphère error screen** | Send the newest file in `atmosphere/crash_reports/` and the `logs` folder. |
 
@@ -334,7 +346,7 @@ Atmosphère version, and what format your game is in. **Never attach game files*
 | Word | Meaning |
 |---|---|
 | **XBE** | The Xbox's program file format. `default.xbe` is the game's program; the port is made from it, and unlocked with it. |
-| **Locked .nro** | The release's port, encrypted (AES-256-GCM) with a key made from the supported `default.xbe`: of no use without the game. The installer page unlocks it. |
+| **Locked .nro** | The release's port, encrypted (AES-256-GCM) with a key made from the supported `default.xbe` (from 0.4.0, its game code, which other editions of the same code share): of no use without the game. The installer page unlocks it. |
 | **XISO** | A disc image with only the game partition of an Xbox disc. |
 | **Full disc dump** | A disc image of the whole disc (the video partition first, then the game partition), as Redump's are. |
 | **CCI**, **CSO** | Compressed Xbox disc images, made by Repackinator, read by Cerbios (CCI) and StellarOS (CSO). |

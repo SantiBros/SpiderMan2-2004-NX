@@ -3,6 +3,57 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.4.0]
+
+**Updates from inside the port, voices in another language, other editions of the game, the Switch's button
+layout, and a closer 16:9.** The debug menu can now update the port by itself from its GitHub release; the voices
+can be in another language than the text, from the European discs; a European edition is accepted when its game
+code is the US one's; the buttons can follow the Switch's letters instead of the Xbox's positions
+([#2](https://github.com/SantiBros/SpiderMan2-2004-NX/issues/2)); 16:9 has a close view with a bigger HUD; the
+cutscenes fill a 16:9 screen ([#1](https://github.com/SantiBros/SpiderMan2-2004-NX/issues/1)); and in 16:9 the
+minimap's pins sit on the map again.
+
+### Added
+- **Update, in the debug menu.** A asks GitHub for the newest version; a newer one is downloaded from its release (so
+  it counts among the release's downloads), unlocked on the console with your own `default.xbe` as the installer page
+  does, and put in place of the `.nro`, the old one kept as `SpiderMan2Xbox.nro.old`. A again quits and starts the
+  new version. It uses the Switch's own TLS; nothing of it runs until the row is used. Updating to 0.4.0 itself is
+  done the usual way (installer page); from then on it can be done from the port.
+- **Voices, in the debug menu: their own language.** The game keeps each language's voices in sound banks of their
+  own, and a disc carries only its edition's: the US disc English, the European discs French, German and Spanish (one
+  disc) or Italian. **Auto** speaks the text's language when your copy has those voices, else the copy's own; or pick
+  any language your copy has, apart from the text (Spanish voices with English text, say). The lip sync follows the
+  voices. The menu says which voices your copy has.
+- **16:9, close view** (debug menu, Screen), next to the old 16:9, now called **16:9, wide view**. The close view is
+  the engine's own 16:9: the field of view the game sets across the width, so Spider-Man and the city look a third
+  bigger, with a little less above and below. The HUD and menus are a tenth bigger; the map icons, the markers and
+  the minimap follow them.
+- **Other editions of the game.** The port and the installer page now tell a release by its game code (its
+  `default.xbe`'s sections, not its header and certificate, which name the region): a European edition built from
+  the same code as the US one is accepted as it is. 0.4.0's locked `.nro` opens with that game code (lock version 2);
+  the earlier versions' still open with the US `default.xbe` only. An edition with other code is named on screen with
+  its regions and both SHA-1s, to report.
+- **Buttons: Xbox layout or Switch layout** (debug menu). The Xbox layout, by position, stays the default; the
+  Switch layout maps by letter: the game's A is the Switch's A, B is B, X is X, Y is Y. It changes at once.
+
+### Fixed
+- **Italian text.** The game shows Italian only as its Italian edition; the port asked for it as the French, German
+  and Spanish edition, which shows French for any other language. Each text language now gets its edition, on any
+  disc: English text on the European French, German and Spanish disc too.
+- **16:9: the cutscenes fill the screen.** The story's movies are letterboxed for the cinema inside their 4:3 frame,
+  so in 16:9 they were a small picture with black on all four sides. Movies with black bands across their top and
+  bottom are now enlarged to the screen's width, the bands cut to fit (nothing of the picture is lost). The logos
+  and the attract demo, whose picture reaches the top and bottom, stay 4:3 in the middle.
+- **16:9: the minimap.** Its 3D map is drawn where its rectangle is across the whole 16:9 screen, but its frame and
+  pins (drawn flat, with the HUD) are kept 4:3 in the middle, so they sat to the left of the map under them. The map
+  is now drawn where the HUD puts its frame.
+- A sound bank or a movie only another edition has is opened in its place: another language's bank, or the 50 Hz
+  movie (`NAME_PAL.XMV`) for the 60 Hz one.
+
+### Changed
+- The debug menu's rows are a little shorter, to fit the three new ones.
+- The shader list of 0.3.x is kept, its programs updated for the close view.
+
 ## Installer page, 2026-11-03
 
 Changes to the [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) only: no new version of the port.
