@@ -38,8 +38,10 @@ computer. Either way the result is a `.nro` made with your copy, and it goes on 
 You need *Spider-Man 2* for the **original Xbox**, the release whose `default.xbe` has the SHA-1
 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (title ID `4156002B`, version 4, the US edition). From 0.4.0 another
 edition works too if its game code is the same (`b3d6d36a707840a9dcc047f0302b41edc61dfee2`: the program itself,
-without the header that names its region), as a European one may be. The builder, the installer page and the port
-check it, so you don't have to work it out yourself. The port never downloads anything: it uses the copy you give
+without the header that names its region), and from 0.4.1 the European French, German and Spanish one ("Spider-Man 2
+(Europe) (Fr,De,Es)", `default.xbe` SHA-1 `ad4f0d360fc5a1869005331fe50f54a711426029`), whose `default.xbe` the
+installer page and the port make into the US one with a small patch. They check it, so you don't have to work it out
+yourself (the builder, `build.sh`, takes only the US one). The port never downloads anything: it uses the copy you give
 it.
 
 ### With a modded Xbox
@@ -83,8 +85,9 @@ browser (Chrome, Firefox, Edge, Safari, Samsung Internet; untested on an iPhone)
 
 1. **Choose your game:** your disc image (`.iso`, `.xiso`, `.cci`, `.cso`; for a split one, select all its parts
    at once) or only its `default.xbe`. The page reads the game's `default.xbe` from it and checks that it is the
-   supported release, or (for 0.4.0 and later) another edition with its game code. Every version takes the same
-   files.
+   supported release, or (for 0.4.0 and later) another edition with its game code, or (for 0.4.1 and later) the
+   European French, German and Spanish one, which it makes into the supported release with its patch (locked with
+   that edition's own game code). Every version takes the same files.
 2. **Choose the version**, or leave the newest, which is already picked. The menu has every release from 0.0.8 on
    and says which is recommended (the newest), which run on a Switch with known problems (0.1.0 to 0.3.0) and which
    are early tests that don't start on one (0.0.8 to 0.0.10). Under it are the version's main changes, a link to

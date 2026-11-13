@@ -202,6 +202,18 @@ text's when the copy has its banks (`STREAMS_VOICE_<XX>.WBK`), else the copy's o
 first). A bank still missing is opened in another language's place, and a movie only one edition has in the other's
 (`NAME.XMV` and the 50 Hz `NAME_PAL.XMV`) (`kernel::g_missing_disc_file`), as the game would otherwise find no file.
 
+**Editions built apart.** The European French, German and Spanish edition's `default.xbe` is a later build (version 5,
+four days after the US one's version 4: its `.text` 0x330 bytes shorter, everything after it moved), so its game code
+is not the one the port runs. Its disc's data is the US disc's but for `game.ini` (`SKU=Xbox-Multi`), one stretch of
+`amalga_xb.pak`, its `_FR`, `_DE` and `_ES` sound banks and its `_PAL` movies, all of which the US code reads (the
+port is checked to boot it, play its movies and voices and show every text language). So its `default.xbe` is made
+into the US one by a patch ([`tools/edition_patch.py`](../tools/edition_patch.py): bsdiff's steps in an LZ4 block,
+about 250 KB), checked by SHA-1 on both ends, and the port goes on as with the US copy, with that disc as `D:`. The
+patch is kept out of the repository (`assets/editions/`): the Switch build carries it inside the `.nro`
+(`switch/build.sh` writes it into `editions.cpp`; `kernel::FindGameCopies` applies it), and the installer page gets
+it locked with that edition's own game code (`editions/*.patch.locked`, listed in `versions.json`), so neither is of
+any use without that edition's `default.xbe`.
+
 | Switch | Xbox (`XC_LANGUAGE`) |
 |---|---|
 | English (US, UK) | 1 English |
@@ -328,7 +340,7 @@ The port's changes to the Xbox XBE Recomp SDK, kept in `sdk/`:
 - `runtime/kernel/image.{h,cpp}` (new): the disc image containers (plain, split, CCI, CSO v2) and the LZ4 decoder;
   `kernel/disc.cpp` reads through it and names Xbox 360 images.
 - `runtime/kernel/game_source.{h,cpp}` (new): the player's copy found in folders, matched by SHA-1, game code
-  (`runtime/xbe/code.h`, new) and entry point.
+  (`runtime/xbe/code.h`, new) and entry point; an edition built apart made into the supported xbe by its patch.
 - `runtime/kernel/files.cpp`: read-only opens unless written, renames and resizes around open files (above);
   `IoQueryVolumeInformation`, which the game imports, answers as `NtQueryVolumeInformationFile` does (it was missing, and
   a call would have stopped the game); `RewriteDiscFile` (a disc file the title layer rewrites, opened from a copy)
@@ -417,6 +429,7 @@ tools/xbe/           the PC tools build (xbe_recomp, xbe_symbols, xbe_extract)
 tools/test/          the disc image tests
 tools/analysis/      Python scripts that survey an XBE (header, imports, functions)
 tools/make_release.sh  the release zip
+tools/edition_patch.py  another edition's default.xbe made into the supported one (the European Fr/De/Es)
 tools/lock_nro.py    the release's .nro locked with the supported default.xbe's game code (AES-256-GCM; up to
                      0.3.1 with the whole file), and unlocked; `code` prints an xbe's game code SHA-1
 tools/make_installer_site.sh  the installer page's site (gh-pages) and the release's locked .nro and symbols

@@ -188,7 +188,12 @@ bash tools/test_update.sh /path/to/default.xbe
    update both READMEs ([English](../README.md) and [Spanish](../README.es.md): the "New in" box, the status,
    the version in the install steps) and the player's guide [`switch/README-switch.txt`](../switch/README-switch.txt).
 2. **Check it:** build with `build.sh` from a clean checkout, run it on the PC test build and, if you can, on a
-   console.
+   console. For the editions built apart (the European French, German and Spanish one), their patch must be in
+   `assets/editions/` before the Switch build, which carries it: `python3 tools/edition_patch.py make <its
+   default.xbe> <the supported default.xbe> assets/editions/europe-fr-de-es.patch "Europe (French, German, Spanish)"`
+   (it also writes the `.locked` copy for the installer page; the edition is listed in
+   [`installer/editions.json`](../installer/editions.json)). The PC test build takes them with
+   `XBE_EDITIONS=assets/editions`.
 3. **The zip:** commit, then `bash tools/make_release.sh` writes `out/SpiderMan2-2004-NX-<version>.zip` (the
    repository at that commit) and prints its SHA-256. It refuses a zip with game files in it.
 4. **The locked .nro, the symbols and the installer page:** with the `.nro` of step 2 in `build-switch/`,

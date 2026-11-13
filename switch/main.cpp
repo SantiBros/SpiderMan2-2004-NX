@@ -45,6 +45,13 @@ namespace fs = std::filesystem;
 
 extern const char kImageSha1[];
 extern const char kImageCode[];  // the SHA-1 of its game code (xbe/code.h), which other editions may share
+// the patches that make other editions' default.xbe into it (switch/build.sh, from assets/editions)
+struct EditionBlob {
+    const uint8_t* data;
+    size_t size;
+};
+extern const EditionBlob kEditionPatches[];
+extern const size_t kEditionPatchCount;
 // from the VERSION file, through switch/build.sh
 #ifndef SM2NX_VERSION
 #define SM2NX_VERSION "dev"
@@ -203,7 +210,10 @@ int main(int argc, char** argv) {
          settings.startup_log ? "on" : "off");
 
     // the player's copy: in game/, or beside the .nro
-    kernel::GameSearch search = kernel::FindGameCopies({game, dir}, IMAGE_XBE, kImageSha1, kImageCode);
+    std::vector<kernel::EditionPatch> editions;
+    for (size_t i = 0; i < kEditionPatchCount; i++)
+        if (kEditionPatches[i].size) editions.push_back({kEditionPatches[i].data, kEditionPatches[i].size});
+    kernel::GameSearch search = kernel::FindGameCopies({game, dir}, IMAGE_XBE, kImageSha1, kImageCode, editions);
     std::string skipped;
     for (size_t i = 0; i < search.skipped.size() && i < 6; i++) skipped += "\n- " + search.skipped[i];
     if (search.copies.empty())
@@ -233,7 +243,11 @@ int main(int argc, char** argv) {
             return 1;
     }
     if (copy.other_edition) {
-        LOGI("switch: another edition of the game (%s), with the game code this build was made from", copy.regions.c_str());
+        if (!copy.edition.empty())
+            LOGI("switch: the %s edition of the game (%s), its default.xbe made into the one this build was made from",
+                 copy.edition.c_str(), copy.regions.c_str());
+        else
+            LOGI("switch: another edition of the game (%s), with the game code this build was made from", copy.regions.c_str());
     }
     if (!copy.disc && !fs::is_directory(copy.folder / "data")) {
         std::string g = copy.folder.string();

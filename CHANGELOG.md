@@ -3,6 +3,20 @@
 All notable changes to the port. 0.1.0 is the first version played on a Switch; the versions before it were test
 builds.
 
+## [0.4.1]
+
+**The European French, German and Spanish disc.** Its `default.xbe` turned out to be a later build of the game
+(version 5, four days after the US one's version 4), not the US code under another header, so 0.4.0 turned it away.
+Its disc's data is the US disc's but for `game.ini`, a small part of one pack, the voices and the 50 Hz movies.
+
+### Added
+- **The European French, German and Spanish edition** ("Spider-Man 2 (Europe) (Fr,De,Es)", `default.xbe` SHA-1
+  `ad4f0d360fc5a1869005331fe50f54a711426029`). A patch makes its `default.xbe` into the supported one, and the port
+  runs it with the disc's own data: its French, German and Spanish voices (the **Voices** setting), its 50 Hz movies,
+  and the text in any of the five languages, English included. The patch is carried inside the `.nro` and, for the
+  installer page, published locked with that edition's game code: it does nothing without its `default.xbe`.
+  Tested on a computer with the disc; not yet on a console.
+
 ## [0.4.0]
 
 **Updates from inside the port, voices in another language, other editions of the game, the Switch's button

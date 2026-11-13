@@ -47,6 +47,16 @@ int main(int argc, char** argv) {
     std::string hdd = app::Instance() > 1 ? "hdd" + std::to_string(app::Instance()) : "hdd";
     std::vector<uint8_t> xbe;
     std::error_code ec;
+    // XBE_EDITIONS=folder: its edition patches (*.patch, tools/edition_patch.py), as the Switch build carries them
+    std::vector<std::vector<uint8_t>> patch_bytes;
+    std::vector<kernel::EditionPatch> editions;
+    if (const char* dir = std::getenv("XBE_EDITIONS"))
+        for (const auto& e : std::filesystem::directory_iterator(dir, ec))
+            if (e.path().extension() == ".patch") {
+                std::ifstream f(e.path(), std::ios::binary);
+                patch_bytes.emplace_back(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+            }
+    for (const auto& b : patch_bytes) editions.push_back({b.data(), b.size()});
     if (std::filesystem::is_regular_file(game, ec)) {
         // one disc image, as given
         auto disc = std::make_unique<kernel::Disc>();
@@ -55,11 +65,17 @@ int main(int argc, char** argv) {
             LOGE("harness: %s: %s", game.c_str(), error.empty() ? "no " IMAGE_XBE : error.c_str());
             return 1;
         }
+        for (const kernel::EditionPatch& e : editions) {
+            std::vector<uint8_t> out;
+            if (!kernel::EditionPatchFits(e, xbe) || !kernel::ApplyEditionPatch(e, xbe, out, error)) continue;
+            LOGI("harness: the %s edition's " IMAGE_XBE " made into the supported one by its patch", kernel::EditionName(e).c_str());
+            xbe = std::move(out);
+        }
         LOGI("harness: D: is the disc image %s (%s)", game.c_str(), disc->Kind().c_str());
         kernel::MountDisc(std::move(disc));
         game = std::filesystem::path(game).parent_path().string();
     } else {
-        auto search = kernel::FindGameCopies({game}, IMAGE_XBE, "");
+        auto search = kernel::FindGameCopies({game}, IMAGE_XBE, "", "", editions);
         auto it = std::find_if(search.copies.begin(), search.copies.end(), [](const kernel::GameCopy& c) { return c.same_entry; });
         if (it == search.copies.end()) {
             LOGE("harness: no copy of the game in %s", game.c_str());

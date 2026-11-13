@@ -54,20 +54,24 @@ def key_material(version: int, xbe: bytes) -> bytes:
     return xbe if version == 1 else code_bytes(xbe)
 
 
-def lock(nro_path, xbe_path, out_path, version=2):
+def lock_bytes(data: bytes, xbe: bytes, version=2) -> bytes:
+    """data locked with that default.xbe (version 1) or its game code (version 2)"""
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    magic, label = FORMATS[version]
+    material = key_material(version, xbe)
+    nonce = os.urandom(12)
+    header = magic + nonce + b"\0" * 4 + struct.pack("<Q", len(data)) + hashlib.sha1(material).digest() + b"\0" * 12
+    assert len(header) == 64
+    return header + AESGCM(hashlib.sha256(label + material).digest()).encrypt(nonce, data, header)
+
+
+def lock(nro_path, xbe_path, out_path, version=2):
     nro = open(nro_path, "rb").read()
     xbe = open(xbe_path, "rb").read()
     if hashlib.sha1(xbe).hexdigest() != SUPPORTED_SHA1:
         sys.exit("this default.xbe is not the supported release (SHA-1 %s)" % hashlib.sha1(xbe).hexdigest())
-    magic, label = FORMATS[version]
-    material = key_material(version, xbe)
-    nonce = os.urandom(12)
-    header = magic + nonce + b"\0" * 4 + struct.pack("<Q", len(nro)) + hashlib.sha1(material).digest() + b"\0" * 12
-    assert len(header) == 64
-    sealed = AESGCM(hashlib.sha256(label + material).digest()).encrypt(nonce, nro, header)
     with open(out_path, "wb") as f:
-        f.write(header + sealed)
+        f.write(lock_bytes(nro, xbe, version))
     print("%s: %d bytes locked (version %d) into %s" % (nro_path, len(nro), version, out_path))
 
 

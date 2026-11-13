@@ -50,8 +50,9 @@ them first), Xbox 360 images, and the old zlib CSO (version 1) made for the
 PSP.
 
 It must be the game code the .nro was made with: the US edition's, or another
-edition built from the same code (a European one, if its code is the same; the
-log names your copy's game code and regions). With another release the screen
+edition built from the same code; or the European French, German and Spanish
+edition, which the port makes into the US one with its patch (from 0.4.1). The
+log names your copy's game code and regions. With another release the screen
 says so and asks before starting, as it would most likely crash.
 
 

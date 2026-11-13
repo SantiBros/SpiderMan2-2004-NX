@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <fstream>
 
 #include "core/log.h"
 #include "cpu/x86_context.h"
 #include "kernel/crypto.h"
+#include "kernel/image.h"
 #include "xbe/code.h"
 #include "xbe/xbe.h"
 
@@ -60,20 +62,50 @@ std::string Regions(uint32_t r) {
     return s.empty() ? "none" : s;
 }
 
-void Describe(GameCopy& c, const std::string& sha1, const std::string& code) {
+void Digest(const uint8_t* data, size_t n, uint8_t out[20]) {
+    alignas(8) uint8_t ctx[128];
+    crypto::ShaInit(ctx);
+    crypto::ShaUpdate(ctx, data, n);
+    crypto::ShaFinal(ctx, out);
+}
+
+uint32_t U32(const uint8_t* p) { return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24; }
+
+void Describe(GameCopy& c, const std::string& sha1, const std::string& code, const std::vector<EditionPatch>& editions) {
     c.sha1 = Sha1Hex(c.xbe.data(), c.xbe.size());
     std::vector<uint8_t> bytes;
     if (xbe::CodeBytes(c.xbe, bytes)) c.code = Sha1Hex(bytes.data(), bytes.size());
     const bool same_xbe = c.sha1 == Lower(sha1);
     c.other_edition = !same_xbe && !code.empty() && c.code == Lower(code);
     c.same_release = same_xbe || c.other_edition;
+    // an edition built apart: its xbe made into the supported one, the copy's disc as it is
+    for (const EditionPatch& e : editions) {
+        if (c.same_release || !EditionPatchFits(e, c.xbe)) continue;
+        std::vector<uint8_t> out;
+        std::string error;
+        if (!ApplyEditionPatch(e, c.xbe, out, error) || (!sha1.empty() && Sha1Hex(out.data(), out.size()) != Lower(sha1))) {
+            LOGW("game: %s: the patch for %s did not apply: %s", c.name.c_str(), EditionName(e).c_str(),
+                 error.empty() ? "another default.xbe came out" : error.c_str());
+            continue;
+        }
+        c.edition = EditionName(e);
+        c.other_edition = c.same_release = true;
+        xbe::Image x;
+        std::string e2;
+        if (x.Parse(c.xbe, e2) && x.cert >= x.base && size_t(x.cert - x.base) + 0xB0 <= c.xbe.size()) {
+            c.regions = Regions(x.U32(x.cert - x.base + 0xA0));
+            c.version = x.U32(x.cert - x.base + 0xAC);
+        }
+        c.xbe = std::move(out);
+        break;
+    }
     xbe::Image x;
     std::string error;
     if (x.Parse(c.xbe, error)) {
         c.title_id = x.title_id;
         c.title = Title(x);
         c.same_entry = x.entry == X86EntryPoint;
-        if (x.cert >= x.base && size_t(x.cert - x.base) + 0xB0 <= c.xbe.size()) {
+        if (c.edition.empty() && x.cert >= x.base && size_t(x.cert - x.base) + 0xB0 <= c.xbe.size()) {
             c.regions = Regions(x.U32(x.cert - x.base + 0xA0));
             c.version = x.U32(x.cert - x.base + 0xAC);
         }
@@ -96,6 +128,64 @@ bool LaterPart(const fs::path& p, const std::vector<std::string>& names) {
 
 }  // namespace
 
+// tools/edition_patch.py's: a 128 byte header ("SM2NXPD1", the sizes of the edition's xbe and the supported one, their
+// SHA-1s, the size of the LZ4 block once decompressed, the steps' count, the edition's name), then the LZ4 block: the
+// steps (x, y, z), the added bytes, the new bytes, as bsdiff's
+constexpr size_t kPatchHeader = 128;
+
+std::string EditionName(const EditionPatch& patch) {
+    if (patch.size < kPatchHeader) return "?";
+    const char* name = reinterpret_cast<const char*>(patch.data + 64);
+    return std::string(name, strnlen(name, 64));
+}
+
+bool EditionPatchFits(const EditionPatch& patch, const std::vector<uint8_t>& xbe) {
+    if (patch.size < kPatchHeader || std::memcmp(patch.data, "SM2NXPD1", 8) || U32(patch.data + 8) != xbe.size()) return false;
+    uint8_t sha[20];
+    Digest(xbe.data(), xbe.size(), sha);
+    return !std::memcmp(sha, patch.data + 16, 20);
+}
+
+bool ApplyEditionPatch(const EditionPatch& patch, const std::vector<uint8_t>& src, std::vector<uint8_t>& out, std::string& error) {
+    if (!EditionPatchFits(patch, src)) {
+        error = "not this default.xbe's patch";
+        return false;
+    }
+    const uint8_t* h = patch.data;
+    const size_t out_size = U32(h + 12), body_size = U32(h + 56), count = U32(h + 60);
+    std::vector<uint8_t> body(body_size);
+    if (body_size < count * 12 || Lz4Decode(h + kPatchHeader, patch.size - kPatchHeader, body.data(), body_size) != int(body_size)) {
+        error = "the patch is damaged";
+        return false;
+    }
+    size_t added = count * 12, fresh = added;
+    for (size_t i = 0; i < count; i++) fresh += U32(&body[i * 12]);
+    out.clear();
+    out.reserve(out_size);
+    int64_t at = 0;
+    for (size_t i = 0; i < count; i++) {
+        const int32_t x = int32_t(U32(&body[i * 12])), y = int32_t(U32(&body[i * 12 + 4])), z = int32_t(U32(&body[i * 12 + 8]));
+        if (x < 0 || y < 0 || added + size_t(x) > body_size || fresh + size_t(y) > body_size || at < 0 || at + x > int64_t(src.size()) ||
+            out.size() + size_t(x) + size_t(y) > out_size) {
+            error = "the patch is damaged";
+            return false;
+        }
+        for (int32_t k = 0; k < x; k++) out.push_back(uint8_t(body[added + k] + src[size_t(at) + k]));
+        added += size_t(x);
+        at += x;
+        out.insert(out.end(), body.begin() + fresh, body.begin() + fresh + y);
+        fresh += size_t(y);
+        at += z;
+    }
+    uint8_t sha[20];
+    Digest(out.data(), out.size(), sha);
+    if (out.size() != out_size || std::memcmp(sha, h + 36, 20)) {
+        error = "the patch did not make the supported default.xbe";
+        return false;
+    }
+    return true;
+}
+
 std::string Sha1Hex(const uint8_t* data, size_t n) {
     alignas(8) uint8_t ctx[128];
     uint8_t digest[20];
@@ -111,7 +201,7 @@ std::string Sha1Hex(const uint8_t* data, size_t n) {
 }
 
 GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_name, const std::string& sha1,
-                          const std::string& code) {
+                          const std::string& code, const std::vector<EditionPatch>& editions) {
     GameSearch out;
     std::vector<fs::path> seen;
     for (const fs::path& dir : folders) {
@@ -129,7 +219,7 @@ GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_
                 c.folder = dir;
                 c.name = dir.filename().string();
                 c.kind = "folder";
-                Describe(c, sha1, code);
+                Describe(c, sha1, code, editions);
                 out.copies.push_back(std::move(c));
             }
         }
@@ -162,7 +252,7 @@ GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_
             c.folder = dir;
             c.name = name;
             c.kind = c.disc->Kind();
-            Describe(c, sha1, code);
+            Describe(c, sha1, code, editions);
             out.copies.push_back(std::move(c));
         }
     }
@@ -172,7 +262,8 @@ GameSearch FindGameCopies(const std::vector<fs::path>& folders, const char* xbe_
     for (const GameCopy& c : out.copies)
         LOGI("game: %s (%s), %s %s, game code %s, title %08X \"%s\" version %u, regions %s%s", c.name.c_str(), c.kind.c_str(), xbe_name,
              c.sha1.c_str(), c.code.c_str(), c.title_id, c.title.c_str(), c.version, c.regions.c_str(),
-             c.other_edition  ? ", another edition of the same game code"
+             !c.edition.empty() ? (", the " + c.edition + " edition, its default.xbe made into the supported one").c_str()
+             : c.other_edition  ? ", another edition of the same game code"
              : c.same_release ? ""
              : c.same_entry   ? ", another release"
                               : ", another game or version");

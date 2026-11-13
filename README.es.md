@@ -49,13 +49,20 @@ en tu móvil) y balancéate por Nueva York.
 > mientras se preparaban shaders, y la 0.3.1 lo arregla.
 
 > [!TIP]
+> **Novedades de la 0.4.1: funciona el disco europeo en francés, alemán y español.** "Spider-Man 2 (Europe)
+> (Fr,De,Es)" es una compilación posterior del juego a la de EE. UU., así que la 0.4.0 lo rechazaba; ahora la página
+> de instalación y el port convierten su `default.xbe` en el admitido con un pequeño parche, bloqueado con tu propio
+> juego, y usan sus propias voces y películas. Pon **Voices** en Français, Deutsch o Español, con los textos en
+> cualquier idioma.
+>
 > **Novedades de la 0.4.0: actualizaciones desde el port, voces en otro idioma, ediciones europeas, un 16:9 más
 > cercano y la disposición de botones de la Switch.** La nueva fila **Update** del menú de depuración descarga la
 > versión más reciente desde su release en GitHub (cada actualización cuenta como una descarga allí), la desbloquea
 > en la consola con tu propio juego y la instala: después de esta, ya no hace falta computador ni móvil. **Voices**
 > elige el idioma de los personajes aparte del de los textos, entre las voces que tenga tu copia: los discos
 > europeos traen francés, alemán y español, o italiano. Una **edición europea** funciona si su código de juego es el
-> de la de EE. UU. (el port y la página de instalación lo comprueban). **16:9, close view** muestra a Spider-Man y la
+> de la de EE. UU. (el port y la página de instalación lo comprueban), y desde la 0.4.1 la de francés, alemán y
+> español en todo caso. **16:9, close view** muestra a Spider-Man y la
 > ciudad un tercio más grandes, con un HUD un décimo más grande. El nuevo ajuste **Buttons** asigna A a A, B a B,
 > X a X e Y a Y si prefieres las letras de la Switch a las posiciones de la Xbox. En 16:9 las cinemáticas ahora
 > llenan la pantalla y los marcadores del minimapa vuelven a estar sobre el mapa, y el texto en italiano ya no sale
@@ -203,7 +210,7 @@ en tu móvil) y balancéate por Nueva York.
   los lados, con el HUD y los menús en 4:3; la vista cercana muestra a Spider-Man y la ciudad un tercio más grandes,
   con un HUD un décimo más grande. Las cinemáticas llenan el ancho. O deja el 4:3, con los lados negros, desenfocados, con telaraña o con los colores del traje, o en un televisor CRT de los 2000 o de los 70.
 - **Vibración** en los Joy-Con y el Pro Controller, con la fuerza que elijas, y nunca se queda encendida.
-- **Tu copia en el formato que tengas.** La edición de EE. UU., o una europea con el mismo código de juego. Una
+- **Tu copia en el formato que tengas.** La edición de EE. UU., o la europea en francés, alemán y español. Una
   imagen de disco (`.iso` o `.xiso`, una XISO recortada o un volcado completo del disco), las imágenes comprimidas `.cci` (Cerbios) y `.cso` (StellarOS) que hace
   Repackinator, cualquiera de ellas dividida en partes para una tarjeta FAT32, o los archivos del disco.
 - **Se instala desde tu móvil.** La [página de instalación](https://santibros.github.io/SpiderMan2-2004-NX/)
@@ -402,7 +409,7 @@ Stock para que la batería dure más.
 | En el dock (TV) | 🧪 Todavía no se ha probado en una consola |
 | Partidas | ✅ Guardar y cargar funcionan desde la 0.2.3 (antes, las partidas se guardaban pero nunca cargaban); en `save/` en la tarjeta SD, con una copia en `sdmc:/config/SpiderMan2Xbox/save/` |
 | Idioma | ✅ El de la consola: textos en inglés, español, francés, alemán o italiano (el italiano bien desde la 0.4.0); las voces que tenga tu copia, en su propio idioma desde la 0.4.0 |
-| Otras ediciones | 🧪 Nuevo en la 0.4.0: se acepta una edición europea con el código de juego de la de EE. UU., y se ofrecen sus voces; todavía sin probar con un disco europeo |
+| Otras ediciones | 🧪 El disco europeo en francés, alemán y español funciona desde la 0.4.1 (un parche lo convierte en el `default.xbe` de EE. UU.): sus voces, sus películas y todos los idiomas de texto, probado en un computador, todavía no en una consola. Los discos europeos en inglés y en italiano: todavía sin probar (ayuda un issue con el SHA-1 de su `default.xbe`) |
 | Menú de depuración, contador | ✅ En una Switch Lite; los relojes solo ofrecen velocidades que usan los perfiles de Nintendo |
 | En línea | Solo Update, en el menú de depuración, para llegar a GitHub |
 
@@ -435,7 +442,7 @@ juego. Los reportes en español o en inglés ayudan mucho, con la carpeta `logs`
 | 🧊 **Se congela** | Si la consola se congela, toma una foto, reiníciala y envía la carpeta `logs` y los archivos más nuevos de `atmosphere/crash_reports/`. Luego prueba una vez manteniendo **L** al arrancar (sin sonido), y otra manteniendo **R** (el renderizador por CPU). |
 | 🎨 **La imagen** | Una foto de lo que se dibuje mal, y la carpeta `logs`: sus líneas `perf:` dicen a qué velocidad va y en qué se va el tiempo. |
 | 💿 **El formato de tu imagen** | Si tu `.cci`, `.cso` o imagen dividida no es aceptada, envía el registro: dice por qué. |
-| 🇪🇺 **Un disco europeo** | ¿Lo acepta la página de instalación? ¿Arranca el port, y las **Voices** en francés, alemán, español o italiano suenan con los labios a tiempo? Envía el registro: su línea `game:` dice el código de juego y las regiones de tu copia. |
+| 🇪🇺 **Un disco europeo** | El de francés, alemán y español: ¿se puede jugar de principio a fin en una consola, con las **Voices** a tiempo con los labios? El de inglés o el de italiano: ¿lo acepta la página de instalación? Envía el registro, o el SHA-1 que muestra la página. |
 
 Abre un [issue](../../issues/new/choose): el formulario pide todo lo necesario.
 
@@ -480,7 +487,12 @@ La edición de EE. UU., cuyo `default.xbe` tiene el SHA-1 `853bcb253c5baea2d7e2d
 `4156002B`, versión 4). Desde la 0.4.0 también funciona otra edición si su **código de juego** es el mismo: el
 programa en sí (las secciones del xbe, su punto de entrada y sus importaciones, sin la cabecera ni el certificado que
 nombran su región), cuyo SHA-1 es `b3d6d36a707840a9dcc047f0302b41edc61dfee2`. Una edición europea hecha con el mismo
-código se acepta tal cual, con sus voces. `build.sh`, la página de instalación y el port lo comprueban y te avisan si
+código se acepta tal cual, con sus voces. Desde la 0.4.1 también funciona la edición europea en francés, alemán y
+español ("Spider-Man 2 (Europe) (Fr,De,Es)", `default.xbe` con SHA-1 `ad4f0d360fc5a1869005331fe50f54a711426029`): es
+una compilación posterior del juego (versión 5), pero los datos de su disco son los del de EE. UU. salvo sus voces, sus
+películas a 50 Hz y algunos textos, así que un pequeño parche convierte su `default.xbe` en el admitido, y el port usa
+las voces y las películas del propio disco. El parche no sirve de nada sin ese `default.xbe`, y solo se publica
+bloqueado con él. `build.sh`, la página de instalación y el port lo comprueban y te avisan si
 la tuya es distinta. El código recompilado corresponde exactamente a ese código de juego; una edición con otro
 código necesitaría su propia configuración del recompilador. Si tienes otra edición, ayuda abrir un issue con su
 SHA-1 y su código de juego (el compilador y el port los muestran).

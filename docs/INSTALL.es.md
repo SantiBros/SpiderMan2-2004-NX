@@ -39,8 +39,10 @@ tarjeta SD junto con tu juego.
 Necesitas *Spider-Man 2* para la **Xbox original**, la edición cuyo `default.xbe` tiene el SHA-1
 `853bcb253c5baea2d7e2d9b59e5888b4c87bb402` (ID de título `4156002B`, versión 4, la edición de EE. UU.). Desde la
 0.4.0 también sirve otra edición si su código de juego es el mismo (`b3d6d36a707840a9dcc047f0302b41edc61dfee2`: el
-programa en sí, sin la cabecera que nombra su región), como puede serlo una europea. El compilador, la página de
-instalación y el port lo comprueban, así que no tienes que averiguarlo tú. El port nunca descarga nada: usa la
+programa en sí, sin la cabecera que nombra su región), y desde la 0.4.1 la europea en francés, alemán y español
+("Spider-Man 2 (Europe) (Fr,De,Es)", `default.xbe` con SHA-1 `ad4f0d360fc5a1869005331fe50f54a711426029`), cuyo
+`default.xbe` la página de instalación y el port convierten en el de EE. UU. con un pequeño parche. Lo comprueban, así
+que no tienes que averiguarlo tú (el compilador, `build.sh`, solo acepta el de EE. UU.). El port nunca descarga nada: usa la
 copia que le das.
 
 ### Con una Xbox modificada
@@ -84,8 +86,9 @@ navegador reciente (Chrome, Firefox, Edge, Safari, Samsung Internet; en iPhone n
 
 1. **Elige tu juego:** tu imagen de disco (`.iso`, `.xiso`, `.cci`, `.cso`; si está dividida, selecciona todas sus
    partes a la vez) o solo su `default.xbe`. La página lee el `default.xbe` del juego y comprueba que sea la
-   edición compatible o (para la 0.4.0 y posteriores) otra edición con su código de juego. Todas las versiones
-   aceptan los mismos archivos.
+   edición compatible, o (para la 0.4.0 y posteriores) otra edición con su código de juego, o (para la 0.4.1 y
+   posteriores) la europea en francés, alemán y español, que convierte en la edición compatible con su parche
+   (bloqueado con el propio código de juego de esa edición). Todas las versiones aceptan los mismos archivos.
 2. **Elige la versión**, o deja la más reciente, que ya está elegida. El menú tiene todas desde la 0.0.8 y dice cuál
    es la recomendada (la más reciente), cuáles funcionan en una Switch con problemas conocidos (0.1.0 a 0.3.0) y
    cuáles son pruebas tempranas que no arrancan en ella (0.0.8 a 0.0.10). Debajo están los cambios principales de

@@ -50,9 +50,13 @@ cp "$T/switch/game-folder-README.txt" "$V/PUT_YOUR_GAME_HERE.txt"
 cp "$R/installer/index.html" "$OUT/index.html"
 SHA1=$(python3 -c "import hashlib,sys; print(hashlib.sha1(open(sys.argv[1],'rb').read()).hexdigest())" "$XBE")
 CODE=$(python3 "$R/tools/lock_nro.py" code "$XBE")
-python3 - "$OUT" "$R/installer/versions.json" "$SHA1" "$CODE" <<'EOF'
+# the editions built apart (installer/editions.json): their patch to the supported default.xbe, locked with their
+# own game code (assets/editions/*.patch.locked, tools/edition_patch.py)
+mkdir -p "$OUT/editions"
+for f in "$R"/assets/editions/*.patch.locked; do [ -f "$f" ] && cp "$f" "$OUT/editions/"; done
+python3 - "$OUT" "$R/installer/versions.json" "$SHA1" "$CODE" "$R/installer/editions.json" <<'EOF'
 import json, os, re, sys
-out, manifest, sha1, code = sys.argv[1:5]
+out, manifest, sha1, code, editions_manifest = sys.argv[1:6]
 titles = {e['version']: e for e in json.load(open(manifest, encoding='utf-8'))}
 key = lambda v: tuple(int(n) for n in re.findall(r'\d+', v))
 there = [d for d in os.listdir(out) if os.path.isfile(os.path.join(out, d, 'SpiderMan2Xbox.nro.locked'))]
@@ -60,7 +64,21 @@ there = [d for d in os.listdir(out) if os.path.isfile(os.path.join(out, d, 'Spid
 lock = lambda v: 2 if open(os.path.join(out, v, 'SpiderMan2Xbox.nro.locked'), 'rb').read(8) == b'SM2NXLK2' else 1
 versions = [dict(titles.get(v, {}), version=v, path=v + '/', lock=lock(v)) for v in sorted(there, key=key, reverse=True)]
 with open(os.path.join(out, 'versions.json'), 'w', encoding='utf-8') as f:
-    json.dump({'xbe_sha1': sha1, 'xbe_code': code, 'versions': versions}, f, ensure_ascii=False, indent=1)
+    editions = []
+    for e in json.load(open(editions_manifest, encoding='utf-8')):
+        path = os.path.join(out, 'editions', e['file'] + '.locked')
+        if not os.path.isfile(path):
+            continue
+        head = open(path, 'rb').read(64)
+        patch_sha1 = None
+        # the edition's default.xbe SHA-1 is in the patch's own header, inside the lock: kept beside it, by make
+        sidecar = os.path.join(os.path.dirname(editions_manifest), '..', 'assets', 'editions', e['file'])
+        if os.path.isfile(sidecar):
+            patch_sha1 = open(sidecar, 'rb').read(36)[16:36].hex()
+        if not patch_sha1:
+            continue
+        editions.append(dict(e, sha1=patch_sha1, code=head[32:52].hex(), path='editions/' + e['file'] + '.locked'))
+    json.dump({'xbe_sha1': sha1, 'xbe_code': code, 'editions': editions, 'versions': versions}, f, ensure_ascii=False, indent=1)
 print('versions.json:', ', '.join(v['version'] for v in versions))
 EOF
 touch "$OUT/.nojekyll"  # served as it is, without GitHub's Jekyll

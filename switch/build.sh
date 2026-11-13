@@ -33,9 +33,27 @@ SHA=$(sha1sum "$R/assets/default.xbe" 2>/dev/null | cut -c1-40)
 CODE=$(python3 "$R/tools/lock_nro.py" code "$R/assets/default.xbe" 2>/dev/null)
 printf 'extern const char kImageSha1[] = "%s";\nextern const char kImageCode[] = "%s";\n' "${SHA:-unknown}" "${CODE:-unknown}" > "$OUT/xbe_sha1.cpp.new"
 cmp -s "$OUT/xbe_sha1.cpp.new" "$OUT/xbe_sha1.cpp" && rm "$OUT/xbe_sha1.cpp.new" || mv "$OUT/xbe_sha1.cpp.new" "$OUT/xbe_sha1.cpp"
+# the patches that make other editions' default.xbe into this one (assets/editions/*.patch, tools/edition_patch.py),
+# carried in the .nro, which is only published locked
+python3 - "$R/assets/editions" "$OUT/editions.cpp.new" <<'PY'
+import glob, os, sys
+src, out = sys.argv[1:3]
+names = sorted(glob.glob(os.path.join(src, '*.patch')))
+with open(out, 'w') as f:
+    f.write('#include <cstddef>\n#include <cstdint>\n')
+    for i, n in enumerate(names):
+        data = open(n, 'rb').read()
+        f.write('alignas(8) static const uint8_t kPatch%d[] = {' % i)
+        f.write(','.join(str(b) for b in data))
+        f.write('};\n')
+    f.write('struct EditionBlob { const uint8_t* data; size_t size; };\n')
+    f.write('extern const EditionBlob kEditionPatches[] = {%s};\n' % ''.join('{kPatch%d, sizeof kPatch%d},' % (i, i) for i in range(len(names))) if names else 'extern const EditionBlob kEditionPatches[] = {{nullptr, 0}};\n')
+    f.write('extern const size_t kEditionPatchCount = %d;\n' % len(names))
+PY
+cmp -s "$OUT/editions.cpp.new" "$OUT/editions.cpp" && rm "$OUT/editions.cpp.new" || mv "$OUT/editions.cpp.new" "$OUT/editions.cpp"
 SRC=$(ls "$R"/sdk/runtime/*/*.cpp | grep -Ev "/runtime/app/|/core/input.cpp|/gpu/d3d12.cpp|/audio/xaudio2.cpp")
 SRC="$SRC $(ls "$R"/src/*/*.cpp) $(ls "$R"/gl/*.cpp) $R/sdk/harness/reference_renderer.cpp"
-SRC="$SRC $(ls "$R"/switch/*.cpp) $OUT/xbe_sha1.cpp"
+SRC="$SRC $(ls "$R"/switch/*.cpp) $OUT/xbe_sha1.cpp $OUT/editions.cpp"
 HOSTINC="$INC -isystem $PORTLIBS/include -I$R/src -I$R -I$R/sdk/harness -I$R/sdk/harness/compat"
 newest=$( (find "$R/sdk/runtime" "$R/src" "$R/gl" "$R/switch" "$R/sdk/harness" "$GEN/image_symbols.h" -name '*.h' -printf '%T@ %p\n'; find "$R/VERSION" -printf '%T@ %p\n') | sort -n | tail -1 | cut -d' ' -f2)
 objs=()

@@ -47,12 +47,18 @@ swing through New York.
 > long pauses while shaders were built, which 0.3.1 fixes.
 
 > [!TIP]
+> **New in 0.4.1: the European French, German and Spanish disc works.** "Spider-Man 2 (Europe) (Fr,De,Es)" is a
+> later build of the game than the US one, so 0.4.0 turned it away; now the installer page and the port make its
+> `default.xbe` into the supported one with a small patch, locked with your own game, and play its own voices and
+> movies. Set **Voices** to Français, Deutsch or Español, with the text in any language.
+>
 > **New in 0.4.0: updates from inside the port, voices in another language, European editions, a closer 16:9 and
 > the Switch's button layout.** The debug menu's new **Update** row downloads the newest version from its GitHub
 > release (each update counts as a download there), unlocks it on the console with your own game and installs it: no
 > computer or phone needed after this one. **Voices** picks the characters' language apart from the text's, from the
 > voices your copy has: the European discs have French, German and Spanish, or Italian ones. A **European edition**
-> works when its game code is the US one's (the port and the installer page check it). **16:9, close view** shows
+> works when its game code is the US one's (the port and the installer page check it), and from 0.4.1 the French,
+> German and Spanish one in any case. **16:9, close view** shows
 > Spider-Man and the city a third bigger, with a HUD a tenth bigger. The new **Buttons** setting maps A to A, B to B,
 > X to X and Y to Y if you prefer the Switch's letters to the Xbox's positions. In 16:9 the cutscenes now fill the
 > screen and the minimap's pins sit on the map again, and Italian text no longer shows French.
@@ -196,7 +202,7 @@ swing through New York.
   HUD a tenth bigger. The cutscenes fill the width. Or keep 4:3, with black, blurred, spider-web or suit-coloured
   sides, or on a 2000s or a 70s CRT TV.
 - **Vibration** on Joy-Con and the Pro Controller, at the strength you choose, and never left running.
-- **Your copy in the format you have.** The US edition, or a European one with the same game code. A disc
+- **Your copy in the format you have.** The US edition, or the European French, German and Spanish one. A disc
   image (`.iso` or `.xiso`, a trimmed XISO or a full disc dump), the compressed `.cci` (Cerbios) and `.cso` (StellarOS) images that Repackinator makes, any of
   them split into parts for a FAT32 card, or the files from the disc.
 - **Installed from your phone.** The [installer page](https://santibros.github.io/SpiderMan2-2004-NX/) unlocks
@@ -392,7 +398,7 @@ Auto clocks use more battery than the console's own: choose Stock for a longer b
 | Docked (TV) | 🧪 Not tried yet on a console |
 | Saves | ✅ Saving and loading work since 0.2.3 (before it, saves were written but never loaded); in `save/` on the SD card, with a copy in `sdmc:/config/SpiderMan2Xbox/save/` |
 | Language | ✅ The console's: English, Spanish, French, German or Italian texts (Italian right since 0.4.0); the voices your copy has, in their own language since 0.4.0 |
-| Other editions | 🧪 New in 0.4.0: a European edition with the US one's game code is accepted, and its voices offered; not yet tried with a European disc |
+| Other editions | 🧪 The European French, German and Spanish disc runs from 0.4.1 (made into the US `default.xbe` by a patch): its voices, its movies and every text language, tried on a computer, not yet on a console. The English European and the Italian discs: not yet tried (an issue with their `default.xbe` SHA-1 helps) |
 | Debug menu, frame-rate counter | ✅ On a Switch Lite; the clocks only offer rates Nintendo's own profiles use |
 | Online | Only the debug menu's Update, to reach GitHub |
 
@@ -424,7 +430,7 @@ Reports in English or Spanish help most, with the `logs` folder:
 | 🧊 **Freezes** | If the console freezes, take a photo, restart, and send the `logs` folder and the newest files in `atmosphere/crash_reports/`. Then try once holding **L** at start (no sound), and once holding **R** (the CPU renderer). |
 | 🎨 **The picture** | A photo of anything drawn wrong, and the `logs` folder: its `perf:` lines say how fast it runs and where the time goes. |
 | 💿 **Your image format** | If your `.cci`, `.cso` or split image isn't accepted, send the log: it says why. |
-| 🇪🇺 **A European disc** | Does the installer page accept it? Does the port start, and do the **Voices** in French, German, Spanish or Italian play with their lips in time? Send the log: its `game:` line names your copy's game code and regions. |
+| 🇪🇺 **A European disc** | The French, German and Spanish one: does it play through on a console, with the **Voices** in time with the lips? The English or Italian one: does the installer page accept it? Send the log, or the SHA-1 the page shows. |
 
 Open an [issue](../../issues/new/choose): the form asks for everything needed.
 
@@ -469,7 +475,12 @@ The US edition, whose `default.xbe` has the SHA-1 `853bcb253c5baea2d7e2d9b59e588
 `4156002B`, version 4). From 0.4.0 another edition works too if its **game code** is the same: the program itself
 (the xbe's sections, entry point and imports, without the header and certificate that name its region), whose SHA-1
 is `b3d6d36a707840a9dcc047f0302b41edc61dfee2`. A European edition built from the same code is then accepted as it
-is, its voices included. `build.sh`, the installer page and the port check it and tell you if yours is different.
+is, its voices included. From 0.4.1 the European French, German and Spanish edition works too ("Spider-Man 2
+(Europe) (Fr,De,Es)", `default.xbe` SHA-1 `ad4f0d360fc5a1869005331fe50f54a711426029`): it is a later build of the
+game (version 5), but its disc's data is the US one's but for its voices, its 50 Hz movies and a few texts, so a small
+patch makes its `default.xbe` into the supported one, and the port plays the disc's own voices and movies. The patch
+does nothing without that `default.xbe`, and is only published locked with it. `build.sh`, the installer page and the
+port check your copy and tell you if yours is different.
 The recompiled code matches that game code exactly; a release with other code would need its own recompiler config.
 If you have another release, an issue with its SHA-1 and game code (the builder and the port print them) helps.
 </details>
